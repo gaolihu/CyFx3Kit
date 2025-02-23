@@ -1,13 +1,19 @@
-#include "Logger.h"
 #include <QDateTime>
 #include <QFileInfo>
 #include <QApplication>
+
+#include "Logger.h"
+#include "LoggerTypes.h" 
+#include "LogWriter.h"
+#include "UIUpdater.h"
 
 Logger::Logger()
     : QObject(nullptr)
     , m_logWidget(nullptr)
     , m_initialized(false)
     , m_currentCategory(CAT_NONE)
+    , m_logWriter(std::make_unique<LogWriter>(this))
+    , m_uiUpdater(std::make_unique<UIUpdater>(this))
 {
 }
 
@@ -26,9 +32,10 @@ Logger& Logger::instance()
 
 QString Logger::getThreadId()
 {
-    return QString::number((quint64)QThread::currentThreadId());
+    std::stringstream ss;
+    ss << std::this_thread::get_id();
+    return QString::fromStdString(ss.str());
 }
-
 QString Logger::getThreadIdAsString(const std::thread& thread)
 {
     std::stringstream ss;
@@ -45,9 +52,13 @@ void Logger::setLogFile(const QString& logFile, bool clearOldLog)
 {
     QMutexLocker locker(&m_mutex);
 
+    qDebug() << "Set log file:" << logFile << "" << (clearOldLog ? ", clear old" : "append old");
+
     if (m_logFile.isOpen()) {
         m_logFile.close();
     }
+
+    m_logFile.setFileName(logFile);
 
     if (clearOldLog) {
         QFileInfo fileInfo(logFile);
@@ -57,7 +68,6 @@ void Logger::setLogFile(const QString& logFile, bool clearOldLog)
         clearLogFile();
     }
 
-    m_logFile.setFileName(logFile);
     if (!m_logFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
         qDebug() << "Failed to open log file:" << logFile;
         return;
@@ -82,15 +92,19 @@ void Logger::setLogWidget(QTextEdit* logWidget)
 
 void Logger::log(const QString& message, LogLevel level, const QString& file, int line)
 {
-    QString formattedMessage = formatMessage(message, level, file, line);
+    if (!m_initialized || !shouldLog(level)) return;
 
-    {
-        QMutexLocker lock(&m_mutex);
-        writeToFile(formattedMessage);
-        appendToWidget(formattedMessage, level);
-    }
+    LogEntry entry{
+        message,
+        getThreadId(),
+        level,
+        file,
+        line,
+        QDateTime::currentDateTime()
+    };
 
-    qDebug().noquote() << formattedMessage;
+    m_logWriter->enqueue(entry);
+    m_uiUpdater->enqueue(entry);
 }
 
 void Logger::error(const QString& error, const QString& file, int line)
@@ -148,10 +162,10 @@ void Logger::appendToWidget(const QString& message, LogLevel level)
     m_logWidget->ensureCursorVisible();
 }
 
-QString Logger::formatMessage(const QString& message, LogLevel level,
+QString Logger::formatMessage(const QString& message,
+    const QString& threadId, LogLevel level,
     const QString& file, int line)
 {
-    QString threadId = getThreadId();
     QString category = getCategoryString();
     QString location;
 
@@ -165,7 +179,7 @@ QString Logger::formatMessage(const QString& message, LogLevel level,
     return QString("[%1][%2][T:%3]%4%5 %6")
         .arg(QDateTime::currentDateTime().toString("hh:mm:ss.zzz"))
         .arg(getLevelString(level))
-        .arg(threadId)
+        .arg(threadId)  // 使用传入的线程ID
         .arg(categoryStr)
         .arg(location)
         .arg(message);
@@ -218,5 +232,6 @@ void Logger::backupOldLog()
         .arg(oldLogPath)
         .arg(QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss"));
 
+    qDebug() << "Backup old: " << oldLogPath << ", to: " << backupPath;
     QFile::rename(oldLogPath, backupPath);
 }

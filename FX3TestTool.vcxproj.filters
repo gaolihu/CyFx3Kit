@@ -41,11 +41,20 @@
     <ClCompile Include="Core\USBDevice.cpp">
       <Filter>Source Files\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Core\DataAcquisition.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\CommandManager.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Utils\Logger.cpp">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="Core\DataAcquisition.cpp">
-      <Filter>Source Files\Core</Filter>
+    <ClCompile Include="Utils\LogWriter.cpp">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Utils\UIUpdater.cpp">
+      <Filter>Source Files\Utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -55,11 +64,25 @@
     <QtMoc Include="Core\USBDevice.h">
       <Filter>Source Files\Core</Filter>
     </QtMoc>
-    <QtMoc Include="Utils\Logger.h">
-      <Filter>Source Files\Utils</Filter>
-    </QtMoc>
     <QtMoc Include="Core\DataAcquisition.h">
       <Filter>Source Files\Core</Filter>
     </QtMoc>
+    <QtMoc Include="UI\CommandManager.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Utils\Logger.h">
+      <Filter>Source Files\Utils</Filter>
+    </QtMoc>
+    <QtMoc Include="Utils\LogWriter.h">
+      <Filter>Source Files\Utils</Filter>
+    </QtMoc>
+    <QtMoc Include="Utils\UIUpdater.h">
+      <Filter>Source Files\Utils</Filter>
+    </QtMoc>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Utils\LoggerTypes.h">
+      <Filter>Source Files\Utils</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

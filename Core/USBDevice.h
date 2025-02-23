@@ -50,7 +50,7 @@ private:
 
 private:
     // 命令发送方法
-    bool sendCommand(const UCHAR* cmd, int length);
+    bool sendCommand(const UCHAR* cmd, size_t length);
     bool configureTransfer(ULONG frameSize);
 
     // 命令处理方法
@@ -80,11 +80,14 @@ private:
     std::atomic<bool> m_isTransferring;
     std::chrono::steady_clock::time_point m_transferStartTime;
 
+    // 传输统计
+    std::atomic<uint64_t> m_totalBytes{ 0 };
+    std::atomic<double> m_currentSpeed{ 0.0 };
+    std::chrono::steady_clock::time_point m_lastSpeedUpdate;
+    static constexpr int SPEED_UPDATE_INTERVAL_MS = 1000; // 速度更新间隔
+
     // FPGA 命令定义
     static const int CMD_BUFFER_SIZE = 512;
-    static const UCHAR CMD_START[];
-    static const UCHAR CMD_FRAME_SIZE[];
-    static const UCHAR CMD_STOP[];
 
     // 配置参数
     uint16_t m_width;
@@ -100,4 +103,5 @@ private:
     // 当前传输配置
     ULONG m_frameSize;
     bool m_isConfigured;
+    std::atomic<uint64_t> m_lastTotalBytes{ 0 };  // 用于速度计算的上次总字节数
 };

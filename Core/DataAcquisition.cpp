@@ -1,8 +1,7 @@
-#include <Windows.h>
-#include <thread>
-#include <chrono>
 #include "DataAcquisition.h"
 #include "Logger.h"
+#include <QDateTime>
+#include <QCoreApplication>
 
 DataAcquisitionManager::DataAcquisitionManager(std::shared_ptr<USBDevice> device)
     : m_device(device)
@@ -21,9 +20,12 @@ DataAcquisitionManager::DataAcquisitionManager(std::shared_ptr<USBDevice> device
 
 DataAcquisitionManager::~DataAcquisitionManager()
 {
+    stopAcquisition();
 }
 
 DataAcquisitionManager::CircularBuffer::CircularBuffer(size_t bufferCount, size_t bufferSize)
+    : m_warningThreshold(bufferCount * 0.75)
+    , m_criticalThreshold(bufferCount * 0.90)
 {
     LOG_INFO(QString("Initializing circular buffer - Count: %1, Size per buffer: %2 bytes")
         .arg(bufferCount).arg(bufferSize));
@@ -38,6 +40,20 @@ DataAcquisitionManager::CircularBuffer::CircularBuffer(size_t bufferCount, size_
         .arg(bufferCount * bufferSize));
 }
 
+auto DataAcquisitionManager::CircularBuffer::checkBufferStatus() -> WarningLevel
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    size_t queueSize = m_readyBuffers.size();
+
+    if (queueSize >= m_criticalThreshold) {
+        return WarningLevel::C_CRITICAL;
+    }
+    else if (queueSize >= m_warningThreshold) {
+        return WarningLevel::C_WARNING;
+    }
+    return WarningLevel::C_NORMAL;
+}
+
 std::pair<uint8_t*, size_t> DataAcquisitionManager::CircularBuffer::getWriteBuffer()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -50,10 +66,12 @@ std::pair<uint8_t*, size_t> DataAcquisitionManager::CircularBuffer::getWriteBuff
     size_t bufferSize = m_buffers[m_currentWriteBuffer].size();
     uint8_t* bufferPtr = m_buffers[m_currentWriteBuffer].data();
 
+#if 0
     LOG_DEBUG(QString("Providing write buffer - Index: %1, Size: %2 bytes, Address: 0x%3")
         .arg(m_currentWriteBuffer)
         .arg(bufferSize)
         .arg(reinterpret_cast<quint64>(bufferPtr), 0, 16));
+#endif
 
     return { bufferPtr, bufferSize };
 }
@@ -62,9 +80,11 @@ void DataAcquisitionManager::CircularBuffer::commitBuffer(size_t bytesWritten)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
+#if 0
     LOG_DEBUG(QString("Committing buffer - Index: %1, Written bytes: %2")
         .arg(m_currentWriteBuffer)
         .arg(bytesWritten));
+#endif
 
     if (bytesWritten == 0) {
         LOG_WARN("Attempting to commit empty buffer");
@@ -88,13 +108,13 @@ void DataAcquisitionManager::CircularBuffer::commitBuffer(size_t bytesWritten)
 
     m_readyBuffers.push(std::move(packet));
 
-    size_t oldIndex = m_currentWriteBuffer;
     m_currentWriteBuffer = (m_currentWriteBuffer + 1) % m_buffers.size();
 
-    LOG_DEBUG(QString("Buffer committed - Old index: %1, New index: %2, Queue size: %3")
-        .arg(oldIndex)
-        .arg(m_currentWriteBuffer)
+#if 0
+    LOG_DEBUG(QString("Buffer committed - Size: %1, Queue size: %2")
+        .arg(bytesWritten)
         .arg(m_readyBuffers.size()));
+#endif
 }
 
 std::optional<DataPacket> DataAcquisitionManager::CircularBuffer::getReadBuffer()
@@ -109,23 +129,39 @@ std::optional<DataPacket> DataAcquisitionManager::CircularBuffer::getReadBuffer(
     return packet;
 }
 
+void DataAcquisitionManager::CircularBuffer::reset()
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    while (!m_readyBuffers.empty()) {
+        m_readyBuffers.pop();
+    }
+    m_currentWriteBuffer = 0;
+}
+
 bool DataAcquisitionManager::startAcquisition(uint16_t width, uint16_t height, uint8_t capType)
 {
     LOG_INFO("Try start acquisition");
 
-    // 确保线程未在运行
-    stopAcquisition();
+    if (m_running) {
+        LOG_WARN("Acquisition already running");
+        return false;
+    }
 
-    // 设置采集参数
+    // 配置采集参数
     m_params.width = width;
     m_params.height = height;
     m_params.format = capType;
 
-    // 重置状态和统计信息
-    m_totalBytes = 0;
-    m_startTime = std::chrono::steady_clock::now();
+    if (!validateAcquisitionParams()) {
+        LOG_ERROR("Invalid acquisition parameters");
+        return false;
+    }
 
-    // 这里明确设置运行标志
+    // 重置状态和统计信息
+    m_transferStats.reset();
+    m_buffer->reset();
+
+    // 设置运行标志
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_running = true;
@@ -156,62 +192,249 @@ bool DataAcquisitionManager::startAcquisition(uint16_t width, uint16_t height, u
         return false;
     }
 
-    LOG_INFO("Acquisition started");
+    updateAcquisitionState(AcquisitionState::AC_RUNNING);
     emit acquisitionStarted();
+    LOG_INFO("Acquisition started");
     return true;
 }
 
-void DataAcquisitionManager::stopAcquisition()
-{
+void DataAcquisitionManager::stopAcquisition() {
+    std::unique_lock<std::mutex> stopLock(m_stopMutex);
+
     if (!m_running) {
         return;
     }
 
-    LOG_INFO("Stopping data acquisition");
+    // 保存最终统计数据
+    uint64_t finalBytes = m_transferStats.getTotalBytes();
+    double finalSpeed = m_transferStats.getCurrentSpeed();
 
+    // 设置停止标志
     m_running = false;
+    m_dataReady.notify_all();
 
-    // 等待采集线程结束
-    if (m_acquisitionThread.joinable()) {
+    // 等待线程结束
+    if (m_acquisitionThread.joinable() &&
+        std::this_thread::get_id() != m_acquisitionThread.get_id()) {
         m_acquisitionThread.join();
     }
 
-    // 等待处理线程结束
-    if (m_processingThread.joinable()) {
+    if (m_processingThread.joinable() &&
+        std::this_thread::get_id() != m_processingThread.get_id()) {
         m_processingThread.join();
     }
 
-    // 停止USB传输
-    if (m_device) {
-        m_device->stopTransfer();
-    }
+    // 发送最终统计数据
+    emit statsUpdated(finalBytes, 0.0);  // 速度设为0表示已停止
 
-    // 重置统计信息
-    m_totalBytes = 0;
-
+    // 清理资源
+    m_buffer->reset();
+    updateAcquisitionState(AcquisitionState::AC_IDLE);
     emit acquisitionStopped();
-    LOG_INFO("Acquisition stoped");
 }
 
-void DataAcquisitionManager::updateAcquisitionState(AcquisitionState newState)
+void DataAcquisitionManager::signalStop(StopReason reason)
 {
-    LOG_INFO("Update acquisition state");
+    std::lock_guard<std::mutex> lock(m_stopMutex);
 
-    m_acquisitionState = newState;
-
-    QString stateStr;
-    switch (newState) {
-    case AcquisitionState::AC_IDLE: stateStr = "空闲"; break;
-    case AcquisitionState::AC_CONFIGURING: stateStr = "配置中"; break;
-    case AcquisitionState::AC_RUNNING: stateStr = "采集中"; break;
-    case AcquisitionState::AC_PAUSED: stateStr = "已暂停"; break;
-    case AcquisitionState::AC_ERROR: stateStr = "错误"; break;
+    if (!m_running) {
+        return;
     }
 
-    acquisitionStateChanged(stateStr);
+    switch (reason) {
+    case StopReason::READ_ERROR:
+        LOG_ERROR("Stopping acquisition due to read errors");
+        m_errorOccurred = true;
+        emit errorOccurred(QString::fromLocal8Bit("数据读取错误，采集已停止"));
+        break;
+
+    case StopReason::DEVICE_ERROR:
+        LOG_ERROR("Stopping acquisition due to device error");
+        m_errorOccurred = true;
+        emit errorOccurred(QString::fromLocal8Bit("设备错误，采集已停止"));
+        break;
+
+    case StopReason::BUFFER_OVERFLOW:
+        LOG_ERROR("Stopping acquisition due to buffer overflow");
+        m_errorOccurred = true;
+        emit errorOccurred(QString::fromLocal8Bit("缓冲区溢出，采集已停止"));
+        break;
+
+    case StopReason::USER_REQUEST:
+        LOG_INFO("Stopping acquisition by user request");
+        break;
+    }
+
+    m_running = false;
+    m_dataReady.notify_all();
+
+    // 通知UI更新状态
+    emit acquisitionStateChanged(QString::fromLocal8Bit("已停止"));
+    emit statsUpdated(m_totalBytes, 0.0);  // 速率清零
 }
 
-bool DataAcquisitionManager::validateAcquisitionParams() {
+void DataAcquisitionManager::acquisitionThread()
+{
+    LOG_INFO("Data acquisition thread started");
+
+    // 添加连续读取失败计数
+    int consecutiveFailures = 0;
+
+    try {
+        while (m_running) {
+            if (!m_running) break;  // 快速检查停止标志
+
+            // 检查缓冲区状态
+            if (m_buffer->checkBufferStatus() == CircularBuffer::WarningLevel::C_CRITICAL) {
+                LOG_ERROR("Buffer overflow detected");
+                signalStop(StopReason::BUFFER_OVERFLOW);
+                break;
+            }
+
+            auto [writeBuffer, size] = m_buffer->getWriteBuffer();
+            if (!writeBuffer) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(STOP_CHECK_INTERVAL_MS));
+                continue;
+            }
+
+            LONG actualLength = static_cast<LONG>(size);
+            if (static_cast<size_t>(actualLength) > MAX_PACKET_SIZE) {
+                actualLength = static_cast<LONG>(MAX_PACKET_SIZE);
+            }
+
+            bool readSuccess = m_device->readData(writeBuffer, actualLength);
+
+            if (readSuccess && actualLength > 0) {
+                // 读取成功，重置失败计数
+                consecutiveFailures = 0;
+
+                m_buffer->commitBuffer(actualLength);
+                m_totalBytes += actualLength;
+                m_dataReady.notify_one();
+
+                // 降低统计更新频率
+                static auto lastUpdate = std::chrono::steady_clock::now();
+                auto now = std::chrono::steady_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    now - lastUpdate).count();
+
+                if (duration >= STATS_UPDATE_INTERVAL_MS) {
+                    updateStats();
+                    lastUpdate = now;
+                }
+            }
+            else {
+                // 读取失败处理
+                consecutiveFailures++;
+
+                if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                    LOG_ERROR("Too many consecutive read failures, stopping acquisition");
+                    signalStop(StopReason::READ_ERROR);
+                    break;
+                }
+
+                LOG_WARN(QString("Failed to read data (attempt %1/%2)")
+                    .arg(consecutiveFailures)
+                    .arg(MAX_CONSECUTIVE_FAILURES));
+
+                // 短暂延时后继续尝试
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+
+            // 让出时间片
+            std::this_thread::yield();
+        }
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR(QString("Exception in acquisition thread: %1").arg(e.what()));
+        signalStop(StopReason::DEVICE_ERROR);
+    }
+
+    // 记录最终传输统计
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::steady_clock::now() - m_transferStats.getStartTime()).count();
+
+#if 0
+    LOG_INFO(QString("  Total Bytes: %1 bytes (%2 MB)")
+        .arg(m_transferStats.getTotalBytes())
+        .arg(m_transferStats.getTotalBytes() / (1024.0 * 1024.0), 0, 'f', 2));
+#endif
+    LOG_INFO(QString("  Duration: %1 seconds").arg(duration));
+#if 0
+    LOG_INFO(QString("  Average Speed: %1 MB/s")
+        .arg(m_transferStats.getCurrentSpeed(), 0, 'f', 2));
+    LOG_INFO(QString("  Successful Transfers: %1").arg(m_transferStats.getSuccessCount()));
+    LOG_INFO(QString("  Failed Transfers: %1").arg(m_transferStats.getFailureCount()));
+#endif
+
+    LOG_WARN("Data acquisition thread stopped");
+}
+
+void DataAcquisitionManager::processingThread()
+{
+    LOG_INFO("Processing thread started");
+
+    try {
+        while (m_running) {
+            std::unique_lock<std::mutex> lock(m_mutex);
+
+            // 等待数据或停止信号
+            m_dataReady.wait_for(lock, std::chrono::milliseconds(STOP_CHECK_INTERVAL_MS),
+                [this]() { return !m_running || m_buffer->getReadBuffer().has_value(); });
+
+            if (!m_running) break;
+
+            // 获取待处理的数据包
+            if (auto packet = m_buffer->getReadBuffer()) {
+                lock.unlock();  // 解锁以允许并行处理
+
+                if (m_processor) {
+                    try {
+                        m_processor->processData(*packet);
+                        emit dataReceived(*packet);
+                    }
+                    catch (const std::exception& e) {
+                        LOG_ERROR(QString("Data processing error: %1").arg(e.what()));
+                        emit errorOccurred(QString("数据处理错误: %1").arg(e.what()));
+                    }
+                }
+            }
+        }
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR(QString("Exception in processing thread: %1").arg(e.what()));
+        signalStop(StopReason::DEVICE_ERROR);
+    }
+
+    LOG_WARN("Processing thread stopped");
+}
+
+void DataAcquisitionManager::updateStats()
+{
+    if (!m_running) return;
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto now = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - m_startTime).count();
+
+    if (duration > 0) {
+        // 计算数据速率
+        m_dataRate = static_cast<double>(m_totalBytes.load()) / duration / (1024 * 1024);
+
+        // 在发送信号前获取atomic变量的值
+        uint64_t currentBytes = m_totalBytes.load();
+        double currentRate = m_dataRate;
+
+        // 使用Qt的信号槽机制安全地更新UI
+        QMetaObject::invokeMethod(this, [this, currentBytes, currentRate]() {
+            emit statsUpdated(currentBytes, currentRate);
+            }, Qt::QueuedConnection);
+    }
+}
+
+bool DataAcquisitionManager::validateAcquisitionParams() const
+{
     // 图像宽度验证
     if (m_params.width == 0 || m_params.width > 4096) {
         LOG_ERROR(QString("Invalid image width: %1").arg(m_params.width));
@@ -239,115 +462,28 @@ bool DataAcquisitionManager::validateAcquisitionParams() {
     return true;
 }
 
-// 错误处理
-void DataAcquisitionManager::handleAcquisitionError(const std::string& error) {
-    LOG_INFO("Handle acquisition error");
-    LOG_ERROR(QString::fromStdString(error));
-    updateAcquisitionState(AcquisitionState::AC_ERROR);
-    emit errorOccurred(QString::fromStdString(error));
-
-    // 停止所有采集相关活动
-    if (m_running) {
-        m_running = false;
-        if (m_acquisitionThread.joinable()) {
-            m_acquisitionThread.join();
-        }
-        if (m_processingThread.joinable()) {
-            m_processingThread.join();
-        }
-    }
-
-    // 确保USB设备停止传输
-    if (m_device) {
-        m_device->stopTransfer();
-    }
-}
-
-void DataAcquisitionManager::acquisitionThread() {
-    LOG_INFO("Data acquisition thread started");
-
-    const size_t BUFFER_SIZE = 16384;  // 16KB
-    std::vector<uint8_t> readBuffer(BUFFER_SIZE);
-
-    LOG_INFO(QString("Acquisition buffer configured - Size: %1 bytes").arg(BUFFER_SIZE));
-
-    while (m_running) {
-        auto [writeBuffer, size] = m_buffer->getWriteBuffer();
-        if (!writeBuffer) {
-            LOG_WARN("Failed to get write buffer, retrying after delay");
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            continue;
-        }
-
-        LOG_DEBUG(QString("Starting USB read - Buffer size: %1 bytes").arg(size));
-
-        LONG actualLength = BUFFER_SIZE;
-        bool readSuccess = m_device->readData(writeBuffer, actualLength);
-
-        LOG_DEBUG(QString("USB read completed - Success: %1, Requested: %2, Actual: %3")
-            .arg(readSuccess)
-            .arg(BUFFER_SIZE)
-            .arg(actualLength));
-
-        if (readSuccess && actualLength > 0) {
-            m_buffer->commitBuffer(actualLength);
-            m_totalBytes += actualLength;
-            m_dataReady.notify_one();
-
-            LOG_DEBUG(QString("Data processed - Total bytes: %1, This read: %2")
-                .arg(m_totalBytes)
-                .arg(actualLength));
-        }
-        else {
-            LOG_ERROR(QString("Failed to read data from device, read len: %1")
-                .arg(actualLength));
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-    }
-
-    LOG_WARN("Data acquisition thread exiting");
-}
-
-void DataAcquisitionManager::processingThread()
+void DataAcquisitionManager::updateAcquisitionState(AcquisitionState newState)
 {
-    LOG_INFO("Processing thread started");
+    m_acquisitionState = newState;
 
-    while (m_running) {
-        // 获取待处理的数据包
-        if (auto packet = m_buffer->getReadBuffer()) {
-            if (m_processor) {
-                try {
-                    // 处理数据
-                    m_processor->processData(*packet);
-                    emit dataReceived(*packet);
-                }
-                catch (const std::exception& e) {
-                    emit errorOccurred(QString("数据处理错误: %1").arg(e.what()));
-                }
-            }
-        }
-        else {
-            // 如果没有数据可处理，等待新数据到达
-            std::unique_lock<std::mutex> lock(m_mutex);
-            m_dataReady.wait_for(lock, std::chrono::milliseconds(100));
-        }
+    QString stateStr;
+    switch (newState) {
+    case AcquisitionState::AC_IDLE:
+        stateStr = "空闲";
+        break;
+    case AcquisitionState::AC_CONFIGURING:
+        stateStr = "配置中";
+        break;
+    case AcquisitionState::AC_RUNNING:
+        stateStr = "采集中";
+        break;
+    case AcquisitionState::AC_STOPPING:
+        stateStr = "正在停止";
+        break;
+    case AcquisitionState::AC_ERROR:
+        stateStr = "错误";
+        break;
     }
 
-    LOG_WARN("Processing thread stopped");
-}
-
-void DataAcquisitionManager::updateStats()
-{
-    static auto lastUpdate = std::chrono::steady_clock::now();
-    auto now = std::chrono::steady_clock::now();
-
-    if (std::chrono::duration_cast<std::chrono::seconds>(now - lastUpdate).count() >= 1) {
-        auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - m_startTime).count();
-        if (duration > 0) {
-            double dataRate = static_cast<double>(m_totalBytes) / duration / (1024 * 1024); // MB/s
-            LOG_INFO("Update status");
-            emit statsUpdated(m_totalBytes, dataRate);
-        }
-        lastUpdate = now;
-    }
+    emit acquisitionStateChanged(stateStr);
 }

@@ -111,8 +111,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Core\DataAcquisition.cpp" />
+    <ClCompile Include="UI\CommandManager.cpp" />
     <ClCompile Include="UI\FX3TestTool.cpp" />
     <ClCompile Include="Utils\Logger.cpp" />
+    <ClCompile Include="Utils\LogWriter.cpp" />
+    <ClCompile Include="Utils\UIUpdater.cpp" />
     <QtRcc Include="FX3TestTool.qrc" />
     <QtUic Include="FX3TestTool.ui" />
     <ClCompile Include="Core\USBDevice.cpp" />
@@ -123,10 +126,20 @@
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="UI\FX3TestTool.h" />
-    <QtMoc Include="Utils\Logger.h" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Core\DataAcquisition.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="UI\CommandManager.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="Utils\Logger.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Utils\LoggerTypes.h" />
+    <QtMoc Include="Utils\UIUpdater.h" />
+    <QtMoc Include="Utils\LogWriter.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
