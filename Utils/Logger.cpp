@@ -176,7 +176,7 @@ QString Logger::formatMessage(const QString& message,
 
     QString categoryStr = category.isEmpty() ? "" : QString("[%1]").arg(category);
 
-    return QString("[%1][%2][T:%3]%4%5 %6")
+    return QString("[%1][%2][Tid:%3]%4%5 %6")
         .arg(QDateTime::currentDateTime().toString("hh:mm:ss.zzz"))
         .arg(getLevelString(level))
         .arg(threadId)  // 使用传入的线程ID

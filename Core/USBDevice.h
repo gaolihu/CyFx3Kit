@@ -30,13 +30,33 @@ public:
     QString getDeviceInfo() const;
     bool isUSB3() const;
 
-    void setTransferSize(int size);
+    void setImageParams(uint16_t width, uint16_t height, uint8_t capType) {
+        m_width = width;
+        m_height = height;
+        m_capType = capType;
+    }
     void setQueueSize(int size);
     bool isTransferring() const { return m_isTransferring; }
 
     // 新增传输状态查询
     double getTransferRate() const;
     uint64_t getTotalTransferred() const;
+
+    // USB连接速度类型枚举
+    enum class USBSpeedType {
+        UNKNOWN,        // 未知
+        LOW_SPEED,      // 低速 (USB 1.0) - 1.5 Mbps
+        FULL_SPEED,     // 全速 (USB 1.1) - 12 Mbps
+        HIGH_SPEED,     // 高速 (USB 2.0) - 480 Mbps
+        SUPER_SPEED,    // 超速 (USB 3.0) - 5 Gbps
+        SUPER_SPEED_P   // 超速+ (USB 3.1+) - 10+ Gbps
+    };
+
+    // 获取USB速度类型
+    USBSpeedType getUsbSpeedType() const;
+
+    // 获取当前USB速度的描述文本
+    QString getUsbSpeedDescription() const;
 
 signals:
     void statusChanged(const std::string& status);

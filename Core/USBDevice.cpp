@@ -15,9 +15,33 @@ USBDevice::USBDevice(HWND hwnd)
     m_device = std::make_shared<CCyUSBDevice>(hwnd, CYUSBDRV_GUID, true);
 }
 
-USBDevice::~USBDevice()
-{
-    close();
+USBDevice::~USBDevice() {
+    LOG_INFO("USBDevice destructor START");
+
+    try {
+        // 断开所有信号连接
+        disconnect(this, nullptr, nullptr, nullptr);
+
+        // 确保停止传输
+        if (m_isTransferring) {
+            stopTransfer();
+        }
+
+        // 关闭设备连接
+        close();
+
+        // 显式清除端点引用
+        m_inEndpoint = nullptr;
+        m_outEndpoint = nullptr;
+
+        LOG_INFO("USBDevice destructor END");
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR(QString("Exception in USBDevice destructor: %1").arg(e.what()));
+    }
+    catch (...) {
+        LOG_ERROR("Unknown exception in USBDevice destructor");
+    }
 }
 
 bool USBDevice::isConnected() const
@@ -121,35 +145,40 @@ bool USBDevice::readData(PUCHAR buffer, LONG& length)
         return false;
     }
 
-    m_inEndpoint->TimeOut = 1000;
-    bool success = m_inEndpoint->XferData(buffer, length);
+    try {
+        m_inEndpoint->TimeOut = 1000;
+        bool success = m_inEndpoint->XferData(buffer, length);
 
-    if (success && length > 0) {
-        // 更新总字节数
-        uint64_t currentTotal = m_totalBytes.load();
-        m_totalBytes.store(currentTotal + length);
+        if (success && length > 0) {
+            // 统计数据更新
+            m_totalBytes.fetch_add(length);
 
-        // 更新传输速度
-        auto now = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now - m_lastSpeedUpdate).count();
+            // 速度计算优化 - 使用双缓冲减少抖动
+            auto now = std::chrono::steady_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now - m_lastSpeedUpdate).count();
 
-        if (duration >= SPEED_UPDATE_INTERVAL_MS) {
-            // 计算区间速度（MB/s）
-            uint64_t lastTotal = m_lastTotalBytes.load();
-            double intervalBytes = static_cast<double>(currentTotal + length - lastTotal);
-            //double speed = (intervalBytes / duration) * 1000.0 / (1024.0 * 1024.0);
+            if (duration >= SPEED_UPDATE_INTERVAL_MS) {
+                uint64_t previousTotal = m_lastTotalBytes.exchange(m_totalBytes.load());
+                double intervalBytes = static_cast<double>(m_totalBytes.load() - previousTotal);
+                double mbPerSec = (intervalBytes / duration) * 1000.0 / (1024.0 * 1024.0);
 
-            //m_currentSpeed.store(speed);
-            m_lastSpeedUpdate = now;
-            m_lastTotalBytes.store(currentTotal + length);
+                // 使用指数平滑滤波减少波动
+                static constexpr double alpha = 0.3; // 平滑因子
+                double currentSpeed = m_currentSpeed.load();
+                m_currentSpeed.store(alpha * mbPerSec + (1.0 - alpha) * currentSpeed);
 
-            // 发送进度更新信号
-            emit transferProgress(m_totalBytes.load(), length, 1, 0);
+                m_lastSpeedUpdate = now;
+                emit transferProgress(m_totalBytes.load(), length, 1, 0);
+            }
         }
-    }
 
-    return success;
+        return success;
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR(QString("Exception in readData: %1").arg(e.what()));
+        return false;
+    }
 }
 
 bool USBDevice::startTransfer()
@@ -160,7 +189,7 @@ bool USBDevice::startTransfer()
         return false;
     }
 
-    LOG_INFO("Start hw data transfer...");
+    LOG_INFO("Start hardware data transfer...");
 
     if (m_isTransferring) {
         LOG_WARN("Transfer already in progress");
@@ -203,28 +232,105 @@ bool USBDevice::stopTransfer()
     uint64_t finalBytes = m_totalBytes.load();
     m_isTransferring = false;
 
-    if (m_inEndpoint) {
-        m_inEndpoint->Abort();
-    }
-
-    // 发送最终的传输统计（速度设为0表示已停止）
+    // 发送终止传输的进度更新（速度设为0表示已停止）
     emit transferProgress(finalBytes, 0, 0, 0);
 
-    // 其他停止逻辑
-    auto stopCmd = CommandManager::instance().getCommand(CommandManager::CommandType::CMD_END);
-    if (!stopCmd.empty() && sendCommand(stopCmd.data(), stopCmd.size())) {
-        LOG_DEBUG("Stop command sent successfully");
-    }
+    // 创建后台线程处理所有超时操作
+    std::thread cleanupThread([this]() {
+        try {
+            // 大幅降低超时操作的超时时间
+            const int ABORT_TIMEOUT_MS = 200; // 从1000ms降至200ms
 
-    if (m_inEndpoint) {
-        m_inEndpoint->Reset();
-    }
-    if (m_outEndpoint) {
-        m_outEndpoint->Reset();
-    }
+            // 首先发送停止命令，不等待额外的超时
+            auto stopCmd = CommandManager::instance().getCommand(CommandManager::CommandType::CMD_END);
+            if (!stopCmd.empty()) {
+                try {
+                    // 设置更短的发送超时
+                    if (m_outEndpoint) {
+                        m_outEndpoint->TimeOut = 200; // 原来可能是500ms
+                    }
 
-    // 重置速度，但保留总字节数
-    m_currentSpeed.store(0.0);
+                    if (sendCommand(stopCmd.data(), stopCmd.size())) {
+                        LOG_DEBUG("Stop command sent successfully");
+                    }
+                }
+                catch (...) {
+                    LOG_WARN("Exception during stop command");
+                }
+            }
+
+            // 并行执行端点重置操作，避免串行等待
+            std::future<void> inAbortFuture;
+            std::future<void> outResetFuture;
+
+            if (m_inEndpoint) {
+                inAbortFuture = std::async(std::launch::async, [this]() {
+                    try {
+                        m_inEndpoint->TimeOut = 200; // 缩短超时时间
+                        m_inEndpoint->Abort();
+                        m_inEndpoint->Reset();
+                    }
+                    catch (...) {
+                        LOG_ERROR("Exception during endpoint abort/reset");
+                    }
+                    });
+            }
+
+            if (m_outEndpoint) {
+                outResetFuture = std::async(std::launch::async, [this]() {
+                    try {
+                        m_outEndpoint->TimeOut = 200; // 缩短超时时间
+                        m_outEndpoint->Reset();
+                    }
+                    catch (...) {
+                        LOG_ERROR("Exception during output endpoint reset");
+                    }
+                    });
+            }
+
+            // 等待所有操作完成，但设置较短的总超时
+            const int MAX_WAIT_MS = 500; // 最多等待500ms
+
+            auto startTime = std::chrono::steady_clock::now();
+            bool timeLimitReached = false;
+
+            // 等待输入端点操作完成
+            if (inAbortFuture.valid()) {
+                auto status = inAbortFuture.wait_for(std::chrono::milliseconds(MAX_WAIT_MS));
+                if (status != std::future_status::ready) {
+                    LOG_WARN("Input endpoint operations timed out");
+                    timeLimitReached = true;
+                }
+            }
+
+            // 如果还有剩余时间，等待输出端点操作完成
+            if (!timeLimitReached && outResetFuture.valid()) {
+                auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - startTime).count();
+                int remainingTime = MAX_WAIT_MS - static_cast<int>(elapsedMs);
+
+                if (remainingTime > 0) {
+                    auto status = outResetFuture.wait_for(std::chrono::milliseconds(remainingTime));
+                    if (status != std::future_status::ready) {
+                        LOG_WARN("Output endpoint operations timed out");
+                    }
+                }
+            }
+
+            LOG_INFO("Device cleanup thread completed");
+        }
+        catch (const std::exception& e) {
+            LOG_ERROR(QString("Exception in cleanup thread: %1").arg(e.what()));
+        }
+        catch (...) {
+            LOG_ERROR("Unknown exception in cleanup thread");
+        }
+        });
+
+    // 分离线程，让它在后台运行
+    cleanupThread.detach();
+
+    // 立即更新UI状态
     emit statusChanged("ready");
     return true;
 }
@@ -242,6 +348,43 @@ QString USBDevice::getDeviceInfo() const
 bool USBDevice::isUSB3() const
 {
     return m_device && m_device->bSuperSpeed;  // CCyUSBDevice 直接提供了这个属性
+}
+
+USBDevice::USBSpeedType USBDevice::getUsbSpeedType() const
+{
+    if (!m_device) {
+        return USBSpeedType::UNKNOWN;
+    }
+
+    if (m_device->bSuperSpeed) {
+        return USBSpeedType::SUPER_SPEED;
+    }
+    else if (m_device->bHighSpeed) {
+        return USBSpeedType::HIGH_SPEED;
+    }
+
+    return USBSpeedType::UNKNOWN;
+}
+
+QString USBDevice::getUsbSpeedDescription() const
+{
+    USBSpeedType speedType = getUsbSpeedType();
+
+    switch (speedType) {
+    case USBSpeedType::LOW_SPEED:
+        return QString::fromLocal8Bit("USB1.0低速(1.5Mbps)");
+    case USBSpeedType::FULL_SPEED:
+        return QString::fromLocal8Bit("USB1.1全速(12Mbps)");
+    case USBSpeedType::HIGH_SPEED:
+        return QString::fromLocal8Bit("USB2.0高速(480Mbps)");
+    case USBSpeedType::SUPER_SPEED:
+        return QString::fromLocal8Bit("USB3.0超速(5Gbps)");
+    case USBSpeedType::SUPER_SPEED_P:
+        return QString::fromLocal8Bit("USB3.1+超速+(10+Gbps)");
+    case USBSpeedType::UNKNOWN:
+    default:
+        return QString::fromLocal8Bit("未知 USB 速度");
+    }
 }
 
 bool USBDevice::initEndpoints()

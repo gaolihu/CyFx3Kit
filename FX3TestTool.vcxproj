@@ -66,7 +66,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)Core;$(ProjectDir)UI;$(ProjectDir)Utils;$(ProjectDir)cypress\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalDependencies>legacy_stdio_definitions.lib;Setupapi.lib;ws2_32.lib;winmm.lib;wldap32.lib;$(ProjectDir)cypress\lib\x64\CyAPI.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -75,7 +76,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir)Core;$(ProjectDir)UI;$(ProjectDir)Utils;$(ProjectDir)cypress\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <AdditionalDependencies>legacy_stdio_definitions.lib;Setupapi.lib;ws2_32.lib;winmm.lib;wldap32.lib;$(ProjectDir)cypress\lib\x64\CyAPI.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -111,21 +113,22 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Core\DataAcquisition.cpp" />
+    <ClCompile Include="UI\AppStateMachine.cpp" />
     <ClCompile Include="UI\CommandManager.cpp" />
-    <ClCompile Include="UI\FX3TestTool.cpp" />
+    <ClCompile Include="UI\FX3DeviceManager.cpp" />
+    <ClCompile Include="UI\FX3ToolMainWin.cpp" />
+    <ClCompile Include="UI\UIStateHandler.cpp" />
     <ClCompile Include="Utils\Logger.cpp" />
     <ClCompile Include="Utils\LogWriter.cpp" />
     <ClCompile Include="Utils\UIUpdater.cpp" />
-    <QtRcc Include="FX3TestTool.qrc" />
-    <QtUic Include="FX3TestTool.ui" />
+    <ClCompile Include="Utils\ThreadHelper.h" />
+    <QtRcc Include="FX3ToolMainWin.qrc" />
+    <QtUic Include="FX3ToolMainWin.ui" />
     <ClCompile Include="Core\USBDevice.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Core\USBDevice.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <QtMoc Include="UI\FX3TestTool.h" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Core\DataAcquisition.h" />
@@ -137,6 +140,10 @@
     <QtMoc Include="Utils\Logger.h" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="UI\UIStateHandler.h" />
+    <QtMoc Include="UI\AppStateMachine.h" />
+    <QtMoc Include="UI\FX3DeviceManager.h" />
+    <QtMoc Include="UI\FX3ToolMainWin.h" />
     <ClInclude Include="Utils\LoggerTypes.h" />
     <QtMoc Include="Utils\UIUpdater.h" />
     <QtMoc Include="Utils\LogWriter.h" />

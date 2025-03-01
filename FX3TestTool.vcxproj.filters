@@ -24,19 +24,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <QtRcc Include="FX3TestTool.qrc">
+    <QtRcc Include="FX3ToolMainWin.qrc">
       <Filter>Resource Files</Filter>
     </QtRcc>
-    <QtUic Include="FX3TestTool.ui">
+    <QtUic Include="FX3ToolMainWin.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\FX3TestTool.cpp">
-      <Filter>Source Files\UI</Filter>
     </ClCompile>
     <ClCompile Include="Core\USBDevice.cpp">
       <Filter>Source Files\Core</Filter>
@@ -56,11 +53,23 @@
     <ClCompile Include="Utils\UIUpdater.cpp">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
+    <ClCompile Include="Utils\ThreadHelper.h">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\UIStateHandler.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\AppStateMachine.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FX3DeviceManager.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FX3ToolMainWin.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="UI\FX3TestTool.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
     <QtMoc Include="Core\USBDevice.h">
       <Filter>Source Files\Core</Filter>
     </QtMoc>
@@ -78,6 +87,18 @@
     </QtMoc>
     <QtMoc Include="Utils\UIUpdater.h">
       <Filter>Source Files\Utils</Filter>
+    </QtMoc>
+    <QtMoc Include="UI\UIStateHandler.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="UI\AppStateMachine.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="UI\FX3DeviceManager.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="UI\FX3ToolMainWin.h">
+      <Filter>Source Files\UI</Filter>
     </QtMoc>
   </ItemGroup>
   <ItemGroup>

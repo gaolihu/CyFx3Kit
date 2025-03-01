@@ -28,12 +28,20 @@ public:
 };
 
 // 数据采集管理器
-class DataAcquisitionManager : public QObject {
+class DataAcquisitionManager : public QObject,
+    public std::enable_shared_from_this<DataAcquisitionManager> {
     Q_OBJECT
 
 public:
-    explicit DataAcquisitionManager(std::shared_ptr<USBDevice> device);
+    // 静态工厂方法，用于创建DataAcquisitionManager实例
+    static std::shared_ptr<DataAcquisitionManager> create(std::shared_ptr<USBDevice> device);
+
+    // 析构函数
     ~DataAcquisitionManager();
+
+    // 禁用拷贝操作
+    DataAcquisitionManager(const DataAcquisitionManager&) = delete;
+    DataAcquisitionManager& operator=(const DataAcquisitionManager&) = delete;
 
     // 配置和控制接口
     void setDataProcessor(std::shared_ptr<IDataProcessor> processor) {
@@ -41,9 +49,24 @@ public:
     }
     bool startAcquisition(uint16_t width, uint16_t height, uint8_t capType);
     void stopAcquisition();
+    void prepareForShutdown() {
+        m_isShuttingDown = true;
+        stopAcquisition(); // 立即停止所有活动
+        // 断开所有信号连接以防止新的异步调用
+        disconnect(this, nullptr, nullptr, nullptr);
+    }
+
+    uint64_t getElapsedTimeSeconds() const {
+        if (!m_running) return 0;
+
+        auto now = std::chrono::steady_clock::now();
+        return std::chrono::duration_cast<std::chrono::seconds>(
+            now - m_startTime).count();
+    }
 
     // 状态查询
     bool isRunning() const { return m_running; }
+    bool isShuttingDown() const { return m_isShuttingDown; }
     bool isErrorState() const { return m_errorOccurred; }
     uint64_t getTotalBytes() const { return m_totalBytes; }
     double getDataRate() const { return m_dataRate; }
@@ -53,10 +76,22 @@ signals:
     void acquisitionStopped();
     void dataReceived(const DataPacket& packet);
     void errorOccurred(const QString& error);
-    void statsUpdated(uint64_t receivedBytes, double dataRate);
+    void statsUpdated(uint64_t receivedBytes, double dataRate, uint64_t elapsedTimeSeconds);
     void acquisitionStateChanged(const QString& state);
 
 private:
+    // 私有构造函数 - 强制使用create静态方法创建实例
+    explicit DataAcquisitionManager(std::shared_ptr<USBDevice> device);
+
+    std::atomic<bool> m_isShuttingDown{ false };
+
+    template<typename Func>
+    void safeEmit(Func emitFunc) {
+        if (!m_isShuttingDown) {
+            emitFunc();
+        }
+    }
+
     // 内部类 - 循环缓冲区管理器
     class CircularBuffer {
     public:
@@ -112,11 +147,9 @@ private:
     void updateStats();
     bool validateAcquisitionParams() const;
     void updateAcquisitionState(AcquisitionState newState);
-    void handleAcquisitionError(const QString& error);
-    void cleanupResources();
 
     // 设备和处理器
-    std::shared_ptr<USBDevice> m_device;
+    std::weak_ptr<USBDevice> m_deviceWeak;
     std::shared_ptr<IDataProcessor> m_processor;
     std::unique_ptr<CircularBuffer> m_buffer;
 
