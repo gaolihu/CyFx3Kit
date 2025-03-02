@@ -1,6 +1,8 @@
 #include "DataAnalysis.h"
 #include "Logger.h"
 
+#include <QLabel>
+
 // Qt图表库的条件编译
 #if defined(QT_CHARTS_LIB) || defined(QT_CHARTS_SUPPORT)
 #include <QtCharts/QChartView>
@@ -10,10 +12,6 @@
 #include <QtCharts/QBarSet>
 #include <QtCharts/QBarSeries>
 #include <QtCharts/QBarCategoryAxis>
-
-using namespace QtCharts;
-#else
-#include <QLabel>
 #endif
 
 DataAnalysis::DataAnalysis(QWidget* parent)

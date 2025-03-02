@@ -24,7 +24,6 @@
 #include <QtCharts/QLineSeries>
 #include <QtCharts/QValueAxis>
 #include <QtCharts/QScatterSeries>
-using namespace QtCharts;
 #endif
 
 /**
