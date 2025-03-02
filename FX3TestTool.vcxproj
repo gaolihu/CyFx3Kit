@@ -113,6 +113,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Core\DataAcquisition.cpp" />
+    <ClCompile Include="Main\main.cpp" />
     <ClCompile Include="UI\AppStateMachine.cpp" />
     <ClCompile Include="UI\CommandManager.cpp" />
     <ClCompile Include="UI\FX3DeviceManager.cpp" />
@@ -122,10 +123,7 @@
     <ClCompile Include="Utils\LogWriter.cpp" />
     <ClCompile Include="Utils\UIUpdater.cpp" />
     <ClCompile Include="Utils\ThreadHelper.h" />
-    <QtRcc Include="FX3ToolMainWin.qrc" />
-    <QtUic Include="FX3ToolMainWin.ui" />
     <ClCompile Include="Core\USBDevice.cpp" />
-    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Core\USBDevice.h" />
@@ -147,6 +145,17 @@
     <ClInclude Include="Utils\LoggerTypes.h" />
     <QtMoc Include="Utils\UIUpdater.h" />
     <QtMoc Include="Utils\LogWriter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="resource\channelselect.ui" />
+    <QtUic Include="resource\dataanalysis.ui" />
+    <QtUic Include="resource\FX3ToolMainWin.ui" />
+    <QtUic Include="resource\save_data.ui" />
+    <QtUic Include="resource\updatadevice.ui" />
+    <QtUic Include="resource\videodisplay.ui" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="resource\FX3ToolMainWin.qrc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
