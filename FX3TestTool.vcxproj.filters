@@ -21,175 +21,192 @@
     <Filter Include="Source Files\File">
       <UniqueIdentifier>{fe72304b-4237-44de-bd9c-3d4cd16fe68f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\MVC">
+      <UniqueIdentifier>{a1f14853-bd5a-48bc-a7d8-8cfcdd9353f8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MVC\Controllers">
+      <UniqueIdentifier>{2772c239-f211-49af-aad0-c456800aeeab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MVC\Models">
+      <UniqueIdentifier>{3a3e70e4-a943-4804-b595-2f3c4d7afed8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\MVC\Views">
+      <UniqueIdentifier>{31b8319c-8244-4547-9e36-588072b32d76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Main">
+      <UniqueIdentifier>{a5d4a9ba-5269-4432-ae70-857e7ecba14d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Utils\Logger.cpp">
+    <ClCompile Include="Source\Core\AppStateMachine.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\CommandManager.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\DataAcquisition.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\FX3DeviceManager.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\UIStateHandler.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\USBDevice.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\File\AsyncFileWriter.cpp">
+      <Filter>Source Files\File</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\File\FileCacheManager.cpp">
+      <Filter>Source Files\File</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\File\FileSaveController.cpp">
+      <Filter>Source Files\File</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\File\FileSaveManager.cpp">
+      <Filter>Source Files\File</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\File\StandardFileWriter.cpp">
+      <Filter>Source Files\File</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Main\main.cpp">
+      <Filter>Source Files\Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\ChannelSelect.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\DataAnalysis.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\FileSavePanel.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\FX3DeviceController.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\FX3MenuController.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\FX3ModuleManager.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\FX3ToolMainWin.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\FX3UILayoutManager.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\SaveFileBox.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\UpdataDevice.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\VideoDisplay.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\UI\WaveformAnalysis.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Utils\Logger.cpp">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="Utils\LogWriter.cpp">
+    <ClCompile Include="Source\Utils\LogWriter.cpp">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="Utils\UIUpdater.cpp">
+    <ClCompile Include="Source\Utils\UIUpdater.cpp">
       <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="Utils\ThreadHelper.h">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
-    <ClCompile Include="Main\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="File\FileCacheManager.cpp">
-      <Filter>Source Files\File</Filter>
-    </ClCompile>
-    <ClCompile Include="File\FileSaveManager.cpp">
-      <Filter>Source Files\File</Filter>
-    </ClCompile>
-    <ClCompile Include="File\StandardFileWriter.cpp">
-      <Filter>Source Files\File</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\AppStateMachine.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\CommandManager.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\DataAcquisition.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\FX3DeviceManager.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\UIStateHandler.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="Core\USBDevice.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
-    <ClCompile Include="File\AsyncFileWriter.cpp">
-      <Filter>Source Files\File</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\ChannelSelect.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\DataAnalysis.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\FileSavePanel.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\FX3ToolMainWin.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\SaveFileBox.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\UpdataDevice.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\VideoDisplay.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\WaveformAnalysis.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\FX3DeviceController.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\FX3MenuController.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\FX3UILayoutManager.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="UI\FX3ModuleManager.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="File\FileSaveController.cpp">
-      <Filter>Source Files\File</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="Utils\Logger.h">
-      <Filter>Source Files\Utils</Filter>
+    <QtMoc Include="Source\Core\AppStateMachine.h">
+      <Filter>Source Files\Core</Filter>
     </QtMoc>
-    <QtMoc Include="Utils\LogWriter.h">
-      <Filter>Source Files\Utils</Filter>
+    <QtMoc Include="Source\Core\CommandManager.h">
+      <Filter>Source Files\Core</Filter>
     </QtMoc>
-    <QtMoc Include="Utils\UIUpdater.h">
-      <Filter>Source Files\Utils</Filter>
+    <QtMoc Include="Source\Core\DataAcquisition.h">
+      <Filter>Source Files\Core</Filter>
     </QtMoc>
-    <QtMoc Include="File\FileSaveManager.h">
+    <QtMoc Include="Source\Core\FX3DeviceManager.h">
+      <Filter>Source Files\Core</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\Core\UIStateHandler.h">
+      <Filter>Source Files\Core</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\Core\USBDevice.h">
+      <Filter>Source Files\Core</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\File\FileSaveController.h">
       <Filter>Source Files\File</Filter>
     </QtMoc>
-    <QtMoc Include="Core\AppStateMachine.h">
-      <Filter>Source Files\Core</Filter>
-    </QtMoc>
-    <QtMoc Include="Core\CommandManager.h">
-      <Filter>Source Files\Core</Filter>
-    </QtMoc>
-    <QtMoc Include="Core\DataAcquisition.h">
-      <Filter>Source Files\Core</Filter>
-    </QtMoc>
-    <QtMoc Include="Core\FX3DeviceManager.h">
-      <Filter>Source Files\Core</Filter>
-    </QtMoc>
-    <QtMoc Include="Core\UIStateHandler.h">
-      <Filter>Source Files\Core</Filter>
-    </QtMoc>
-    <QtMoc Include="Core\USBDevice.h">
-      <Filter>Source Files\Core</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\DataAnalysis.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\FileSavePanel.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\FX3ToolMainWin.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\SaveFileBox.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\UpdataDevice.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\VideoDisplay.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\ChannelSelect.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\WaveformAnalysis.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\FX3DeviceController.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\FX3MenuController.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\FX3UILayoutManager.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="UI\FX3ModuleManager.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="File\FileSaveController.h">
+    <QtMoc Include="Source\File\FileSaveManager.h">
       <Filter>Source Files\File</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\ChannelSelect.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\DataAnalysis.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\FileSavePanel.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\FX3DeviceController.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\FX3MenuController.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\FX3ModuleManager.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\FX3ToolMainWin.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\FX3UILayoutManager.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\SaveFileBox.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\UpdataDevice.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\VideoDisplay.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\UI\WaveformAnalysis.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\Utils\Logger.h">
+      <Filter>Source Files\Utils</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\Utils\LogWriter.h">
+      <Filter>Source Files\Utils</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\Utils\UIUpdater.h">
+      <Filter>Source Files\Utils</Filter>
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Utils\LoggerTypes.h">
-      <Filter>Source Files\Utils</Filter>
+    <ClInclude Include="resource\resource.h">
+      <Filter>Resource Files</Filter>
     </ClInclude>
-    <ClInclude Include="File\DataConverters.h">
+    <ClInclude Include="Source\File\DataConverters.h">
       <Filter>Source Files\File</Filter>
     </ClInclude>
-    <ClInclude Include="Utils\QtCompat.h">
+    <ClInclude Include="Source\Utils\LoggerTypes.h">
       <Filter>Source Files\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h" />
+    <ClInclude Include="Source\Utils\QtCompat.h">
+      <Filter>Source Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Utils\ThreadHelper.h">
+      <Filter>Source Files\Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="resource\Resource.qrc">
