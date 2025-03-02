@@ -92,6 +92,21 @@
     <ClCompile Include="UI\WaveformAnalysis.cpp">
       <Filter>Source Files\UI</Filter>
     </ClCompile>
+    <ClCompile Include="UI\FX3DeviceController.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FX3MenuController.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FX3UILayoutManager.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\FX3ModuleManager.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="File\FileSaveController.cpp">
+      <Filter>Source Files\File</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Utils\Logger.h">
@@ -148,6 +163,21 @@
     <QtMoc Include="UI\WaveformAnalysis.h">
       <Filter>Source Files\UI</Filter>
     </QtMoc>
+    <QtMoc Include="UI\FX3DeviceController.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="UI\FX3MenuController.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="UI\FX3UILayoutManager.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="UI\FX3ModuleManager.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="File\FileSaveController.h">
+      <Filter>Source Files\File</Filter>
+    </QtMoc>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Utils\LoggerTypes.h">
@@ -159,9 +189,10 @@
     <ClInclude Include="Utils\QtCompat.h">
       <Filter>Source Files\Utils</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <QtRcc Include="resource\FX3ToolMainWin.qrc">
+    <QtRcc Include="resource\Resource.qrc">
       <Filter>Resource Files</Filter>
     </QtRcc>
   </ItemGroup>
@@ -184,5 +215,10 @@
     <QtUic Include="resource\VideoDisplay.ui">
       <Filter>Resource Files</Filter>
     </QtUic>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="FX3TestTool.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

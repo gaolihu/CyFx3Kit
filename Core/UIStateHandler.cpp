@@ -5,191 +5,153 @@
 UIStateHandler::UIStateHandler(Ui::FX3ToolMainWinClass& ui, QObject* parent)
     : QObject(parent)
     , m_ui(ui)
-    , m_isClosing(false)
-    , m_lastTransferred(0)
-    , m_lastSpeed(0.0)
+    , m_validUI(true)  // 默认假设UI有效
 {
-    // 主动获取当前状态并更新UI
-    AppState currentState = AppStateMachine::instance().currentState();
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("UIStateHandler构造 - 初始化UI状态: %1")
-        .arg(AppStateMachine::stateToString(currentState)));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态处理器已创建"));
 
-    // 确保UI初始状态正确
-    updateButtonStates(currentState);
-    updateStatusTexts(currentState);
+    // 检查关键UI元素是否存在
+    if (!m_ui.usbStatusLabel || !m_ui.transferStatusLabel ||
+        !m_ui.startButton || !m_ui.stopButton || !m_ui.resetButton) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("部分UI元素不可用，UI状态处理器将使用有限功能"));
+        m_validUI = false;
+    }
 }
 
-void UIStateHandler::onStateChanged(AppState newState, AppState oldState, const QString& reason) {
-    // 检查是否可以更新UI
-    if (!canUpdateUI()) {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("UI处理器准备关闭或应用正在退出，忽略状态更新"));
-        return;
-    }
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态处理器收到状态变化: %1 -> %2, 原因: %3")
+void UIStateHandler::onStateChanged(AppState newState, AppState oldState, const QString& reason)
+{
+    // 记录状态变化
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态处理器：状态变更 %1 -> %2, 原因: %3")
         .arg(AppStateMachine::stateToString(oldState))
         .arg(AppStateMachine::stateToString(newState))
         .arg(reason));
 
-    // 使用invokeMethod确保在主线程中更新UI
-    QMetaObject::invokeMethod(this, [this, newState, oldState, reason]() {
-        if (!canUpdateUI()) return;
-
-        // 更新按钮状态
-        updateButtonStates(newState);
-
-        // 更新状态文本
-        updateStatusTexts(newState, reason);
-        }, Qt::QueuedConnection);
+    // 根据新状态更新UI
+    updateButtonStates(newState);
+    updateStatusLabels(newState);
 }
 
-void UIStateHandler::updateButtonStates(AppState state) {
-    // 检查是否可以更新UI
-    if (!canUpdateUI()) return;
+void UIStateHandler::updateButtonStates(AppState state)
+{
+    bool enableStartButton = false;
+    bool enableStopButton = false;
+    bool enableResetButton = false;
 
-    // 根据状态确定按钮启用/禁用
-    bool startEnabled = false;
-    bool stopEnabled = false;
-    bool resetEnabled = false;
-    bool cmdDirEnabled = false;
-    bool imageParamsEnabled = false;
-
-    // 根据状态设置按钮状态
+    // 设置各种状态下的按钮启用/禁用
     switch (state) {
     case AppState::INITIALIZING:
-    case AppState::STARTING:
-    case AppState::STOPPING:
-    case AppState::SHUTDOWN:
-        // 所有按钮禁用
+        // 初始化中所有按钮禁用
         break;
 
     case AppState::DEVICE_ABSENT:
-        // 只有命令目录按钮可用
-        cmdDirEnabled = true;
+        // 设备未连接时所有操作按钮禁用
         break;
 
     case AppState::DEVICE_ERROR:
-        // 可以重置设备和选择命令目录
-        resetEnabled = true;
-        cmdDirEnabled = true;
-        break;
-
-    case AppState::COMMANDS_MISSING:
-        // 可以重置设备和选择命令目录
-        resetEnabled = true;
-        cmdDirEnabled = true;
-        break;
-
-    case AppState::CONFIGURED:
-        // 可以开始传输、重置设备和选择命令目录
-        startEnabled = true;
-        resetEnabled = true;
-        cmdDirEnabled = true;
-        imageParamsEnabled = true;
-        break;
-
-    case AppState::TRANSFERRING:
-        // 只能停止传输
-        stopEnabled = true;
+        // 设备错误时只能重置
+        enableResetButton = true;
         break;
 
     case AppState::IDLE:
-        // 可以重置设备和选择命令目录
-        resetEnabled = true;
-        cmdDirEnabled = true;
-        imageParamsEnabled = true;
+        // 空闲状态，可以开始和重置
+        enableStartButton = true;
+        enableResetButton = true;
         break;
 
-    default:
-        LOG_WARN(LocalQTCompat::fromLocal8Bit("updateButtonStates - 未处理的状态: %1")
-            .arg(AppStateMachine::stateToString(state)));
+    case AppState::COMMANDS_MISSING:
+        // 命令文件未加载，可以重置
+        enableResetButton = true;
+        break;
+
+    case AppState::CONFIGURED:
+        // 已配置，可以开始和重置
+        enableStartButton = true;
+        enableResetButton = true;
+        break;
+
+    case AppState::STARTING:
+        // 启动中，只能重置
+        enableResetButton = true;
+        break;
+
+    case AppState::TRANSFERRING:
+        // 传输中，可以停止和重置
+        enableStopButton = true;
+        enableResetButton = true;
+        break;
+
+    case AppState::STOPPING:
+        // 停止中，不能进行任何操作
+        break;
+
+    case AppState::SHUTDOWN:
+        // 关闭中，禁用所有操作
         break;
     }
 
-    // 线程安全地更新UI
-    QMetaObject::invokeMethod(QApplication::instance(), [=, this]() {
-        if (!canUpdateUI()) return;
-
-        // 直接更新按钮状态
-        if (m_ui.startButton) m_ui.startButton->setEnabled(startEnabled);
-        if (m_ui.stopButton) m_ui.stopButton->setEnabled(stopEnabled);
-        if (m_ui.resetButton) m_ui.resetButton->setEnabled(resetEnabled);
-        if (m_ui.cmdDirButton) m_ui.cmdDirButton->setEnabled(cmdDirEnabled);
-
-        // 更新图像参数控件状态
-        if (m_ui.imageWIdth) m_ui.imageWIdth->setReadOnly(!imageParamsEnabled);
-        if (m_ui.imageHeight) m_ui.imageHeight->setReadOnly(!imageParamsEnabled);
-        if (m_ui.imageType) m_ui.imageType->setEnabled(imageParamsEnabled);
-
-        LOG_DEBUG(LocalQTCompat::fromLocal8Bit("按钮状态已更新 - 开始: %1, 停止: %2, 重置: %3, 命令目录: %4")
-            .arg(startEnabled ? LocalQTCompat::fromLocal8Bit("启用") : LocalQTCompat::fromLocal8Bit("禁用"))
-            .arg(stopEnabled ? LocalQTCompat::fromLocal8Bit("启用") : LocalQTCompat::fromLocal8Bit("禁用"))
-            .arg(resetEnabled ? LocalQTCompat::fromLocal8Bit("启用") : LocalQTCompat::fromLocal8Bit("禁用"))
-            .arg(cmdDirEnabled ? LocalQTCompat::fromLocal8Bit("启用") : LocalQTCompat::fromLocal8Bit("禁用")));
-        }, Qt::QueuedConnection);
+    // 更新按钮状态
+    updateButtons(enableStartButton, enableStopButton, enableResetButton);
 }
 
-void UIStateHandler::updateStatusTexts(AppState state, const QString& additionalInfo) {
+void UIStateHandler::updateStatusLabels(AppState state)
+{
     QString statusText;
     QString transferStatusText;
 
-    if (!canUpdateUI()) return;
-
-    // 根据状态设置状态文本
+    // 设置各种状态下的文本
     switch (state) {
     case AppState::INITIALIZING:
         statusText = LocalQTCompat::fromLocal8Bit("初始化中");
-        transferStatusText = LocalQTCompat::fromLocal8Bit("初始化中");
+        transferStatusText = LocalQTCompat::fromLocal8Bit("未开始");
         break;
 
     case AppState::DEVICE_ABSENT:
-        statusText = LocalQTCompat::fromLocal8Bit("未连接设备");
+        statusText = LocalQTCompat::fromLocal8Bit("设备未连接");
         transferStatusText = LocalQTCompat::fromLocal8Bit("未连接");
-        // 清空USB速度信息
-        m_ui.usbSpeedLabel->setText(LocalQTCompat::fromLocal8Bit("设备: 未连接"));
-        m_ui.usbSpeedLabel->setStyleSheet("");
         break;
 
     case AppState::DEVICE_ERROR:
         statusText = LocalQTCompat::fromLocal8Bit("设备错误");
         transferStatusText = LocalQTCompat::fromLocal8Bit("错误");
-        m_ui.usbSpeedLabel->setStyleSheet("color: red;");
+        break;
+
+    case AppState::IDLE:
+        statusText = LocalQTCompat::fromLocal8Bit("设备已连接");
+        transferStatusText = LocalQTCompat::fromLocal8Bit("空闲");
         break;
 
     case AppState::COMMANDS_MISSING:
         statusText = LocalQTCompat::fromLocal8Bit("命令文件未加载");
         transferStatusText = LocalQTCompat::fromLocal8Bit("空闲");
-        // 更新命令状态标签
-        m_ui.cmdStatusLabel->setText(LocalQTCompat::fromLocal8Bit("命令文件未加载"));
-        m_ui.cmdStatusLabel->setStyleSheet("color: red;");
+        // 防御性检查：确保cmdStatusLabel存在再访问
+        if (validUI() && m_ui.cmdStatusLabel) {
+            //m_ui.cmdStatusLabel->setText(LocalQTCompat::fromLocal8Bit("命令文件未加载"));
+            //m_ui.cmdStatusLabel->setStyleSheet("color: red;");
+        }
         break;
 
     case AppState::CONFIGURED:
-        statusText = LocalQTCompat::fromLocal8Bit("就绪");
-        transferStatusText = LocalQTCompat::fromLocal8Bit("已配置");
-        // 更新命令状态标签
-        m_ui.cmdStatusLabel->setText(LocalQTCompat::fromLocal8Bit("命令文件加载成功"));
-        m_ui.cmdStatusLabel->setStyleSheet("color: green;");
+        statusText = LocalQTCompat::fromLocal8Bit("设备已配置");
+        transferStatusText = LocalQTCompat::fromLocal8Bit("就绪");
+        // 防御性检查：确保cmdStatusLabel存在再访问
+        if (validUI() && m_ui.cmdStatusLabel) {
+            m_ui.cmdStatusLabel->setText(LocalQTCompat::fromLocal8Bit("命令文件已加载"));
+            m_ui.cmdStatusLabel->setStyleSheet("color: green;");
+        }
         break;
 
     case AppState::STARTING:
-        statusText = LocalQTCompat::fromLocal8Bit("启动中");
+        statusText = LocalQTCompat::fromLocal8Bit("设备已连接");
         transferStatusText = LocalQTCompat::fromLocal8Bit("启动中");
         break;
 
     case AppState::TRANSFERRING:
-        statusText = LocalQTCompat::fromLocal8Bit("传输中");
+        statusText = LocalQTCompat::fromLocal8Bit("设备已连接");
         transferStatusText = LocalQTCompat::fromLocal8Bit("传输中");
         break;
 
     case AppState::STOPPING:
-        statusText = LocalQTCompat::fromLocal8Bit("停止中");
+        statusText = LocalQTCompat::fromLocal8Bit("设备已连接");
         transferStatusText = LocalQTCompat::fromLocal8Bit("停止中");
-        break;
-
-    case AppState::IDLE:
-        statusText = LocalQTCompat::fromLocal8Bit("就绪");
-        transferStatusText = LocalQTCompat::fromLocal8Bit("空闲");
         break;
 
     case AppState::SHUTDOWN:
@@ -203,104 +165,120 @@ void UIStateHandler::updateStatusTexts(AppState state, const QString& additional
         break;
     }
 
-    // 更新状态标签
-    m_ui.usbStatusLabel->setText(LocalQTCompat::fromLocal8Bit("USB状态: %1").arg(statusText));
-    m_ui.transferStatusLabel->setText(LocalQTCompat::fromLocal8Bit("传输状态: %1").arg(transferStatusText));
+    updateStatusLabels(statusText, transferStatusText);
 }
 
-void UIStateHandler::updateTransferStats(uint64_t transferred, double speed, uint64_t elapsedTimeSeconds) {
-    if (transferred > 0) {
-        // 只在有有效数据时更新最后的传输值
-        m_lastTransferred = transferred;
+void UIStateHandler::updateTransferStats(double transferSpeed, uint64_t totalBytes, uint32_t totalTime)
+{
+    if (!validUI()) return;
+
+    // 更新速度标签
+    if (m_ui.speedLabel) {
+        m_ui.speedLabel->setText(LocalQTCompat::fromLocal8Bit("%1 MB/s").arg(transferSpeed, 0, 'f', 2));
     }
 
-    if (speed > 0) {
-        // 只在有有效速度时更新最后的速度值
-        m_lastSpeed = speed;
-    }
-    else if (transferred > 0) {
-        // 如果有数据但速度为0，使用上次的有效速度
-        speed = m_lastSpeed;
-    }
-
-    if (!canUpdateUI()) return;
-
-    // 更新速度显示
-    QString speedText = LocalQTCompat::fromLocal8Bit("速度: 0 MB/s");
-    if (speed > 0) {
-        if (speed >= 1024) {
-            speedText = LocalQTCompat::fromLocal8Bit("速度: %1 GB/s")
-                .arg(speed / 1024.0, 0, 'f', 2);
+    // 更新总字节标签
+    if (m_ui.totalBytesLabel) {
+        QString bytesText;
+        if (totalBytes < 1024 * 1024) {
+            bytesText = LocalQTCompat::fromLocal8Bit("%1 KB").arg(totalBytes / 1024.0, 0, 'f', 2);
+        }
+        else if (totalBytes < 1024 * 1024 * 1024) {
+            bytesText = LocalQTCompat::fromLocal8Bit("%1 MB").arg(totalBytes / (1024.0 * 1024.0), 0, 'f', 2);
         }
         else {
-            speedText = LocalQTCompat::fromLocal8Bit("速度: %1 MB/s")
-                .arg(speed, 0, 'f', 2);
+            bytesText = LocalQTCompat::fromLocal8Bit("%1 GB").arg(totalBytes / (1024.0 * 1024.0 * 1024.0), 0, 'f', 2);
+        }
+        m_ui.totalBytesLabel->setText(bytesText);
+    }
+
+    // 更新总时间标签
+    if (m_ui.totalTimeLabel) {
+        int hours = totalTime / 3600;
+        int minutes = (totalTime % 3600) / 60;
+        int seconds = totalTime % 60;
+
+        QString timeText;
+        if (hours > 0) {
+            timeText = LocalQTCompat::fromLocal8Bit("%1:%2:%3").arg(hours).arg(minutes, 2, 10, QChar('0')).arg(seconds, 2, 10, QChar('0'));
+        }
+        else {
+            timeText = LocalQTCompat::fromLocal8Bit("%1:%2").arg(minutes).arg(seconds, 2, 10, QChar('0'));
+        }
+        m_ui.totalTimeLabel->setText(timeText);
+    }
+}
+
+void UIStateHandler::updateUsbSpeedDisplay(const QString& speedDesc, bool isUSB3)
+{
+    if (!validUI()) return;
+
+    if (m_ui.usbSpeedLabel) {
+        m_ui.usbSpeedLabel->setText(speedDesc);
+
+        // 可选：根据是否是USB3.0设置不同的样式
+        if (isUSB3) {
+            m_ui.usbSpeedLabel->setStyleSheet("color: blue;");
+        }
+        else {
+            m_ui.usbSpeedLabel->setStyleSheet("");
         }
     }
-    m_ui.speedLabel->setText(speedText);
-
-    // 更新总传输量显示，使用最后的有效传输量
-    uint64_t displayTransferred = (transferred > 0) ? transferred : m_lastTransferred;
-    m_ui.totalBytesLabel->setText(LocalQTCompat::fromLocal8Bit("总计: %1").arg(formatDataSize(displayTransferred)));
-
-    // 更新时间显示
-    QString timeText;
-    if (elapsedTimeSeconds > 0) {
-        m_lastElapsedTime = elapsedTimeSeconds; // 保存最后的有效时间
-        timeText = LocalQTCompat::fromLocal8Bit("采集时长: %1").arg(formatElapsedTime(elapsedTimeSeconds));
-    }
-    else if (m_lastElapsedTime > 0) {
-        // 使用上次的有效时间
-        timeText = LocalQTCompat::fromLocal8Bit("采集时长: %1").arg(formatElapsedTime(m_lastElapsedTime));
-    }
-    else {
-        timeText = LocalQTCompat::fromLocal8Bit("采集时长: 00:00:00");
-    }
-    m_ui.totalTimeLabel->setText(timeText);
-
-    LOG_DEBUG(speedText);
 }
 
-void UIStateHandler::updateUsbSpeedDisplay(const QString& speedDesc, bool isUSB3) {
-    m_ui.usbSpeedLabel->setText(LocalQTCompat::fromLocal8Bit("设备: %1").arg(speedDesc));
+void UIStateHandler::showErrorMessage(const QString& errorMsg, const QString& details)
+{
+    LOG_ERROR(LocalQTCompat::fromLocal8Bit("UI错误: %1 - %2").arg(errorMsg).arg(details));
 
-    if (!canUpdateUI()) return;
-
-    // 根据USB速度设置不同样式
-    if (isUSB3) {
-        m_ui.usbSpeedLabel->setStyleSheet("color: blue;");
-    }
-    else if (!speedDesc.contains(LocalQTCompat::fromLocal8Bit("未连接"))) {
-        m_ui.usbSpeedLabel->setStyleSheet("color: green;");
-    }
-    else {
-        m_ui.usbSpeedLabel->setStyleSheet("");
+    // 处理错误显示
+    QString fullMessage = errorMsg;
+    if (!details.isEmpty()) {
+        fullMessage += "\n\n" + details;
     }
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("接收信号，USB速度更新: %1").arg(speedDesc));
+    // 在UI线程中显示消息框
+    QMetaObject::invokeMethod(QApplication::activeWindow(), [fullMessage]() {
+        QMessageBox::critical(QApplication::activeWindow(),
+            LocalQTCompat::fromLocal8Bit("错误"),
+            fullMessage);
+        }, Qt::QueuedConnection);
 }
 
-void UIStateHandler::showErrorMessage(const QString& title, const QString& message) {
-    LOG_ERROR(LocalQTCompat::fromLocal8Bit("错误对话框: %1 - %2").arg(title).arg(message));
-    if (!canUpdateUI()) return;
-
-    QMessageBox::critical(nullptr, title, message);
+void UIStateHandler::prepareForClose()
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态处理器准备关闭"));
+    m_validUI = false;  // 标记UI为无效，防止后续访问
 }
 
-QString UIStateHandler::formatDataSize(uint64_t bytes) {
-    if (bytes >= 1024ULL * 1024ULL * 1024ULL) {
-        double gb = bytes / (1024.0 * 1024.0 * 1024.0);
-        return QString("%1 GB").arg(gb, 0, 'f', 2);
-    }
-    else if (bytes >= 1024ULL * 1024ULL) {
-        double mb = bytes / (1024.0 * 1024.0);
-        return QString("%1 MB").arg(mb, 0, 'f', 2);
-    }
-    else if (bytes >= 1024ULL) {
-        double kb = bytes / 1024.0;
-        return QString("%1 KB").arg(kb, 0, 'f', 2);
-    }
-    else {
-        return QString("%1 B").arg(bytes);
-    }
+bool UIStateHandler::validUI() const
+{
+    // 检查指向UI的指针是否有效
+    return m_validUI;
+}
+
+void UIStateHandler::updateButtons(bool enableStart, bool enableStop, bool enableReset)
+{
+    if (!validUI()) return;
+
+    // 防御性检查所有使用的UI元素
+    if (m_ui.startButton)
+        m_ui.startButton->setEnabled(enableStart);
+
+    if (m_ui.stopButton)
+        m_ui.stopButton->setEnabled(enableStop);
+
+    if (m_ui.resetButton)
+        m_ui.resetButton->setEnabled(enableReset);
+}
+
+void UIStateHandler::updateStatusLabels(const QString& statusText, const QString& transferStatusText)
+{
+    if (!validUI()) return;
+
+    // 防御性检查所有使用的UI元素
+    if (m_ui.usbStatusLabel)
+        m_ui.usbStatusLabel->setText(statusText);
+
+    if (m_ui.transferStatusLabel)
+        m_ui.transferStatusLabel->setText(transferStatusText);
 }

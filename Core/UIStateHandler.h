@@ -1,85 +1,98 @@
 #pragma once
 
 #include <QObject>
-#include "AppStateMachine.h"
+#include <QString>
 #include "ui_FX3ToolMainWin.h"
-#include "Logger.h"
+#include "AppStateMachine.h"
 
-// UI状态处理类 - 负责根据应用状态更新UI
-class UIStateHandler : public QObject {
+/**
+ * @brief UI状态处理器类，负责管理UI状态
+ *
+ * 此类根据应用程序状态更新UI元素，处理状态转换和显示反馈。
+ */
+class UIStateHandler : public QObject
+{
     Q_OBJECT
 
 public:
+    /**
+     * @brief 构造函数
+     * @param ui UI对象引用
+     * @param parent 父对象
+     */
     explicit UIStateHandler(Ui::FX3ToolMainWinClass& ui, QObject* parent = nullptr);
-    ~UIStateHandler() = default;
 
-    // 准备关闭，停止所有UI更新
-    void prepareForClose() {
-        m_isClosing = true;
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态处理器已准备关闭"));
-    }
+    /**
+     * @brief 更新传输统计信息
+     * @param transferSpeed 传输速度(MB/s)
+     * @param totalBytes 总字节数
+     * @param totalTime 总时间(秒)
+     */
+    void updateTransferStats(double transferSpeed, uint64_t totalBytes, uint32_t totalTime);
 
-    // 检查是否可以安全更新UI
-    bool canUpdateUI() const {
-        // 检查应用程序是否正在关闭
-        if (QApplication::closingDown()) {
-            return false;
-        }
-
-        // 检查UI处理器是否正在关闭
-        if (m_isClosing.load()) {
-            return false;
-        }
-
-        // 确保在主线程中调用
-        if (QThread::currentThread() != QApplication::instance()->thread()) {
-            // 如果不在主线程，只允许某些操作
-            return false;
-        }
-
-        return true;
-    }
-
-public slots:
-    // 当应用状态改变时更新UI
-    void onStateChanged(AppState newState, AppState oldState, const QString& reason);
-
-    // 更新传输速度和数据统计
-    void updateTransferStats(uint64_t transferred, double speed, uint64_t elapsedTimeSeconds = 0);
-
-    // 更新USB设备速度显示
+    /**
+     * @brief 更新USB速度显示
+     * @param speed USB速度(0=未知, 1=FS, 2=HS, 3=SS)
+     */
     void updateUsbSpeedDisplay(const QString& speedDesc, bool isUSB3);
 
-    // 显示错误消息
-    void showErrorMessage(const QString& title, const QString& message);
+    /**
+     * @brief 显示错误消息
+     * @param errorMsg 错误消息
+     * @param details 详细信息
+     */
+    void showErrorMessage(const QString& errorMsg, const QString& details);
+
+    /**
+     * @brief 准备关闭
+     *
+     * 在应用程序关闭前调用，防止后续UI访问
+     */
+    void prepareForClose();
+
+public slots:
+    /**
+     * @brief 处理状态变化
+     * @param newState 新状态
+     * @param oldState 旧状态
+     * @param reason 原因
+     */
+    void onStateChanged(AppState newState, AppState oldState, const QString& reason);
 
 private:
-    // 根据应用状态更新按钮状态
+    /**
+     * @brief 更新按钮状态
+     * @param state 应用状态
+     */
     void updateButtonStates(AppState state);
 
-    // 更新状态栏文本
-    void updateStatusTexts(AppState state, const QString& additionalInfo = QString());
+    /**
+     * @brief 更新状态标签
+     * @param state 应用状态
+     */
+    void updateStatusLabels(AppState state);
 
-    // 格式化数据大小显示
-    QString formatDataSize(uint64_t bytes);
+    /**
+     * @brief 检查UI是否有效
+     * @return 如果UI有效返回true，否则返回false
+     */
+    bool validUI() const;
 
-    QString formatElapsedTime(uint64_t seconds) {
-        uint64_t hours = seconds / 3600;
-        uint64_t minutes = (seconds % 3600) / 60;
-        uint64_t secs = seconds % 60;
+    /**
+     * @brief 更新UI控件启用/禁用状态
+     * @param enableStart 是否启用开始按钮
+     * @param enableStop 是否启用停止按钮
+     * @param enableReset 是否启用重置按钮
+     */
+    void updateButtons(bool enableStart, bool enableStop, bool enableReset);
 
-        return QString("%1:%2:%3")
-            .arg(hours, 2, 10, QChar('0'))
-            .arg(minutes, 2, 10, QChar('0'))
-            .arg(secs, 2, 10, QChar('0'));
-    }
+    /**
+     * @brief 更新状态文本
+     * @param statusText USB状态文本
+     * @param transferStatusText 传输状态文本
+     */
+    void updateStatusLabels(const QString& statusText, const QString& transferStatusText);
 
-    // UI引用
-    Ui::FX3ToolMainWinClass& m_ui;
-
-    // 上次更新的传输状态
-    uint64_t m_lastTransferred = 0;
-    double m_lastSpeed = 0.0;
-    uint64_t m_lastElapsedTime = 0;
-    std::atomic<bool> m_isClosing{ false };
+    Ui::FX3ToolMainWinClass& m_ui;  ///< UI引用
+    bool m_validUI;                 ///< UI有效性标志
 };

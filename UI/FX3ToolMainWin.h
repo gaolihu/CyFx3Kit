@@ -1,3 +1,4 @@
+// FX3ToolMainWin.h
 #pragma once
 
 #include <QtWidgets/QMainWindow>
@@ -15,19 +16,16 @@
 #include "FX3DeviceManager.h"
 #include "UIStateHandler.h"
 #include "AppStateMachine.h"
+#include "FX3DeviceController.h"
+#include "FX3MenuController.h"
+#include "FX3UILayoutManager.h"
+#include "FX3ModuleManager.h"
 #include "FileSaveManager.h"
-#include "FileSavePanel.h"
-#include "SaveFileBox.h"
+#include "FileSaveController.h"
 #include "ChannelSelect.h"
 #include "DataAnalysis.h"
 #include "UpdataDevice.h"
 #include "VideoDisplay.h"
-
-// 前置声明其他窗口类
-class ChannelSelect;
-class DataAnalysis;
-class UpdataDevice;
-class VideoDisplay;
 
 class FX3ToolMainWin : public QMainWindow {
     Q_OBJECT
@@ -38,11 +36,7 @@ public:
 
 protected:
     // 本地事件处理
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    virtual bool nativeEvent(const QByteArray& eventType, void* message, long* result) override;
-#else
     virtual bool nativeEvent(const QByteArray& eventType, void* message, qintptr* result) override;
-#endif
     void closeEvent(QCloseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
@@ -51,9 +45,6 @@ private slots:
     void slot_onStartButtonClicked();
     void slot_onStopButtonClicked();
     void slot_onResetButtonClicked();
-    void slot_onSaveButtonClicked();
-
-    // 命令目录选择
     void slot_onSelectCommandDirectory();
 
     // 状态机处理
@@ -65,13 +56,11 @@ private slots:
 
     // 数据处理相关槽函数
     void slot_onDataPacketAvailable(const DataPacket& packet);
+
+    // 文件保存相关槽函数
+    void slot_onShowSaveFileBoxTriggered();
     void slot_onSaveCompleted(const QString& path, uint64_t totalBytes);
     void slot_onSaveError(const QString& error);
-
-    // 文件保存对话框相关槽函数
-    void slot_onShowSaveFileBoxTriggered();
-    void slot_onSaveFileBoxCompleted(const QString& path, uint64_t totalBytes);
-    void slot_onSaveFileBoxError(const QString& error);
 
     // 通道选择窗口相关槽函数
     void slot_onShowChannelSelectTriggered();
@@ -85,7 +74,6 @@ private slots:
 
     // 视频显示窗口相关槽函数
     void slot_onShowVideoDisplayTriggered();
-
     void slot_onShowWaveformAnalysisTriggered();
     void slot_onVideoDisplayStatusChanged(bool isRunning);
 
@@ -104,31 +92,20 @@ private:
     void registerDeviceNotification();
     void initializeConnections();
     void stopAndReleaseResources();
-    bool initializeFileSaveComponents();
     void setupMenuBar();
     void updateMenuBarState(AppState state);
     void checkForUpdates();
-
-    // 初始化主界面
     void initializeMainUI();
-
-    // 更新状态面板
-    void updateStatusPanel();
-
-    // 创建工具栏
-    void createMainToolBar();
-
-    // 创建并返回主页标签内容
     QWidget* createHomeTabContent();
-
-    // 传输参数验证
+    void updateStatusPanel();
+    void createMainToolBar();
     bool validateImageParameters(uint16_t& width, uint16_t& height, uint8_t& capType);
 
-    // 模块管理方法
+    // 模块管理函数
     void addModuleToMainTab(QWidget* widget, const QString& tabName, int& tabIndex, const QIcon& icon = QIcon());
-    void showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName);
     void showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName, const QIcon& icon = QIcon());
     void removeModuleTab(int& tabIndex);
+    void showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName);
 
     // UI成员
     Ui::FX3ToolMainWinClass ui;
@@ -137,10 +114,28 @@ private:
     // 设备管理器
     FX3DeviceManager* m_deviceManager;
 
-    // 文件保存面板
-    FileSavePanel* m_fileSavePanel;
+    // 控制器类
+    FX3UILayoutManager* m_layoutManager;
+    FX3DeviceController* m_deviceController;
+    FX3MenuController* m_menuController;
+    FX3ModuleManager* m_moduleManager;
+    FileSaveController* m_fileSaveController;
 
-    // 各子窗口
+    // UI组件
+    QTabWidget* m_mainTabWidget;
+    QSplitter* m_mainSplitter;
+    QSplitter* m_leftSplitter;
+    QWidget* m_statusPanel;
+    QToolBar* m_mainToolBar;
+
+    // 模块标签索引
+    int m_homeTabIndex;
+    int m_channelTabIndex;
+    int m_dataAnalysisTabIndex;
+    int m_videoDisplayTabIndex;
+    int m_waveformTabIndex;
+
+    // 子窗口指针 (弱引用，不负责生命周期)
     SaveFileBox* m_saveFileBox;
     ChannelSelect* m_channelSelectWidget;
     DataAnalysis* m_dataAnalysisWidget;
@@ -151,18 +146,4 @@ private:
     std::atomic<bool> m_isClosing{ false };
     bool m_loggerInitialized{ false };
     static std::atomic<bool> s_resourcesReleased;
-
-    // 主界面组件
-    QTabWidget* m_mainTabWidget;          // 主标签页控件
-    QSplitter* m_mainSplitter;            // 主分割器
-    QSplitter* m_leftSplitter;            // 左侧分割器
-    QToolBar* m_mainToolBar;              // 主工具栏
-    QWidget* m_statusPanel;               // 状态面板
-
-    // 模块标签页索引
-    int m_homeTabIndex;                   // 主页标签索引
-    int m_channelTabIndex;                // 通道配置标签索引
-    int m_dataAnalysisTabIndex;           // 数据分析标签索引
-    int m_videoDisplayTabIndex;           // 视频显示标签索引
-    int m_waveformTabIndex;               // 波形分析标签索引(预留)
 };

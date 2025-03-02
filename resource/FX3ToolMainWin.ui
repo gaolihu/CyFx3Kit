@@ -189,6 +189,9 @@
         </item>
         <item>
          <widget class="QTextEdit" name="logTextEdit">
+          <property name="styleSheet">
+           <string notr="true">background-image: url(:/background/res/Picture/1.png);</string>
+          </property>
           <property name="readOnly">
            <bool>true</bool>
           </property>
@@ -429,7 +432,7 @@
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="FX3ToolMainWin.qrc"/>
+  <include location="Resource.qrc"/>
  </resources>
  <connections>
   <connection>

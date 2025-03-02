@@ -57,6 +57,11 @@ class FileSavePanel : public QWidget {
 public:
     explicit FileSavePanel(QWidget* parent = nullptr);
 
+signals:
+    void saveStartRequested();
+    void saveStopRequested();
+    void saveSettingsChanged(const SaveParameters& parameters);
+
 public slots:
     // 外部调用接口
     void startSaving();

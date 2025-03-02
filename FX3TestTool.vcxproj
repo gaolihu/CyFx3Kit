@@ -124,11 +124,16 @@
     <ClCompile Include="File\FileCacheManager.cpp" />
     <ClCompile Include="File\FileSaveManager.cpp" />
     <ClCompile Include="File\StandardFileWriter.cpp" />
+    <ClCompile Include="File\FileSaveController.cpp" />
     <ClCompile Include="Main\main.cpp" />
     <ClCompile Include="UI\ChannelSelect.cpp" />
     <ClCompile Include="UI\DataAnalysis.cpp" />
     <ClCompile Include="UI\FileSavePanel.cpp" />
+    <ClCompile Include="UI\FX3DeviceController.cpp" />
+    <ClCompile Include="UI\FX3MenuController.cpp" />
+    <ClCompile Include="UI\FX3ModuleManager.cpp" />
     <ClCompile Include="UI\FX3ToolMainWin.cpp" />
+    <ClCompile Include="UI\FX3UILayoutManager.cpp" />
     <ClCompile Include="UI\SaveFileBox.cpp" />
     <ClCompile Include="UI\UpdataDevice.cpp" />
     <ClCompile Include="UI\VideoDisplay.cpp" />
@@ -143,6 +148,12 @@
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="UI\WaveformAnalysis.h" />
+    <QtMoc Include="UI\FX3DeviceController.h" />
+    <QtMoc Include="UI\FX3MenuController.h" />
+    <QtMoc Include="UI\FX3ModuleManager.h" />
+    <QtMoc Include="UI\FX3UILayoutManager.h" />
+    <QtMoc Include="File\FileSaveController.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="Utils\QtCompat.h" />
     <QtMoc Include="Core\AppStateMachine.h" />
     <QtMoc Include="Core\CommandManager.h" />
@@ -164,7 +175,7 @@
     <QtMoc Include="Utils\LogWriter.h" />
   </ItemGroup>
   <ItemGroup>
-    <QtRcc Include="resource\FX3ToolMainWin.qrc" />
+    <QtRcc Include="resource\Resource.qrc" />
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="resource\ChannelSelect.ui" />
@@ -173,6 +184,9 @@
     <QtUic Include="resource\SaveFileBox.ui" />
     <QtUic Include="resource\UpdataDevice.ui" />
     <QtUic Include="resource\VideoDisplay.ui" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="FX3TestTool.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
