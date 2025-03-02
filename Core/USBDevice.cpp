@@ -19,18 +19,18 @@ USBDevice::~USBDevice() {
     LOG_INFO("USBDevice destructor START");
 
     try {
-        // ¶Ï¿ªËùÓĞĞÅºÅÁ¬½Ó
+        // æ–­å¼€æ‰€æœ‰ä¿¡å·è¿æ¥
         disconnect(this, nullptr, nullptr, nullptr);
 
-        // È·±£Í£Ö¹´«Êä
+        // ç¡®ä¿åœæ­¢ä¼ è¾“
         if (m_isTransferring) {
             stopTransfer();
         }
 
-        // ¹Ø±ÕÉè±¸Á¬½Ó
+        // å…³é—­è®¾å¤‡è¿æ¥
         close();
 
-        // ÏÔÊ½Çå³ı¶ËµãÒıÓÃ
+        // æ˜¾å¼æ¸…é™¤ç«¯ç‚¹å¼•ç”¨
         m_inEndpoint = nullptr;
         m_outEndpoint = nullptr;
 
@@ -49,7 +49,7 @@ bool USBDevice::isConnected() const
     return m_device && m_device->DeviceCount() > 0;
 }
 
-// ÔÚÉè±¸³õÊ¼»¯Ê±Ìí¼ÓÖØÊÔ»úÖÆ
+// åœ¨è®¾å¤‡åˆå§‹åŒ–æ—¶æ·»åŠ é‡è¯•æœºåˆ¶
 bool USBDevice::open()
 {
     const int MAX_RETRIES = 3;
@@ -64,7 +64,7 @@ bool USBDevice::open()
             return false;
         }
 
-        // Ã¿´Î³¢ÊÔÇ°Ë¢ĞÂÉè±¸×´Ì¬
+        // æ¯æ¬¡å°è¯•å‰åˆ·æ–°è®¾å¤‡çŠ¶æ€
         if (m_device->DeviceCount() <= 0) {
             m_device = std::make_shared<CCyUSBDevice>((HWND)m_hwnd, CYUSBDRV_GUID, true);
         }
@@ -150,10 +150,10 @@ bool USBDevice::readData(PUCHAR buffer, LONG& length)
         bool success = m_inEndpoint->XferData(buffer, length);
 
         if (success && length > 0) {
-            // Í³¼ÆÊı¾İ¸üĞÂ
+            // ç»Ÿè®¡æ•°æ®æ›´æ–°
             m_totalBytes.fetch_add(length);
 
-            // ËÙ¶È¼ÆËãÓÅ»¯ - Ê¹ÓÃË«»º³å¼õÉÙ¶¶¶¯
+            // é€Ÿåº¦è®¡ç®—ä¼˜åŒ– - ä½¿ç”¨åŒç¼“å†²å‡å°‘æŠ–åŠ¨
             auto now = std::chrono::steady_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
                 now - m_lastSpeedUpdate).count();
@@ -163,8 +163,8 @@ bool USBDevice::readData(PUCHAR buffer, LONG& length)
                 double intervalBytes = static_cast<double>(m_totalBytes.load() - previousTotal);
                 double mbPerSec = (intervalBytes / duration) * 1000.0 / (1024.0 * 1024.0);
 
-                // Ê¹ÓÃÖ¸ÊıÆ½»¬ÂË²¨¼õÉÙ²¨¶¯
-                static constexpr double alpha = 0.3; // Æ½»¬Òò×Ó
+                // ä½¿ç”¨æŒ‡æ•°å¹³æ»‘æ»¤æ³¢å‡å°‘æ³¢åŠ¨
+                static constexpr double alpha = 0.3; // å¹³æ»‘å› å­
                 double currentSpeed = m_currentSpeed.load();
                 m_currentSpeed.store(alpha * mbPerSec + (1.0 - alpha) * currentSpeed);
 
@@ -196,20 +196,20 @@ bool USBDevice::startTransfer()
         return true;
     }
 
-    // Ê¹ÓÃÃüÁî¹ÜÀíÆ÷»ñÈ¡Æô¶¯ÃüÁî
+    // ä½¿ç”¨å‘½ä»¤ç®¡ç†å™¨è·å–å¯åŠ¨å‘½ä»¤
     auto startCmd = CommandManager::instance().getCommand(CommandManager::CommandType::CMD_START);
     if (startCmd.empty()) {
         LOG_ERROR("Failed to get start command");
         return false;
     }
 
-    // ·¢ËÍ¿ªÊ¼ÃüÁî
+    // å‘é€å¼€å§‹å‘½ä»¤
     if (!sendCommand(startCmd.data(), startCmd.size())) {
         LOG_ERROR("Failed to send start command");
         return false;
     }
 
-    // Ö»ÓĞÔÚÌØ¶¨Ìõ¼şÏÂ²ÅÉèÖÃ´«Êä±êÖ¾
+    // åªæœ‰åœ¨ç‰¹å®šæ¡ä»¶ä¸‹æ‰è®¾ç½®ä¼ è¾“æ ‡å¿—
     if (m_channelMode != 0xfe && m_invertPn != 0xfe) {
         LOG_INFO("Transfering start OK");
         m_isTransferring = true;
@@ -228,26 +228,26 @@ bool USBDevice::stopTransfer()
         return true;
     }
 
-    // ÏÈ±£´æ×îÖÕÍ³¼ÆÊı¾İ
+    // å…ˆä¿å­˜æœ€ç»ˆç»Ÿè®¡æ•°æ®
     uint64_t finalBytes = m_totalBytes.load();
     m_isTransferring = false;
 
-    // ·¢ËÍÖÕÖ¹´«ÊäµÄ½ø¶È¸üĞÂ£¨ËÙ¶ÈÉèÎª0±íÊ¾ÒÑÍ£Ö¹£©
+    // å‘é€ç»ˆæ­¢ä¼ è¾“çš„è¿›åº¦æ›´æ–°ï¼ˆé€Ÿåº¦è®¾ä¸º0è¡¨ç¤ºå·²åœæ­¢ï¼‰
     emit transferProgress(finalBytes, 0, 0, 0);
 
-    // ´´½¨ºóÌ¨Ïß³Ì´¦ÀíËùÓĞ³¬Ê±²Ù×÷
+    // åˆ›å»ºåå°çº¿ç¨‹å¤„ç†æ‰€æœ‰è¶…æ—¶æ“ä½œ
     std::thread cleanupThread([this]() {
         try {
-            // ´ó·ù½µµÍ³¬Ê±²Ù×÷µÄ³¬Ê±Ê±¼ä
-            const int ABORT_TIMEOUT_MS = 200; // ´Ó1000ms½µÖÁ200ms
+            // å¤§å¹…é™ä½è¶…æ—¶æ“ä½œçš„è¶…æ—¶æ—¶é—´
+            const int ABORT_TIMEOUT_MS = 200; // ä»1000msé™è‡³200ms
 
-            // Ê×ÏÈ·¢ËÍÍ£Ö¹ÃüÁî£¬²»µÈ´ı¶îÍâµÄ³¬Ê±
+            // é¦–å…ˆå‘é€åœæ­¢å‘½ä»¤ï¼Œä¸ç­‰å¾…é¢å¤–çš„è¶…æ—¶
             auto stopCmd = CommandManager::instance().getCommand(CommandManager::CommandType::CMD_END);
             if (!stopCmd.empty()) {
                 try {
-                    // ÉèÖÃ¸ü¶ÌµÄ·¢ËÍ³¬Ê±
+                    // è®¾ç½®æ›´çŸ­çš„å‘é€è¶…æ—¶
                     if (m_outEndpoint) {
-                        m_outEndpoint->TimeOut = 200; // Ô­À´¿ÉÄÜÊÇ500ms
+                        m_outEndpoint->TimeOut = 200; // åŸæ¥å¯èƒ½æ˜¯500ms
                     }
 
                     if (sendCommand(stopCmd.data(), stopCmd.size())) {
@@ -259,14 +259,14 @@ bool USBDevice::stopTransfer()
                 }
             }
 
-            // ²¢ĞĞÖ´ĞĞ¶ËµãÖØÖÃ²Ù×÷£¬±ÜÃâ´®ĞĞµÈ´ı
+            // å¹¶è¡Œæ‰§è¡Œç«¯ç‚¹é‡ç½®æ“ä½œï¼Œé¿å…ä¸²è¡Œç­‰å¾…
             std::future<void> inAbortFuture;
             std::future<void> outResetFuture;
 
             if (m_inEndpoint) {
                 inAbortFuture = std::async(std::launch::async, [this]() {
                     try {
-                        m_inEndpoint->TimeOut = 200; // Ëõ¶Ì³¬Ê±Ê±¼ä
+                        m_inEndpoint->TimeOut = 200; // ç¼©çŸ­è¶…æ—¶æ—¶é—´
                         m_inEndpoint->Abort();
                         m_inEndpoint->Reset();
                     }
@@ -279,7 +279,7 @@ bool USBDevice::stopTransfer()
             if (m_outEndpoint) {
                 outResetFuture = std::async(std::launch::async, [this]() {
                     try {
-                        m_outEndpoint->TimeOut = 200; // Ëõ¶Ì³¬Ê±Ê±¼ä
+                        m_outEndpoint->TimeOut = 200; // ç¼©çŸ­è¶…æ—¶æ—¶é—´
                         m_outEndpoint->Reset();
                     }
                     catch (...) {
@@ -288,13 +288,13 @@ bool USBDevice::stopTransfer()
                     });
             }
 
-            // µÈ´ıËùÓĞ²Ù×÷Íê³É£¬µ«ÉèÖÃ½Ï¶ÌµÄ×Ü³¬Ê±
-            const int MAX_WAIT_MS = 500; // ×î¶àµÈ´ı500ms
+            // ç­‰å¾…æ‰€æœ‰æ“ä½œå®Œæˆï¼Œä½†è®¾ç½®è¾ƒçŸ­çš„æ€»è¶…æ—¶
+            const int MAX_WAIT_MS = 500; // æœ€å¤šç­‰å¾…500ms
 
             auto startTime = std::chrono::steady_clock::now();
             bool timeLimitReached = false;
 
-            // µÈ´ıÊäÈë¶Ëµã²Ù×÷Íê³É
+            // ç­‰å¾…è¾“å…¥ç«¯ç‚¹æ“ä½œå®Œæˆ
             if (inAbortFuture.valid()) {
                 auto status = inAbortFuture.wait_for(std::chrono::milliseconds(MAX_WAIT_MS));
                 if (status != std::future_status::ready) {
@@ -303,7 +303,7 @@ bool USBDevice::stopTransfer()
                 }
             }
 
-            // Èç¹û»¹ÓĞÊ£ÓàÊ±¼ä£¬µÈ´ıÊä³ö¶Ëµã²Ù×÷Íê³É
+            // å¦‚æœè¿˜æœ‰å‰©ä½™æ—¶é—´ï¼Œç­‰å¾…è¾“å‡ºç«¯ç‚¹æ“ä½œå®Œæˆ
             if (!timeLimitReached && outResetFuture.valid()) {
                 auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::steady_clock::now() - startTime).count();
@@ -327,10 +327,10 @@ bool USBDevice::stopTransfer()
         }
         });
 
-    // ·ÖÀëÏß³Ì£¬ÈÃËüÔÚºóÌ¨ÔËĞĞ
+    // åˆ†ç¦»çº¿ç¨‹ï¼Œè®©å®ƒåœ¨åå°è¿è¡Œ
     cleanupThread.detach();
 
-    // Á¢¼´¸üĞÂUI×´Ì¬
+    // ç«‹å³æ›´æ–°UIçŠ¶æ€
     emit statusChanged("ready");
     return true;
 }
@@ -342,12 +342,12 @@ QString USBDevice::getDeviceInfo() const
     return QString("VID:0x%1 PID:0x%2 %3")
         .arg(m_device->VendorID, 4, 16, QChar('0'))
         .arg(m_device->ProductID, 4, 16, QChar('0'))
-        .arg(QString::fromLocal8Bit(m_device->FriendlyName));
+        .arg(fromLocal8Bit(m_device->FriendlyName));
 }
 
 bool USBDevice::isUSB3() const
 {
-    return m_device && m_device->bSuperSpeed;  // CCyUSBDevice Ö±½ÓÌá¹©ÁËÕâ¸öÊôĞÔ
+    return m_device && m_device->bSuperSpeed;  // CCyUSBDevice ç›´æ¥æä¾›äº†è¿™ä¸ªå±æ€§
 }
 
 USBDevice::USBSpeedType USBDevice::getUsbSpeedType() const
@@ -372,18 +372,18 @@ QString USBDevice::getUsbSpeedDescription() const
 
     switch (speedType) {
     case USBSpeedType::LOW_SPEED:
-        return QString::fromLocal8Bit("USB1.0µÍËÙ(1.5Mbps)");
+        return fromLocal8Bit("USB1.0ä½é€Ÿ(1.5Mbps)");
     case USBSpeedType::FULL_SPEED:
-        return QString::fromLocal8Bit("USB1.1È«ËÙ(12Mbps)");
+        return fromLocal8Bit("USB1.1å…¨é€Ÿ(12Mbps)");
     case USBSpeedType::HIGH_SPEED:
-        return QString::fromLocal8Bit("USB2.0¸ßËÙ(480Mbps)");
+        return fromLocal8Bit("USB2.0é«˜é€Ÿ(480Mbps)");
     case USBSpeedType::SUPER_SPEED:
-        return QString::fromLocal8Bit("USB3.0³¬ËÙ(5Gbps)");
+        return fromLocal8Bit("USB3.0è¶…é€Ÿ(5Gbps)");
     case USBSpeedType::SUPER_SPEED_P:
-        return QString::fromLocal8Bit("USB3.1+³¬ËÙ+(10+Gbps)");
+        return fromLocal8Bit("USB3.1+è¶…é€Ÿ+(10+Gbps)");
     case USBSpeedType::UNKNOWN:
     default:
-        return QString::fromLocal8Bit("Î´Öª USB ËÙ¶È");
+        return fromLocal8Bit("æœªçŸ¥ USB é€Ÿåº¦");
     }
 }
 
@@ -417,7 +417,6 @@ bool USBDevice::initEndpoints()
         return false;
     }
 
-    LOG_INFO("Endpoints initialized successfully");
     return true;
 }
 
@@ -429,7 +428,7 @@ bool USBDevice::validateDevice()
         return false;
     }
 
-    // ¼ÇÂ¼ÍêÕûµÄÉè±¸ĞÅÏ¢
+    // è®°å½•å®Œæ•´çš„è®¾å¤‡ä¿¡æ¯
     QString deviceInfo = QString("Device Info:\n")
         + QString("  VID: 0x%1\n").arg(m_device->VendorID, 4, 16, QChar('0'))
         + QString("  PID: 0x%1\n").arg(m_device->ProductID, 4, 16, QChar('0'))
@@ -440,7 +439,7 @@ bool USBDevice::validateDevice()
 
     LOG_INFO(deviceInfo);
 
-    // FX3Éè±¸ËÙ¶È¼ì²é - Éè±¸¿ÉÄÜ´¦ÓÚ²»Í¬µÄËÙ¶ÈÄ£Ê½
+    // FX3è®¾å¤‡é€Ÿåº¦æ£€æŸ¥ - è®¾å¤‡å¯èƒ½å¤„äºä¸åŒçš„é€Ÿåº¦æ¨¡å¼
     QString speedMode;
     if (m_device->bSuperSpeed) {
         speedMode = "SuperSpeed (USB 3.0)";
@@ -453,10 +452,10 @@ bool USBDevice::validateDevice()
     }
     LOG_INFO(QString("USB Speed Mode: %1").arg(speedMode));
 
-    // ¼ì²éÊÇ·ñÎªFX3Éè±¸
+    // æ£€æŸ¥æ˜¯å¦ä¸ºFX3è®¾å¤‡
     if (m_device->VendorID == 0x04b4 && m_device->ProductID == 0x00f1) {
         LOG_INFO("Detected Cypress FX3 device");
-        // FX3Éè±¸ÑéÖ¤Í¨¹ı£¬²»ĞèÒªÇ¿ÖÆÒªÇóUSB 3.0Ä£Ê½
+        // FX3è®¾å¤‡éªŒè¯é€šè¿‡ï¼Œä¸éœ€è¦å¼ºåˆ¶è¦æ±‚USB 3.0æ¨¡å¼
     }
     else {
         LOG_ERROR("Not a Cypress FX3 device");
@@ -464,13 +463,13 @@ bool USBDevice::validateDevice()
         return false;
     }
 
-    // ÏêÏ¸¼ì²éUSBËÙ¶ÈÄÜÁ¦
+    // è¯¦ç»†æ£€æŸ¥USBé€Ÿåº¦èƒ½åŠ›
     LOG_INFO("Device Speed Capabilities:");
     LOG_INFO(QString("  SuperSpeed Capable: %1").arg(m_device->bSuperSpeed ? "Yes" : "No"));
     LOG_INFO(QString("  HighSpeed Capable: %1").arg(m_device->bHighSpeed ? "Yes" : "No"));
     LOG_INFO(QString("  USB Version: 0x%1").arg(m_device->BcdUSB, 4, 16, QChar('0')));
 
-    // »ñÈ¡BOSÃèÊö·û
+    // è·å–BOSæè¿°ç¬¦
     USB_BOS_DESCRIPTOR bosDesc;
     if (m_device->GetBosDescriptor(&bosDesc)) {
         LOG_INFO("BOS Descriptor Info:");
@@ -479,7 +478,7 @@ bool USBDevice::validateDevice()
         LOG_INFO(QString("  Total Length: %1").arg(bosDesc.wTotalLength));
         LOG_INFO(QString("  Device Capabilities Count: %1").arg(bosDesc.bNumDeviceCaps));
 
-        // USB 2.0À©Õ¹ÃèÊö·û
+        // USB 2.0æ‰©å±•æè¿°ç¬¦
         USB_BOS_USB20_DEVICE_EXTENSION usb20Desc;
         if (m_device->GetBosUSB20DeviceExtensionDescriptor(&usb20Desc)) {
             LOG_INFO("USB 2.0 Extension Descriptor:");
@@ -489,7 +488,7 @@ bool USBDevice::validateDevice()
             LOG_INFO(QString("  Attributes: 0x%1").arg(usb20Desc.bmAttribute, 8, 16, QChar('0')));
         }
 
-        // SuperSpeedÉè±¸ÄÜÁ¦ÃèÊö·û
+        // SuperSpeedè®¾å¤‡èƒ½åŠ›æè¿°ç¬¦
         USB_BOS_SS_DEVICE_CAPABILITY ssDesc;
         if (m_device->GetBosSSCapabilityDescriptor(&ssDesc)) {
             LOG_INFO("SuperSpeed Device Capability:");
@@ -503,7 +502,7 @@ bool USBDevice::validateDevice()
             LOG_INFO(QString("  U2 Exit Latency: %1").arg(ssDesc.bU2DevExitLat));
         }
 
-        // Container IDÃèÊö·û
+        // Container IDæè¿°ç¬¦
         USB_BOS_CONTAINER_ID containerDesc;
         if (m_device->GetBosContainedIDDescriptor(&containerDesc)) {
             LOG_INFO("Container ID Descriptor:");
@@ -519,7 +518,7 @@ bool USBDevice::validateDevice()
         }
     }
 
-    // ÑéÖ¤¶ËµãÅäÖÃ
+    // éªŒè¯ç«¯ç‚¹é…ç½®
     int endpointCount = m_device->EndPointCount();
     LOG_INFO(QString("Found %1 endpoints").arg(endpointCount));
 
@@ -529,7 +528,7 @@ bool USBDevice::validateDevice()
         return false;
     }
 
-    // ¼ì²éÉè±¸×´Ì¬
+    // æ£€æŸ¥è®¾å¤‡çŠ¶æ€
     if (m_device->UsbdStatus != 0) {
         char statusStr[256];
         m_device->UsbdStatusString(m_device->UsbdStatus, statusStr);
@@ -556,35 +555,35 @@ bool USBDevice::sendCommand(const UCHAR* cmdTemplate, size_t length)
         return false;
     }
 
-    // ·ÖÅäÃüÁî»º³åÇø
+    // åˆ†é…å‘½ä»¤ç¼“å†²åŒº
     std::unique_ptr<UCHAR[]> cmdBuffer(new UCHAR[CMD_BUFFER_SIZE]);
 
-    // ×¼±¸ÃüÁîÊı¾İ
+    // å‡†å¤‡å‘½ä»¤æ•°æ®
     if (!prepareCommandBuffer(cmdBuffer.get(), cmdTemplate)) {
         LOG_WARN("Prepare commond failed");
         return false;
     }
 
-    // ÉèÖÃ¶Ëµã²ÎÊı
-    m_outEndpoint->TimeOut = 500;  // °´Ô­´úÂëÉèÖÃ³¬Ê±Îª500ms
+    // è®¾ç½®ç«¯ç‚¹å‚æ•°
+    m_outEndpoint->TimeOut = 500;  // æŒ‰åŸä»£ç è®¾ç½®è¶…æ—¶ä¸º500ms
     m_outEndpoint->SetXferSize(CMD_BUFFER_SIZE);
 
-    // ÌØÊâÇé¿ö´¦Àí
+    // ç‰¹æ®Šæƒ…å†µå¤„ç†
     if (m_channelMode == 0xfe && m_invertPn == 0xfe) {
         memset(cmdBuffer.get(), 0x00, CMD_BUFFER_SIZE);
         LOG_DEBUG("Special channel case");
     }
 
-    // ÖĞÖ¹ÊäÈë¶Ëµãµ±Ç°´«Êä
+    // ä¸­æ­¢è¾“å…¥ç«¯ç‚¹å½“å‰ä¼ è¾“
     if (m_inEndpoint) {
         m_inEndpoint->Abort();
         //LOG_DEBUG("Abort");
     }
 
-    // Ìí¼ÓÑÓÊ±
+    // æ·»åŠ å»¶æ—¶
     QThread::msleep(12);
 
-    // ·¢ËÍÃüÁî
+    // å‘é€å‘½ä»¤
     LONG actualLength = CMD_BUFFER_SIZE;
     bool success = m_outEndpoint->XferData(cmdBuffer.get(), actualLength);
 
@@ -594,7 +593,7 @@ bool USBDevice::sendCommand(const UCHAR* cmdTemplate, size_t length)
         return false;
     }
 
-    // ÑéÖ¤´«Êä³¤¶È
+    // éªŒè¯ä¼ è¾“é•¿åº¦
     if (actualLength != CMD_BUFFER_SIZE) {
         LOG_ERROR(QString("Command length mismatch: sent %1, expected %2")
             .arg(actualLength).arg(CMD_BUFFER_SIZE));
@@ -607,7 +606,7 @@ bool USBDevice::sendCommand(const UCHAR* cmdTemplate, size_t length)
 
 bool USBDevice::configureTransfer(ULONG frameSize)
 {
-    // Ê¹ÓÃÃüÁî¹ÜÀíÆ÷»ñÈ¡Ö¡´óĞ¡ÉèÖÃÃüÁî
+    // ä½¿ç”¨å‘½ä»¤ç®¡ç†å™¨è·å–å¸§å¤§å°è®¾ç½®å‘½ä»¤
     auto frameSizeCmd = CommandManager::instance().getCommand(CommandManager::CommandType::CMD_FRAME_SIZE);
     if (frameSizeCmd.empty()) {
         LOG_ERROR("Failed to get frame size command");
@@ -631,10 +630,10 @@ bool USBDevice::prepareCommandBuffer(PUCHAR buffer, const UCHAR* cmdTemplate)
         return false;
     }
 
-    // ¸´ÖÆ»ù´¡ÃüÁîÄ£°å
+    // å¤åˆ¶åŸºç¡€å‘½ä»¤æ¨¡æ¿
     memcpy_s(buffer, CMD_BUFFER_SIZE, cmdTemplate, CMD_BUFFER_SIZE);
 
-    // ¸ù¾İÉè±¸²ÎÊıĞŞ¸ÄÃüÁîÄÚÈİ
+    // æ ¹æ®è®¾å¤‡å‚æ•°ä¿®æ”¹å‘½ä»¤å†…å®¹
     if (m_capType == 0x39) {
         buffer[80] = ((m_width * 3 + 1) & 0xff00) >> 8;
         buffer[81] = (m_width * 3 + 1) & 0xff;
@@ -658,12 +657,12 @@ bool USBDevice::prepareCommandBuffer(PUCHAR buffer, const UCHAR* cmdTemplate)
 
 void USBDevice::updateTransferStats()
 {
-    // ÒÆ³ıÈÎºÎµÈ´ı»òÑÓ³ÙÂß¼­
+    // ç§»é™¤ä»»ä½•ç­‰å¾…æˆ–å»¶è¿Ÿé€»è¾‘
     auto now = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(
         now - m_transferStartTime).count();
 
-    // ¼´Ê¹durationÎª0Ò²¼ÆËãÍ³¼ÆĞÅÏ¢£¬±ÜÃâµÈ´ı
+    // å³ä½¿durationä¸º0ä¹Ÿè®¡ç®—ç»Ÿè®¡ä¿¡æ¯ï¼Œé¿å…ç­‰å¾…
     double totalMB = static_cast<double>(m_totalTransferred) / (1024 * 1024);
     double rateMBps = (duration > 0) ? (totalMB / duration) : 0.0;
 
@@ -672,6 +671,6 @@ void USBDevice::updateTransferStats()
         .arg(duration)
         .arg(rateMBps, 0, 'f', 2));
 
-    // ¿ÉÒÔÑ¡Ôñ·¢ËÍÍ³¼ÆĞÅÏ¢µ½UI
+    // å¯ä»¥é€‰æ‹©å‘é€ç»Ÿè®¡ä¿¡æ¯åˆ°UI
     emit transferProgress(m_totalTransferred, 0, 0, 0);
 }

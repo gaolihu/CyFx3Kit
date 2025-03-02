@@ -36,13 +36,13 @@
     <Import Project="$(QtMsBuild)\qt_defaults.props" />
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
-    <QtInstall>5.15.2_msvc2019_64</QtInstall>
-    <QtModules>core;gui;widgets</QtModules>
+    <QtInstall>6.5.3_msvc2019_64</QtInstall>
+    <QtModules>core;gui;widgets;</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
-    <QtInstall>5.15.2_msvc2019_64</QtInstall>
-    <QtModules>core;gui;widgets</QtModules>
+    <QtInstall>6.5.3_msvc2019_64</QtInstall>
+    <QtModules>core;gui;widgets;charts</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
@@ -65,9 +65,10 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)Core;$(ProjectDir)UI;$(ProjectDir)Utils;$(ProjectDir)cypress\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Core;$(ProjectDir)UI;$(ProjectDir)File;$(ProjectDir)Utils;$(ProjectDir)cypress\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalOptions>/wd5105 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>legacy_stdio_definitions.lib;Setupapi.lib;ws2_32.lib;winmm.lib;wldap32.lib;$(ProjectDir)cypress\lib\x64\CyAPI.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -75,9 +76,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)Core;$(ProjectDir)UI;$(ProjectDir)Utils;$(ProjectDir)cypress\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Core;$(ProjectDir)UI;$(ProjectDir)File;$(ProjectDir)Utils;$(ProjectDir)cypress\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <AdditionalOptions>/wd5105 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>legacy_stdio_definitions.lib;Setupapi.lib;ws2_32.lib;winmm.lib;wldap32.lib;$(ProjectDir)cypress\lib\x64\CyAPI.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -112,50 +114,63 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Core\AppStateMachine.cpp" />
+    <ClCompile Include="Core\CommandManager.cpp" />
     <ClCompile Include="Core\DataAcquisition.cpp" />
+    <ClCompile Include="Core\FX3DeviceManager.cpp" />
+    <ClCompile Include="Core\UIStateHandler.cpp" />
+    <ClCompile Include="Core\USBDevice.cpp" />
+    <ClCompile Include="File\AsyncFileWriter.cpp" />
+    <ClCompile Include="File\FileCacheManager.cpp" />
+    <ClCompile Include="File\FileSaveManager.cpp" />
+    <ClCompile Include="File\StandardFileWriter.cpp" />
     <ClCompile Include="Main\main.cpp" />
-    <ClCompile Include="UI\AppStateMachine.cpp" />
-    <ClCompile Include="UI\CommandManager.cpp" />
-    <ClCompile Include="UI\FX3DeviceManager.cpp" />
+    <ClCompile Include="UI\ChannelSelect.cpp" />
+    <ClCompile Include="UI\DataAnalysis.cpp" />
+    <ClCompile Include="UI\FileSavePanel.cpp" />
     <ClCompile Include="UI\FX3ToolMainWin.cpp" />
-    <ClCompile Include="UI\UIStateHandler.cpp" />
+    <ClCompile Include="UI\SaveFileBox.cpp" />
+    <ClCompile Include="UI\UpdataDevice.cpp" />
+    <ClCompile Include="UI\VideoDisplay.cpp" />
     <ClCompile Include="Utils\Logger.cpp" />
     <ClCompile Include="Utils\LogWriter.cpp" />
     <ClCompile Include="Utils\UIUpdater.cpp" />
     <ClCompile Include="Utils\ThreadHelper.h" />
-    <ClCompile Include="Core\USBDevice.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <QtMoc Include="Core\USBDevice.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <QtMoc Include="Core\DataAcquisition.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <QtMoc Include="UI\CommandManager.h" />
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Utils\Logger.h" />
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="UI\UIStateHandler.h" />
-    <QtMoc Include="UI\AppStateMachine.h" />
-    <QtMoc Include="UI\FX3DeviceManager.h" />
+    <ClInclude Include="Utils\QtCompat.h" />
+    <QtMoc Include="Core\AppStateMachine.h" />
+    <QtMoc Include="Core\CommandManager.h" />
+    <QtMoc Include="Core\DataAcquisition.h" />
+    <QtMoc Include="Core\FX3DeviceManager.h" />
+    <QtMoc Include="Core\UIStateHandler.h" />
+    <QtMoc Include="Core\USBDevice.h" />
+    <ClInclude Include="File\DataConverters.h" />
+    <QtMoc Include="File\FileSaveManager.h" />
+    <QtMoc Include="UI\ChannelSelect.h" />
+    <QtMoc Include="UI\DataAnalysis.h" />
+    <QtMoc Include="UI\FileSavePanel.h" />
     <QtMoc Include="UI\FX3ToolMainWin.h" />
+    <QtMoc Include="UI\SaveFileBox.h" />
+    <QtMoc Include="UI\UpdataDevice.h" />
+    <QtMoc Include="UI\VideoDisplay.h" />
     <ClInclude Include="Utils\LoggerTypes.h" />
     <QtMoc Include="Utils\UIUpdater.h" />
     <QtMoc Include="Utils\LogWriter.h" />
   </ItemGroup>
   <ItemGroup>
-    <QtUic Include="resource\channelselect.ui" />
-    <QtUic Include="resource\dataanalysis.ui" />
-    <QtUic Include="resource\FX3ToolMainWin.ui" />
-    <QtUic Include="resource\save_data.ui" />
-    <QtUic Include="resource\updatadevice.ui" />
-    <QtUic Include="resource\videodisplay.ui" />
+    <QtRcc Include="resource\FX3ToolMainWin.qrc" />
   </ItemGroup>
   <ItemGroup>
-    <QtRcc Include="resource\FX3ToolMainWin.qrc" />
+    <QtUic Include="resource\ChannelSelect.ui" />
+    <QtUic Include="resource\DataAnalysis.ui" />
+    <QtUic Include="resource\FX3ToolMainWin.ui" />
+    <QtUic Include="resource\SaveFileBox.ui" />
+    <QtUic Include="resource\UpdataDevice.ui" />
+    <QtUic Include="resource\VideoDisplay.ui" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

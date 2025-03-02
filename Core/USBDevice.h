@@ -38,24 +38,24 @@ public:
     void setQueueSize(int size);
     bool isTransferring() const { return m_isTransferring; }
 
-    // ĞÂÔö´«Êä×´Ì¬²éÑ¯
+    // æ–°å¢ä¼ è¾“çŠ¶æ€æŸ¥è¯¢
     double getTransferRate() const;
     uint64_t getTotalTransferred() const;
 
-    // USBÁ¬½ÓËÙ¶ÈÀàĞÍÃ¶¾Ù
+    // USBè¿æ¥é€Ÿåº¦ç±»å‹æšä¸¾
     enum class USBSpeedType {
-        UNKNOWN,        // Î´Öª
-        LOW_SPEED,      // µÍËÙ (USB 1.0) - 1.5 Mbps
-        FULL_SPEED,     // È«ËÙ (USB 1.1) - 12 Mbps
-        HIGH_SPEED,     // ¸ßËÙ (USB 2.0) - 480 Mbps
-        SUPER_SPEED,    // ³¬ËÙ (USB 3.0) - 5 Gbps
-        SUPER_SPEED_P   // ³¬ËÙ+ (USB 3.1+) - 10+ Gbps
+        UNKNOWN,        // æœªçŸ¥
+        LOW_SPEED,      // ä½é€Ÿ (USB 1.0) - 1.5 Mbps
+        FULL_SPEED,     // å…¨é€Ÿ (USB 1.1) - 12 Mbps
+        HIGH_SPEED,     // é«˜é€Ÿ (USB 2.0) - 480 Mbps
+        SUPER_SPEED,    // è¶…é€Ÿ (USB 3.0) - 5 Gbps
+        SUPER_SPEED_P   // è¶…é€Ÿ+ (USB 3.1+) - 10+ Gbps
     };
 
-    // »ñÈ¡USBËÙ¶ÈÀàĞÍ
+    // è·å–USBé€Ÿåº¦ç±»å‹
     USBSpeedType getUsbSpeedType() const;
 
-    // »ñÈ¡µ±Ç°USBËÙ¶ÈµÄÃèÊöÎÄ±¾
+    // è·å–å½“å‰USBé€Ÿåº¦çš„æè¿°æ–‡æœ¬
     QString getUsbSpeedDescription() const;
 
 signals:
@@ -69,11 +69,11 @@ private:
     void emitError(const QString& error);
 
 private:
-    // ÃüÁî·¢ËÍ·½·¨
+    // å‘½ä»¤å‘é€æ–¹æ³•
     bool sendCommand(const UCHAR* cmd, size_t length);
     bool configureTransfer(ULONG frameSize);
 
-    // ÃüÁî´¦Àí·½·¨
+    // å‘½ä»¤å¤„ç†æ–¹æ³•
     bool prepareCommandBuffer(PUCHAR buffer, const UCHAR* cmdTemplate);
     void updateTransferStats();
 
@@ -89,27 +89,27 @@ private:
     static const int DEFAULT_TRANSFER_SIZE = 512 * 1024;  // 512KB per transfer
     static const int DEFAULT_QUEUE_SIZE = 64;             // 64 queues
 
-    static const ULONG READ_TIMEOUT = 1000;  // ¶ÁÈ¡³¬Ê±Ê±¼äms
-    static const ULONG MAX_TRANSFER_SIZE = 1024 * 1024;  // ×î´ó´«Êä´óĞ¡
+    static const ULONG READ_TIMEOUT = 1000;  // è¯»å–è¶…æ—¶æ—¶é—´ms
+    static const ULONG MAX_TRANSFER_SIZE = 1024 * 1024;  // æœ€å¤§ä¼ è¾“å¤§å°
 
     int m_transferSize;
     int m_queueSize;
     uint64_t m_totalTransferred{0};
 
-    // ´«Êä×´Ì¬
+    // ä¼ è¾“çŠ¶æ€
     std::atomic<bool> m_isTransferring;
     std::chrono::steady_clock::time_point m_transferStartTime;
 
-    // ´«ÊäÍ³¼Æ
+    // ä¼ è¾“ç»Ÿè®¡
     std::atomic<uint64_t> m_totalBytes{ 0 };
     std::atomic<double> m_currentSpeed{ 0.0 };
     std::chrono::steady_clock::time_point m_lastSpeedUpdate;
-    static constexpr int SPEED_UPDATE_INTERVAL_MS = 1000; // ËÙ¶È¸üĞÂ¼ä¸ô
+    static constexpr int SPEED_UPDATE_INTERVAL_MS = 1000; // é€Ÿåº¦æ›´æ–°é—´éš”
 
-    // FPGA ÃüÁî¶¨Òå
+    // FPGA å‘½ä»¤å®šä¹‰
     static const int CMD_BUFFER_SIZE = 512;
 
-    // ÅäÖÃ²ÎÊı
+    // é…ç½®å‚æ•°
     uint16_t m_width;
     uint16_t m_height;
     uint8_t m_capType;
@@ -117,11 +117,11 @@ private:
     uint8_t m_channelMode;
     uint8_t m_invertPn;
 
-    // ÃüÁî³¬Ê±ÉèÖÃ
+    // å‘½ä»¤è¶…æ—¶è®¾ç½®
     static const ULONG CMD_TIMEOUT = 1000;  // ms
 
-    // µ±Ç°´«ÊäÅäÖÃ
+    // å½“å‰ä¼ è¾“é…ç½®
     ULONG m_frameSize;
     bool m_isConfigured;
-    std::atomic<uint64_t> m_lastTotalBytes{ 0 };  // ÓÃÓÚËÙ¶È¼ÆËãµÄÉÏ´Î×Ü×Ö½ÚÊı
+    std::atomic<uint64_t> m_lastTotalBytes{ 0 };  // ç”¨äºé€Ÿåº¦è®¡ç®—çš„ä¸Šæ¬¡æ€»å­—èŠ‚æ•°
 };

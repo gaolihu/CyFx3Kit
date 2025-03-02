@@ -1,4 +1,4 @@
-﻿#include <windows.h>
+#include <windows.h>
 #include <dbt.h>
 #include <QVBoxLayout>
 #include <QMessageBox>
@@ -15,10 +15,11 @@
 
 #include "FX3ToolMainWin.h"
 #include "Logger.h"
+#include "DataConverters.h"
 
 std::atomic<bool> FX3ToolMainWin::s_resourcesReleased{ false };
 
-// FX3ToolMainWin.cpp中初始化部分优化
+// 在主窗口构造函数中初始化子窗口指针
 
 FX3ToolMainWin::FX3ToolMainWin(QWidget* parent)
     : QMainWindow(parent)
@@ -26,28 +27,35 @@ FX3ToolMainWin::FX3ToolMainWin(QWidget* parent)
     , m_loggerInitialized(false)
     , m_deviceManager(nullptr)
     , m_uiStateHandler(nullptr)
+    , m_fileSavePanel(nullptr)
+    , m_saveFileBox(nullptr)
+    , m_channelSelectWidget(nullptr)
+    , m_dataAnalysisWidget(nullptr)
+    , m_updataDeviceWidget(nullptr)
+    , m_videoDisplayWidget(nullptr)
 {
     ui.setupUi(this);
 
-    // 明确的初始化顺序，带有错误处理
+    // 设置菜单栏
+    setupMenuBar();
+
     try {
-        // 1. 首先初始化UI和日志系统
-        initializeUI();
+        // 1. 首先初始化日志系统&UI
         if (!initializeLogger()) {
-            QMessageBox::critical(this, QString::fromLocal8Bit("错误"),
-                QString::fromLocal8Bit("日志系统初始化失败，应用程序无法继续"));
+            QMessageBox::critical(this, fromLocal8Bit("错误"),
+                fromLocal8Bit("日志系统初始化失败，应用程序无法继续"));
             QTimer::singleShot(0, this, &FX3ToolMainWin::close);
             return;
         }
-
-        LOG_INFO(QString::fromLocal8Bit("应用程序启动，Qt版本: %1").arg(QT_VERSION_STR));
+        LOG_INFO(fromLocal8Bit("应用程序启动，Qt版本: %1").arg(QT_VERSION_STR));
+        slot_initializeUI();
 
         // 2. 创建UI状态处理器
         m_uiStateHandler = new UIStateHandler(ui, this);
         if (!m_uiStateHandler) {
-            LOG_ERROR(QString::fromLocal8Bit("创建UI状态处理器失败"));
-            QMessageBox::critical(this, QString::fromLocal8Bit("错误"),
-                QString::fromLocal8Bit("UI状态处理器创建失败"));
+            LOG_ERROR(fromLocal8Bit("创建UI状态处理器失败"));
+            QMessageBox::critical(this, fromLocal8Bit("错误"),
+                fromLocal8Bit("UI状态处理器创建失败"));
             QTimer::singleShot(0, this, &FX3ToolMainWin::close);
             return;
         }
@@ -55,73 +63,118 @@ FX3ToolMainWin::FX3ToolMainWin(QWidget* parent)
         // 3. 创建设备管理器
         m_deviceManager = new FX3DeviceManager(this);
         if (!m_deviceManager) {
-            LOG_ERROR(QString::fromLocal8Bit("创建设备管理器失败"));
-            QMessageBox::critical(this, QString::fromLocal8Bit("错误"),
-                QString::fromLocal8Bit("设备管理器创建失败"));
+            LOG_ERROR(fromLocal8Bit("创建设备管理器失败"));
+            QMessageBox::critical(this, fromLocal8Bit("错误"),
+                fromLocal8Bit("设备管理器创建失败"));
             QTimer::singleShot(0, this, &FX3ToolMainWin::close);
             return;
         }
 
-        // 4. 初始化所有信号连接
-        initializeConnections();
-
-        // 5. 启动设备检测
-        registerDeviceNotification();
-
-        // 6. 设置初始状态并初始化设备
-        AppStateMachine::instance().processEvent(StateEvent::APP_INIT,
-            QString::fromLocal8Bit("应用程序初始化完成"));
-
-        if (!m_deviceManager->initializeDeviceAndManager((HWND)this->winId())) {
-            LOG_WARN(QString::fromLocal8Bit("设备初始化失败，应用将以离线模式运行"));
-            QMessageBox::warning(this, QString::fromLocal8Bit("警告"),
-                QString::fromLocal8Bit("设备初始化失败，将以离线模式运行"));
-            // 继续运行，而不是退出应用
+        // 4. 初始化文件保存组件
+        if (!initializeFileSaveComponents()) {
+            LOG_ERROR(fromLocal8Bit("初始化文件保存组件失败"));
+            QMessageBox::critical(this, fromLocal8Bit("错误"),
+                fromLocal8Bit("初始化文件保存组件失败"));
+            QTimer::singleShot(0, this, &FX3ToolMainWin::close);
+            return;
         }
 
-        LOG_INFO(QString::fromLocal8Bit("FX3ToolMainWin构造函数完成..."));
+        // 5. 初始化所有信号连接
+        initializeConnections();
+
+        // 6. 启动设备检测
+        registerDeviceNotification();
+
+        // 7. 设置初始状态并初始化设备
+        AppStateMachine::instance().processEvent(StateEvent::APP_INIT,
+            fromLocal8Bit("应用程序初始化完成"));
+
+        if (!m_deviceManager->initializeDeviceAndManager((HWND)this->winId())) {
+            LOG_WARN(fromLocal8Bit("设备初始化失败，应用将以离线模式运行"));
+            QMessageBox::warning(this, fromLocal8Bit("警告"),
+                fromLocal8Bit("设备初始化失败，将以离线模式运行"));
+        }
+
+        LOG_INFO(fromLocal8Bit("FX3ToolMainWin构造函数完成..."));
     }
     catch (const std::exception& e) {
-        QMessageBox::critical(this, QString::fromLocal8Bit("错误"),
-            QString::fromLocal8Bit("初始化过程中发生异常: %1").arg(e.what()));
-        LOG_ERROR(QString::fromLocal8Bit("初始化异常: %1").arg(e.what()));
+        QMessageBox::critical(this, fromLocal8Bit("错误"),
+            fromLocal8Bit("初始化过程中发生异常: %1").arg(e.what()));
+        LOG_ERROR(fromLocal8Bit("初始化异常: %1").arg(e.what()));
         QTimer::singleShot(0, this, &FX3ToolMainWin::close);
     }
     catch (...) {
-        QMessageBox::critical(this, QString::fromLocal8Bit("错误"),
-            QString::fromLocal8Bit("初始化过程中发生未知异常"));
-        LOG_ERROR(QString::fromLocal8Bit("初始化未知异常"));
+        QMessageBox::critical(this, fromLocal8Bit("错误"),
+            fromLocal8Bit("初始化过程中发生未知异常"));
+        LOG_ERROR(fromLocal8Bit("初始化未知异常"));
         QTimer::singleShot(0, this, &FX3ToolMainWin::close);
     }
 }
 
 FX3ToolMainWin::~FX3ToolMainWin() {
-    LOG_INFO(QString::fromLocal8Bit("FX3ToolMainWin析构函数入口"));
-    LOG_INFO(QString::fromLocal8Bit("设置关闭标志"));
+    LOG_INFO(fromLocal8Bit("FX3ToolMainWin析构函数入口"));
+    LOG_INFO(fromLocal8Bit("设置关闭标志"));
     m_isClosing = true;
 
     // 检查资源是否已在closeEvent中释放
     if (!s_resourcesReleased) {
         if (m_deviceManager) {
-            LOG_INFO(QString::fromLocal8Bit("在析构函数中删除设备管理器"));
+            LOG_INFO(fromLocal8Bit("在析构函数中删除设备管理器"));
             delete m_deviceManager;
             m_deviceManager = nullptr;
         }
 
         if (m_uiStateHandler) {
-            LOG_INFO(QString::fromLocal8Bit("在析构函数中删除UI状态处理器"));
+            LOG_INFO(fromLocal8Bit("在析构函数中删除UI状态处理器"));
             delete m_uiStateHandler;
             m_uiStateHandler = nullptr;
         }
+
+        if (m_saveFileBox) {
+            LOG_INFO(fromLocal8Bit("在析构函数中删除文件保存对话框"));
+            delete m_saveFileBox;
+            m_saveFileBox = nullptr;
+        }
+
+        if (m_fileSavePanel) {
+            LOG_INFO(fromLocal8Bit("在析构函数中删除文件保存面板"));
+            delete m_fileSavePanel;
+            m_fileSavePanel = nullptr;
+        }
+
+        // 释放其他子窗口资源
+        if (m_channelSelectWidget) {
+            LOG_INFO(fromLocal8Bit("在析构函数中删除通道选择窗口"));
+            delete m_channelSelectWidget;
+            m_channelSelectWidget = nullptr;
+        }
+
+        if (m_dataAnalysisWidget) {
+            LOG_INFO(fromLocal8Bit("在析构函数中删除数据分析窗口"));
+            delete m_dataAnalysisWidget;
+            m_dataAnalysisWidget = nullptr;
+        }
+
+        if (m_updataDeviceWidget) {
+            LOG_INFO(fromLocal8Bit("在析构函数中删除设备升级窗口"));
+            delete m_updataDeviceWidget;
+            m_updataDeviceWidget = nullptr;
+        }
+
+        if (m_videoDisplayWidget) {
+            LOG_INFO(fromLocal8Bit("在析构函数中删除视频显示窗口"));
+            delete m_videoDisplayWidget;
+            m_videoDisplayWidget = nullptr;
+        }
     }
     else {
-        LOG_INFO(QString::fromLocal8Bit("资源已在closeEvent中释放"));
+        LOG_INFO(fromLocal8Bit("资源已在closeEvent中释放"));
     }
 
-    LOG_INFO(QString::fromLocal8Bit("FX3ToolMainWin析构函数退出 - 成功"));
+    LOG_INFO(fromLocal8Bit("FX3ToolMainWin析构函数退出 - 成功"));
 }
 
-bool FX3ToolMainWin::nativeEvent(const QByteArray& eventType, void* message, long* result)
+bool FX3ToolMainWin::nativeEvent(const QByteArray& eventType, void* message, qintptr* result)
 {
     MSG* msg = reinterpret_cast<MSG*>(message);
 
@@ -163,8 +216,6 @@ bool FX3ToolMainWin::nativeEvent(const QByteArray& eventType, void* message, lon
     return false;
 }
 
-// FX3ToolMainWin.cpp中closeEvent优化
-
 void FX3ToolMainWin::closeEvent(QCloseEvent* event) {
     // 使用互斥锁防止重复关闭
     static std::mutex closeMutex;
@@ -176,7 +227,7 @@ void FX3ToolMainWin::closeEvent(QCloseEvent* event) {
 
     // 设置关闭标志，防止新的操作
     m_isClosing = true;
-    LOG_INFO(QString::fromLocal8Bit("应用程序关闭中，正在清理资源..."));
+    LOG_INFO(fromLocal8Bit("应用程序关闭中，正在清理资源..."));
 
     try {
         // 1. 首先停止所有定时器
@@ -188,36 +239,68 @@ void FX3ToolMainWin::closeEvent(QCloseEvent* event) {
             }
         }
 
-        // 2. 通知UI状态处理器准备关闭
+        // 2. 停止文件保存（如果正在进行）
+        if (m_fileSavePanel && m_fileSavePanel->isSaving()) {
+            LOG_INFO(fromLocal8Bit("停止文件保存"));
+            m_fileSavePanel->stopSaving();
+        }
+
+        // 3. 关闭所有子窗口
+        if (m_saveFileBox && m_saveFileBox->isVisible()) {
+            LOG_INFO(fromLocal8Bit("关闭文件保存对话框"));
+            m_saveFileBox->close();
+        }
+
+        if (m_channelSelectWidget && m_channelSelectWidget->isVisible()) {
+            LOG_INFO(fromLocal8Bit("关闭通道选择窗口"));
+            m_channelSelectWidget->close();
+        }
+
+        if (m_dataAnalysisWidget && m_dataAnalysisWidget->isVisible()) {
+            LOG_INFO(fromLocal8Bit("关闭数据分析窗口"));
+            m_dataAnalysisWidget->close();
+        }
+
+        if (m_updataDeviceWidget && m_updataDeviceWidget->isVisible()) {
+            LOG_INFO(fromLocal8Bit("关闭设备升级窗口"));
+            m_updataDeviceWidget->close();
+        }
+
+        if (m_videoDisplayWidget && m_videoDisplayWidget->isVisible()) {
+            LOG_INFO(fromLocal8Bit("关闭视频显示窗口"));
+            m_videoDisplayWidget->close();
+        }
+
+        // 4. 通知UI状态处理器准备关闭
         if (m_uiStateHandler) {
             m_uiStateHandler->prepareForClose();
         }
 
-        // 3. 断开状态机信号连接，避免在关闭过程中的信号干扰
+        // 5. 断开状态机信号连接，避免在关闭过程中的信号干扰
         disconnect(&AppStateMachine::instance(), nullptr, this, nullptr);
         if (m_uiStateHandler) {
             disconnect(&AppStateMachine::instance(), nullptr, m_uiStateHandler, nullptr);
         }
 
-        // 4. 发送关闭事件到状态机
+        // 6. 发送关闭事件到状态机
         AppStateMachine::instance().processEvent(StateEvent::APP_SHUTDOWN,
-            QString::fromLocal8Bit("应用程序正在关闭"));
+            fromLocal8Bit("应用程序正在关闭"));
 
-        // 5. 停止设备传输、采集和资源释放
+        // 7. 停止设备传输、采集和资源释放
         stopAndReleaseResources();
 
         // 接受关闭事件
         event->accept();
-        LOG_INFO(QString::fromLocal8Bit("关闭流程执行完成，释放互斥锁"));
+        LOG_INFO(fromLocal8Bit("关闭流程执行完成，释放互斥锁"));
         closeMutex.unlock();
     }
     catch (const std::exception& e) {
-        LOG_ERROR(QString::fromLocal8Bit("关闭过程异常: %1").arg(e.what()));
+        LOG_ERROR(fromLocal8Bit("关闭过程异常: %1").arg(e.what()));
         event->accept();
         closeMutex.unlock();
     }
     catch (...) {
-        LOG_ERROR(QString::fromLocal8Bit("关闭过程未知异常"));
+        LOG_ERROR(fromLocal8Bit("关闭过程未知异常"));
         event->accept();
         closeMutex.unlock();
     }
@@ -225,10 +308,10 @@ void FX3ToolMainWin::closeEvent(QCloseEvent* event) {
 
 void FX3ToolMainWin::resizeEvent(QResizeEvent* event) {
     QMainWindow::resizeEvent(event);
-    adjustStatusBar();
+    slot_adjustStatusBar();
 }
 
-void FX3ToolMainWin::adjustStatusBar() {
+void FX3ToolMainWin::slot_adjustStatusBar() {
     QStatusBar* statusBar = this->statusBar();
     if (!statusBar) return;
 
@@ -236,28 +319,22 @@ void FX3ToolMainWin::adjustStatusBar() {
     statusBar->setMinimumHeight(30);
 }
 
-// 在FX3ToolMainWin::initializeUI()中修改初始按钮状态设置
-
-void FX3ToolMainWin::initializeUI() {
-    LOG_INFO(QString::fromLocal8Bit("初始化UI组件"));
-
-    // 在任何其他初始化之前，先禁用所有控制按钮
+void FX3ToolMainWin::slot_initializeUI() {
+    // 先禁用所有控制按钮
     ui.startButton->setEnabled(false);
     ui.stopButton->setEnabled(false);
 
-    // 重要：检查重置按钮的状态设置
-    LOG_INFO(QString::fromLocal8Bit("设置重置按钮状态为禁用"));
+    // 重置按钮的状态设置
     ui.resetButton->setEnabled(false);
 
     // 立即检查按钮状态
-    LOG_INFO(QString::fromLocal8Bit("初始化UI后按钮状态: 开始=%1, 停止=%2, 重置=%3")
-        .arg(ui.startButton->isEnabled() ? "启用" : "禁用")
-        .arg(ui.stopButton->isEnabled() ? "启用" : "禁用")
-        .arg(ui.resetButton->isEnabled() ? "启用" : "禁用"));
+    LOG_INFO(fromLocal8Bit("初始化UI后按钮状态: 开始=%1, 停止=%2, 重置=%3")
+        .arg(ui.startButton->isEnabled() ? fromLocal8Bit("启用") : fromLocal8Bit("禁用"))
+        .arg(ui.stopButton->isEnabled() ? fromLocal8Bit("启用") : fromLocal8Bit("禁用"))
+        .arg(ui.resetButton->isEnabled() ? fromLocal8Bit("启用") : fromLocal8Bit("禁用")));
 
     // 设置状态栏自适应布局
-    QStatusBar* statusBar = this->statusBar();
-    statusBar->setSizeGripEnabled(false);
+    this->statusBar()->setSizeGripEnabled(false);
 
     // 为所有状态栏标签设置统一字体
     QFont statusFont("Microsoft YaHei", 9); // 使用雅黑字体或其他合适的系统字体
@@ -270,18 +347,11 @@ void FX3ToolMainWin::initializeUI() {
     ui.totalBytesLabel->setFont(statusFont);
     ui.totalTimeLabel->setFont(statusFont);
 
-    // 使用QLabel替代原有标签，并设置最小宽度
-    ui.usbSpeedLabel->setMinimumWidth(200);
-    ui.usbStatusLabel->setMinimumWidth(200);
-    ui.transferStatusLabel->setMinimumWidth(200);
-    ui.speedLabel->setMinimumWidth(250);
-    ui.totalBytesLabel->setMinimumWidth(200);
-
     // 设置窗口最小尺寸
     this->setMinimumSize(1000, 800);
 
     // 初始化命令状态
-    ui.cmdStatusLabel->setText(QString::fromLocal8Bit("命令文件未加载"));
+    ui.cmdStatusLabel->setText(fromLocal8Bit("命令文件未加载"));
     ui.cmdStatusLabel->setStyleSheet("color: red;");
 
     // 初始化图像参数UI
@@ -298,6 +368,20 @@ void FX3ToolMainWin::initializeUI() {
     // 设置默认值
     ui.imageWIdth->setText("1920");
     ui.imageHeight->setText("1080");
+
+    // 创建保存文件按钮
+    QPushButton* saveFileButton = new QPushButton(fromLocal8Bit("保存文件"), this);
+    ui.controlTransferLayout->addWidget(saveFileButton);
+
+    // 连接保存文件按钮信号
+    connect(saveFileButton, &QPushButton::clicked, this, &FX3ToolMainWin::slot_onShowSaveFileBoxTriggered);
+}
+
+void FX3ToolMainWin::slot_showAboutDialog() {
+    QMessageBox::about(this,
+        fromLocal8Bit("关于FX3传输测试工具"),
+        fromLocal8Bit("FX3传输测试工具 v1.0\n\n用于FX3设备的数据传输和测试\n\n© 2025 公司名称")
+    );
 }
 
 bool FX3ToolMainWin::initializeLogger() {
@@ -305,13 +389,9 @@ bool FX3ToolMainWin::initializeLogger() {
         return true;
     }
 
-    QString logPath = QApplication::applicationDirPath() + "/fx3_t.log";
-
     try {
-        // 初始化日志文件
+        QString logPath = QApplication::applicationDirPath() + "/fx3_t.log";
         Logger::instance().setLogFile(logPath);
-
-        // 设置日志控件
         if (ui.logTextEdit) {
             Logger::instance().setLogWidget(ui.logTextEdit);
         }
@@ -319,8 +399,7 @@ bool FX3ToolMainWin::initializeLogger() {
             throw std::runtime_error("未找到日志控件");
         }
 
-        // 添加启动日志
-        LOG_INFO(QString::fromLocal8Bit("日志: %1").arg(logPath));
+        LOG_INFO(fromLocal8Bit("日志: %1").arg(logPath));
 
         m_loggerInitialized = true;
         return true;
@@ -329,6 +408,105 @@ bool FX3ToolMainWin::initializeLogger() {
         qDebug() << "日志初始化失败:" << e.what();
         return false;
     }
+}
+
+void FX3ToolMainWin::setupMenuBar() {
+    // 创建菜单
+    QMenu* fileMenu = menuBar()->addMenu(fromLocal8Bit("文件"));
+    QMenu* deviceMenu = menuBar()->addMenu(fromLocal8Bit("设备"));
+    QMenu* toolsMenu = menuBar()->addMenu(fromLocal8Bit("工具"));
+    QMenu* viewMenu = menuBar()->addMenu(fromLocal8Bit("视图"));
+    QMenu* helpMenu = menuBar()->addMenu(fromLocal8Bit("帮助"));
+
+    // 文件菜单项
+    QAction* saveAction = new QAction(fromLocal8Bit("保存文件..."), this);
+#if QT_VERSION <= QT_VERSION_CHECK(6, 0, 0)
+    saveAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_S));
+#else
+    saveAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_S));
+#endif
+    connect(saveAction, &QAction::triggered, this, &FX3ToolMainWin::slot_onShowSaveFileBoxTriggered);
+    fileMenu->addAction(saveAction);
+
+    QAction* exportAction = new QAction(fromLocal8Bit("导出数据..."), this);
+    fileMenu->addAction(exportAction);
+    fileMenu->addSeparator();
+
+    QAction* exitAction = new QAction(fromLocal8Bit("退出"), this);
+#if QT_VERSION <= QT_VERSION_CHECK(6, 0, 0)
+    exitAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_F4));
+#else
+    exitAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_F4));
+#endif
+    connect(exitAction, &QAction::triggered, this, &QWidget::close);
+    fileMenu->addAction(exitAction);
+
+    // 设备菜单项
+    QAction* startAction = new QAction(fromLocal8Bit("开始传输"), this);
+#if QT_VERSION <= QT_VERSION_CHECK(6, 0, 0)
+    startAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_B));
+#else
+    startAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_B));
+#endif
+    connect(startAction, &QAction::triggered, this, &FX3ToolMainWin::slot_onStartButtonClicked);
+    deviceMenu->addAction(startAction);
+
+    QAction* stopAction = new QAction(fromLocal8Bit("停止传输"), this);
+#if QT_VERSION <= QT_VERSION_CHECK(6, 0, 0)
+    stopAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_E));
+#else
+    stopAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
+#endif
+    connect(stopAction, &QAction::triggered, this, &FX3ToolMainWin::slot_onStopButtonClicked);
+    deviceMenu->addAction(stopAction);
+
+    QAction* resetAction = new QAction(fromLocal8Bit("重置设备"), this);
+    connect(resetAction, &QAction::triggered, this, &FX3ToolMainWin::slot_onResetButtonClicked);
+    deviceMenu->addAction(resetAction);
+    deviceMenu->addSeparator();
+
+    QAction* channelAction = new QAction(fromLocal8Bit("通道配置..."), this);
+    connect(channelAction, &QAction::triggered, this, &FX3ToolMainWin::slot_onShowChannelSelectTriggered);
+    deviceMenu->addAction(channelAction);
+
+    QAction* updataAction = new QAction(fromLocal8Bit("设备升级..."), this);
+    connect(updataAction, &QAction::triggered, this, &FX3ToolMainWin::slot_onShowUpdataDeviceTriggered);
+    deviceMenu->addAction(updataAction);
+
+    // 工具菜单项
+    QAction* analysisAction = new QAction(fromLocal8Bit("数据分析..."), this);
+    connect(analysisAction, &QAction::triggered, this, &FX3ToolMainWin::slot_onShowDataAnalysisTriggered);
+    toolsMenu->addAction(analysisAction);
+
+    QAction* videoAction = new QAction(fromLocal8Bit("视频显示..."), this);
+    connect(videoAction, &QAction::triggered, this, &FX3ToolMainWin::slot_onShowVideoDisplayTriggered);
+    toolsMenu->addAction(videoAction);
+
+    QAction* settingsAction = new QAction(fromLocal8Bit("应用设置..."), this);
+    toolsMenu->addAction(settingsAction);
+
+    // 视图菜单项
+    QAction* clearLogAction = new QAction(fromLocal8Bit("清除日志"), this);
+    connect(clearLogAction, &QAction::triggered, this, [this]() {
+        if (ui.logTextEdit) {
+            ui.logTextEdit->clear();
+            LOG_INFO(fromLocal8Bit("日志已清除"));
+        }
+        });
+    viewMenu->addAction(clearLogAction);
+
+    // 帮助菜单项
+    QAction* helpAction = new QAction(fromLocal8Bit("使用帮助"), this);
+    helpMenu->addAction(helpAction);
+    helpMenu->addSeparator();
+
+    QAction* aboutAction = new QAction(fromLocal8Bit("关于"), this);
+    connect(aboutAction, &QAction::triggered, this, &FX3ToolMainWin::slot_showAboutDialog);
+    helpMenu->addAction(aboutAction);
+}
+
+bool FX3ToolMainWin::initializeFileSaveComponents() {
+    return true;
 }
 
 void FX3ToolMainWin::registerDeviceNotification() {
@@ -346,120 +524,135 @@ void FX3ToolMainWin::registerDeviceNotification() {
     );
 
     if (!hDevNotify) {
-        LOG_ERROR(QString::fromLocal8Bit("注册Fx3 USB设备通知失败: %1")
+        LOG_ERROR(fromLocal8Bit("注册Fx3 USB设备通知失败: %1")
             .arg(GetLastError()));
     }
     else {
-        LOG_DEBUG(QString::fromLocal8Bit("Fx3 USB设备通知注册成功"));
+        LOG_INFO(fromLocal8Bit("Fx3 USB设备通知注册成功"));
     }
 }
 
 void FX3ToolMainWin::initializeConnections() {
     // 按钮信号连接
-    connect(ui.startButton, &QPushButton::clicked, this, &FX3ToolMainWin::onStartButtonClicked);
-    connect(ui.stopButton, &QPushButton::clicked, this, &FX3ToolMainWin::onStopButtonClicked);
-    connect(ui.resetButton, &QPushButton::clicked, this, &FX3ToolMainWin::onResetButtonClicked);
+    connect(ui.startButton, &QPushButton::clicked, this, &FX3ToolMainWin::slot_onStartButtonClicked);
+    connect(ui.stopButton, &QPushButton::clicked, this, &FX3ToolMainWin::slot_onStopButtonClicked);
+    connect(ui.resetButton, &QPushButton::clicked, this, &FX3ToolMainWin::slot_onResetButtonClicked);
 
     // 命令目录按钮连接
-    connect(ui.cmdDirButton, &QPushButton::clicked, this, &FX3ToolMainWin::onSelectCommandDirectory);
+    connect(ui.cmdDirButton, &QPushButton::clicked, this, &FX3ToolMainWin::slot_onSelectCommandDirectory);
 
-    // 确保对象已经创建并初始化
     if (m_deviceManager && m_uiStateHandler) {
         // 设备管理器连接
-        connect(m_deviceManager, &FX3DeviceManager::transferStatsUpdated,
-            m_uiStateHandler, &UIStateHandler::updateTransferStats);
-        connect(m_deviceManager, &FX3DeviceManager::usbSpeedUpdated,
-            m_uiStateHandler, &UIStateHandler::updateUsbSpeedDisplay);
-        connect(m_deviceManager, &FX3DeviceManager::deviceError,
-            m_uiStateHandler, &UIStateHandler::showErrorMessage);
+        connect(m_deviceManager, &FX3DeviceManager::transferStatsUpdated, m_uiStateHandler, &UIStateHandler::updateTransferStats);
+        connect(m_deviceManager, &FX3DeviceManager::usbSpeedUpdated, m_uiStateHandler, &UIStateHandler::updateUsbSpeedDisplay);
+        connect(m_deviceManager, &FX3DeviceManager::deviceError, m_uiStateHandler, &UIStateHandler::showErrorMessage);
 
-        // 尝试直接连接状态机信号，不使用引用
-        AppStateMachine& stateMachine = AppStateMachine::instance();
+        // 添加数据包处理连接
+        //connect(m_deviceManager, &FX3DeviceManager::dataPacketAvailable, this, &FX3ToolMainWin::slot_onDataPacketAvailable);
 
-        // 强制删除之前的连接，避免重复
-        disconnect(&stateMachine, &AppStateMachine::stateChanged,
-            m_uiStateHandler, &UIStateHandler::onStateChanged);
-
-        // 重新建立连接，使用直接连接而非队列连接，确保立即处理
-        bool connected = connect(&stateMachine, &AppStateMachine::stateChanged,
-            m_uiStateHandler, &UIStateHandler::onStateChanged, Qt::DirectConnection);
-
-        LOG_INFO(QString::fromLocal8Bit("状态机stateChanged信号连接到UI处理器 - 连接状态: %1")
-            .arg(connected ? QString::fromLocal8Bit("成功") : QString::fromLocal8Bit("失败")));
-
-        // 如果连接失败，尝试替代方法
-        if (!connected) {
-            LOG_ERROR(QString::fromLocal8Bit("信号连接失败，尝试替代方法"));
-
-            // 使用lambda表达式作为中介
-            connect(&stateMachine, &AppStateMachine::stateChanged,
-                this, [this](AppState newState, AppState oldState, const QString& reason) {
-                    m_uiStateHandler->onStateChanged(newState, oldState, reason);
-                }, Qt::DirectConnection);
-        }
+        // 状态机连接
+        connect(&AppStateMachine::instance(), &AppStateMachine::stateChanged, m_uiStateHandler, &UIStateHandler::onStateChanged, Qt::DirectConnection);
     }
     else {
-        LOG_ERROR(QString::fromLocal8Bit("设备管理器或UI状态处理器为空，无法连接信号"));
-        if (!m_deviceManager) LOG_ERROR(QString::fromLocal8Bit("设备管理器为空"));
-        if (!m_uiStateHandler) LOG_ERROR(QString::fromLocal8Bit("UI状态处理器为空"));
+        LOG_ERROR(fromLocal8Bit("设备管理器或UI状态处理器为空，无法连接信号"));
+        if (!m_deviceManager) LOG_ERROR(fromLocal8Bit("设备管理器为空"));
+        if (!m_uiStateHandler) LOG_ERROR(fromLocal8Bit("UI状态处理器为空"));
     }
 
+    // 连接文件保存管理器信号
+    connect(&FileSaveManager::instance(), &FileSaveManager::saveCompleted,
+        this, &FX3ToolMainWin::slot_onSaveCompleted);
+    connect(&FileSaveManager::instance(), &FileSaveManager::saveError,
+        this, &FX3ToolMainWin::slot_onSaveError);
+
     // 连接状态机事件
-    bool enteringConnected = connect(&AppStateMachine::instance(), &AppStateMachine::enteringState,
-        this, &FX3ToolMainWin::onEnteringState);
-    LOG_INFO(QString::fromLocal8Bit("状态机enteringState信号连接到FX3ToolMainWin - 连接状态: %1")
-        .arg(enteringConnected ? QString::fromLocal8Bit("成功") : QString::fromLocal8Bit("失败")));
+    connect(&AppStateMachine::instance(), &AppStateMachine::enteringState, this, &FX3ToolMainWin::slot_onEnteringState);
 }
 
 void FX3ToolMainWin::stopAndReleaseResources() {
     // 1. 确保设备管理器停止所有传输
     if (m_deviceManager) {
         if (m_deviceManager->isTransferring()) {
-            LOG_INFO(QString::fromLocal8Bit("停止正在进行的数据传输"));
+            LOG_INFO(fromLocal8Bit("停止正在进行的数据传输"));
             m_deviceManager->stopTransfer();
 
             // 给一定时间让设备管理器完成停止操作
             QElapsedTimer timer;
             timer.start();
-            const int MAX_WAIT_MS = 300;
-
-            while (m_deviceManager->isTransferring() && timer.elapsed() < MAX_WAIT_MS) {
+            while (m_deviceManager->isTransferring() && timer.elapsed() < 300) {
                 QThread::msleep(10);
                 QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
             }
         }
     }
 
-    // 2. 创建单独的智能指针保存设备管理器和UI状态处理器，以便在类析构前释放
+    // 2. 停止文件保存（如果正在进行）
+    if (m_fileSavePanel && m_fileSavePanel->isSaving()) {
+        LOG_INFO(fromLocal8Bit("停止文件保存"));
+        m_fileSavePanel->stopSaving();
+
+        // 短暂等待让保存操作完成
+        QThread::msleep(100);
+        QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+    }
+
+    // 3. 创建单独的智能指针保存各个组件，以便在类析构前释放
     std::unique_ptr<FX3DeviceManager> deviceManagerPtr(m_deviceManager);
     std::unique_ptr<UIStateHandler> uiHandlerPtr(m_uiStateHandler);
+    std::unique_ptr<FileSavePanel> fileSavePanelPtr(m_fileSavePanel);
+    std::unique_ptr<SaveFileBox> saveFileBoxPtr(m_saveFileBox);
+    std::unique_ptr<ChannelSelect> channelSelectPtr(m_channelSelectWidget);
+    std::unique_ptr<DataAnalysis> dataAnalysisPtr(m_dataAnalysisWidget);
+    std::unique_ptr<UpdataDevice> updataDevicePtr(m_updataDeviceWidget);
+    std::unique_ptr<VideoDisplay> videoDisplayPtr(m_videoDisplayWidget);
 
     // 将类成员设为nullptr防止析构函数重复释放
     m_deviceManager = nullptr;
     m_uiStateHandler = nullptr;
+    m_fileSavePanel = nullptr;
+    m_saveFileBox = nullptr;
+    m_channelSelectWidget = nullptr;
+    m_dataAnalysisWidget = nullptr;
+    m_updataDeviceWidget = nullptr;
+    m_videoDisplayWidget = nullptr;
 
-    // 3. 先释放设备管理器 - 这会同时清理USB设备和采集管理器
-    if (deviceManagerPtr) {
-        LOG_INFO(QString::fromLocal8Bit("释放设备管理器"));
-        deviceManagerPtr.reset();
-    }
+    // 4. 先释放子窗口
+    LOG_INFO(fromLocal8Bit("释放视频显示窗口"));
+    videoDisplayPtr.reset();
 
-    // 4. 然后释放UI状态处理器
-    if (uiHandlerPtr) {
-        LOG_INFO(QString::fromLocal8Bit("释放UI状态处理器"));
-        uiHandlerPtr.reset();
-    }
+    LOG_INFO(fromLocal8Bit("释放设备升级窗口"));
+    updataDevicePtr.reset();
+
+    LOG_INFO(fromLocal8Bit("释放数据分析窗口"));
+    dataAnalysisPtr.reset();
+
+    LOG_INFO(fromLocal8Bit("释放通道选择窗口"));
+    channelSelectPtr.reset();
+
+    LOG_INFO(fromLocal8Bit("释放文件保存对话框"));
+    saveFileBoxPtr.reset();
+
+    LOG_INFO(fromLocal8Bit("释放文件保存面板"));
+    fileSavePanelPtr.reset();
+
+    // 5. 然后释放UI状态处理器
+    LOG_INFO(fromLocal8Bit("释放UI状态处理器"));
+    uiHandlerPtr.reset();
+
+    // 6. 最后释放设备管理器 - 这会同时清理USB设备和采集管理器
+    LOG_INFO(fromLocal8Bit("释放设备管理器"));
+    deviceManagerPtr.reset();
 
     // 设置静态资源释放标志
     s_resourcesReleased = true;
-    LOG_INFO(QString::fromLocal8Bit("所有资源已释放完成"));
+    LOG_INFO(fromLocal8Bit("所有资源已释放完成"));
 }
 
-void FX3ToolMainWin::onStartButtonClicked() {
-    LOG_INFO(QString::fromLocal8Bit("开始传输按钮点击"));
+void FX3ToolMainWin::slot_onStartButtonClicked() {
+    LOG_INFO(fromLocal8Bit("开始传输按钮点击"));
 
     if (m_isClosing) {
-        LOG_INFO(QString::fromLocal8Bit("应用程序正在关闭，忽略开始请求"));
+        LOG_INFO(fromLocal8Bit("应用程序正在关闭，忽略开始请求"));
         return;
     }
 
@@ -478,11 +671,11 @@ void FX3ToolMainWin::onStartButtonClicked() {
     }
 }
 
-void FX3ToolMainWin::onStopButtonClicked() {
-    LOG_INFO(QString::fromLocal8Bit("停止传输按钮点击"));
+void FX3ToolMainWin::slot_onStopButtonClicked() {
+    LOG_INFO(fromLocal8Bit("停止传输按钮点击"));
 
     if (m_isClosing) {
-        LOG_INFO(QString::fromLocal8Bit("应用程序正在关闭，忽略停止请求"));
+        LOG_INFO(fromLocal8Bit("应用程序正在关闭，忽略停止请求"));
         return;
     }
 
@@ -492,11 +685,11 @@ void FX3ToolMainWin::onStopButtonClicked() {
     }
 }
 
-void FX3ToolMainWin::onResetButtonClicked() {
-    LOG_INFO(QString::fromLocal8Bit("重置设备按钮点击"));
+void FX3ToolMainWin::slot_onResetButtonClicked() {
+    LOG_INFO(fromLocal8Bit("重置设备按钮点击"));
 
     if (m_isClosing) {
-        LOG_INFO(QString::fromLocal8Bit("应用程序正在关闭，忽略重置请求"));
+        LOG_INFO(fromLocal8Bit("应用程序正在关闭，忽略重置请求"));
         return;
     }
 
@@ -506,8 +699,180 @@ void FX3ToolMainWin::onResetButtonClicked() {
     }
 }
 
-void FX3ToolMainWin::onSelectCommandDirectory() {
-    LOG_INFO(QString::fromLocal8Bit("选择命令文件目录"));
+// 通道选择窗口触发函数
+void FX3ToolMainWin::slot_onShowChannelSelectTriggered() {
+    LOG_INFO(fromLocal8Bit("显示通道配置窗口"));
+
+    if (m_isClosing) {
+        LOG_INFO(fromLocal8Bit("应用程序正在关闭，忽略显示请求"));
+        return;
+    }
+
+    // 延迟创建通道选择窗口（单例模式）
+    if (!m_channelSelectWidget) {
+        m_channelSelectWidget = new ChannelSelect(this);
+        connect(m_channelSelectWidget, &ChannelSelect::channelConfigChanged,
+            this, &FX3ToolMainWin::slot_onChannelConfigChanged);
+    }
+
+    // 显示窗口
+    m_channelSelectWidget->show();
+    m_channelSelectWidget->raise();
+    m_channelSelectWidget->activateWindow();
+}
+
+// 数据分析窗口触发函数
+void FX3ToolMainWin::slot_onShowDataAnalysisTriggered() {
+    LOG_INFO(fromLocal8Bit("显示数据分析窗口"));
+
+    if (m_isClosing) {
+        LOG_INFO(fromLocal8Bit("应用程序正在关闭，忽略显示请求"));
+        return;
+    }
+
+    // 延迟创建数据分析窗口（单例模式）
+    if (!m_dataAnalysisWidget) {
+        m_dataAnalysisWidget = new DataAnalysis(this);
+
+        // 连接保存数据信号
+        connect(m_dataAnalysisWidget, &DataAnalysis::saveDataRequested,
+            this, &FX3ToolMainWin::slot_onShowSaveFileBoxTriggered);
+
+        // 连接视频预览信号
+        connect(m_dataAnalysisWidget, &DataAnalysis::videoDisplayRequested,
+            this, &FX3ToolMainWin::slot_onShowVideoDisplayTriggered);
+    }
+
+    // 显示窗口
+    m_dataAnalysisWidget->show();
+    m_dataAnalysisWidget->raise();
+    m_dataAnalysisWidget->activateWindow();
+}
+
+// 设备升级窗口触发函数
+void FX3ToolMainWin::slot_onShowUpdataDeviceTriggered() {
+    LOG_INFO(fromLocal8Bit("显示设备升级窗口"));
+
+    if (m_isClosing) {
+        LOG_INFO(fromLocal8Bit("应用程序正在关闭，忽略显示请求"));
+        return;
+    }
+
+    // 延迟创建设备升级窗口（单例模式）
+    if (!m_updataDeviceWidget) {
+        m_updataDeviceWidget = new UpdataDevice(this);
+    }
+
+    // 显示窗口
+    m_updataDeviceWidget->show();
+    m_updataDeviceWidget->raise();
+    m_updataDeviceWidget->activateWindow();
+}
+
+// 视频显示窗口触发函数
+void FX3ToolMainWin::slot_onShowVideoDisplayTriggered() {
+    LOG_INFO(fromLocal8Bit("显示视频窗口"));
+
+    if (m_isClosing) {
+        LOG_INFO(fromLocal8Bit("应用程序正在关闭，忽略显示请求"));
+        return;
+    }
+
+    // 验证图像参数
+    uint16_t width;
+    uint16_t height;
+    uint8_t capType;
+
+    if (!validateImageParameters(width, height, capType)) {
+        QMessageBox::warning(this,
+            fromLocal8Bit("警告"),
+            fromLocal8Bit("图像参数无效，请先设置正确的图像参数"));
+        return;
+    }
+
+    // 延迟创建视频显示窗口（单例模式）
+    if (!m_videoDisplayWidget) {
+        m_videoDisplayWidget = new VideoDisplay(this);
+    }
+
+    // 设置图像参数
+    m_videoDisplayWidget->setImageParameters(width, height, capType);
+
+    // 显示窗口
+    m_videoDisplayWidget->show();
+    m_videoDisplayWidget->raise();
+    m_videoDisplayWidget->activateWindow();
+}
+
+// 通道配置变更处理函数
+void FX3ToolMainWin::slot_onChannelConfigChanged(const ChannelConfig& config) {
+    LOG_INFO(fromLocal8Bit("通道配置已更新"));
+
+    // 更新主界面上的相关参数
+    if (config.videoWidth > 0 && config.videoHeight > 0) {
+        ui.imageWIdth->setText(QString::number(config.videoWidth));
+        ui.imageHeight->setText(QString::number(config.videoHeight));
+        LOG_INFO(fromLocal8Bit("从通道配置更新图像尺寸：%1x%2")
+            .arg(config.videoWidth).arg(config.videoHeight));
+    }
+
+    // 如果有设备管理器，更新设备配置
+    if (m_deviceManager) {
+        //m_deviceManager->updateChannelConfig(config);
+    }
+}
+
+void FX3ToolMainWin::slot_onSaveButtonClicked() {
+    LOG_INFO(fromLocal8Bit("保存按钮点击"));
+
+    if (m_isClosing) {
+        LOG_INFO(fromLocal8Bit("应用程序正在关闭，忽略保存请求"));
+        return;
+    }
+
+    // 检查文件保存面板是否存在
+    if (!m_fileSavePanel) {
+        LOG_ERROR(fromLocal8Bit("文件保存面板未初始化"));
+        QMessageBox::warning(this, fromLocal8Bit("错误"),
+            fromLocal8Bit("文件保存功能未初始化"));
+        return;
+    }
+
+    // 如果保存已经在进行中，则停止保存
+    if (m_fileSavePanel->isSaving()) {
+        m_fileSavePanel->stopSaving();
+        LOG_INFO(fromLocal8Bit("停止文件保存"));
+    }
+    else {
+        // 否则，启动保存
+
+        // 验证参数并更新文件保存选项
+        uint16_t width;
+        uint16_t height;
+        uint8_t capType;
+
+        if (!validateImageParameters(width, height, capType)) {
+            return;
+        }
+
+        // 获取当前保存参数并更新选项
+        SaveParameters params = FileSaveManager::instance().getSaveParameters();
+        params.options["width"] = width;
+        params.options["height"] = height;
+        params.options["format"] = capType;
+
+        // 更新保存参数
+        FileSaveManager::instance().setSaveParameters(params);
+
+        // 启动保存
+        m_fileSavePanel->startSaving();
+        LOG_INFO(fromLocal8Bit("开始文件保存，参数：宽度=%1，高度=%2，格式=0x%3")
+            .arg(width).arg(height).arg(capType, 2, 16, QChar('0')));
+    }
+}
+
+void FX3ToolMainWin::slot_onSelectCommandDirectory() {
+    LOG_INFO(fromLocal8Bit("选择命令文件目录"));
 
     if (m_isClosing) {
         return;
@@ -515,7 +880,7 @@ void FX3ToolMainWin::onSelectCommandDirectory() {
 
     QString dir = QFileDialog::getExistingDirectory(
         this,
-        QString::fromLocal8Bit("选择命令文件目录"),
+        fromLocal8Bit("选择命令文件目录"),
         QDir::currentPath(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
@@ -531,8 +896,8 @@ void FX3ToolMainWin::onSelectCommandDirectory() {
     if (m_deviceManager && !m_deviceManager->loadCommandFiles(dir)) {
         QMessageBox::warning(
             this,
-            QString::fromLocal8Bit("错误"),
-            QString::fromLocal8Bit("无法加载命令文件，请确保目录包含所需的所有命令文件")
+            fromLocal8Bit("错误"),
+            fromLocal8Bit("无法加载命令文件，请确保目录包含所需的所有命令文件")
         );
         ui.cmdDirEdit->clear();
     }
@@ -549,8 +914,8 @@ bool FX3ToolMainWin::validateImageParameters(uint16_t& width, uint16_t& height, 
     width = widthText.toUInt(&conversionOk);
     if (!conversionOk || width == 0 || width > 4096) {
         LOG_ERROR("无效的图像宽度");
-        QMessageBox::warning(this, QString::fromLocal8Bit("错误"),
-            QString::fromLocal8Bit("无效的图像宽度，请输入1-4096之间的值"));
+        QMessageBox::warning(this, fromLocal8Bit("错误"),
+            fromLocal8Bit("无效的图像宽度，请输入1-4096之间的值"));
         return false;
     }
 
@@ -562,8 +927,8 @@ bool FX3ToolMainWin::validateImageParameters(uint16_t& width, uint16_t& height, 
     height = heightText.toUInt(&conversionOk);
     if (!conversionOk || height == 0 || height > 4096) {
         LOG_ERROR("无效的图像高度");
-        QMessageBox::warning(this, QString::fromLocal8Bit("错误"),
-            QString::fromLocal8Bit("无效的图像高度，请输入1-4096之间的值"));
+        QMessageBox::warning(this, fromLocal8Bit("错误"),
+            fromLocal8Bit("无效的图像高度，请输入1-4096之间的值"));
         return false;
     }
 
@@ -576,13 +941,13 @@ bool FX3ToolMainWin::validateImageParameters(uint16_t& width, uint16_t& height, 
     case 2: capType = 0x3A; break; // RAW12
     }
 
-    LOG_INFO(QString::fromLocal8Bit("图像参数验证通过 - 宽度: %1, 高度: %2, 类型: 0x%3")
+    LOG_INFO(fromLocal8Bit("图像参数验证通过 - 宽度: %1, 高度: %2, 类型: 0x%3")
         .arg(width).arg(height).arg(capType, 2, 16, QChar('0')));
 
     return true;
 }
 
-void FX3ToolMainWin::onEnteringState(AppState state, const QString& reason) {
+void FX3ToolMainWin::slot_onEnteringState(AppState state, const QString& reason) {
     // 这里可以处理特定状态的进入逻辑
     // 目前大部分状态处理已经委托给UIStateHandler
 
@@ -596,4 +961,87 @@ void FX3ToolMainWin::onEnteringState(AppState state, const QString& reason) {
         // 其他状态处理已经由UIStateHandler完成
         break;
     }
+}
+
+void FX3ToolMainWin::slot_onDataPacketAvailable(const DataPacket& packet) {
+    // 如果应用正在关闭，忽略数据包
+    if (m_isClosing) {
+        return;
+    }
+
+    // 检查文件保存面板是否正在保存数据
+    if (m_fileSavePanel && m_fileSavePanel->isSaving()) {
+        // 将数据包传递给文件保存管理器
+        FileSaveManager::instance().processDataPacket(packet);
+    }
+}
+
+void FX3ToolMainWin::slot_onSaveCompleted(const QString& path, uint64_t totalBytes) {
+    LOG_INFO(fromLocal8Bit("文件保存完成: 路径=%1, 总大小=%2 字节")
+        .arg(path).arg(totalBytes));
+
+    // 这里可以添加任何保存完成后的逻辑，比如更新UI等
+}
+
+void FX3ToolMainWin::slot_onSaveError(const QString& error) {
+    LOG_ERROR(fromLocal8Bit("文件保存错误: %1").arg(error));
+
+    // 这里可以添加保存错误处理逻辑
+    // 例如在状态栏显示错误信息等
+}
+
+void FX3ToolMainWin::slot_onShowSaveFileBoxTriggered() {
+    LOG_INFO(fromLocal8Bit("显示文件保存对话框"));
+
+    if (m_isClosing) {
+        LOG_INFO(fromLocal8Bit("应用程序正在关闭，忽略显示请求"));
+        return;
+    }
+
+    // 验证参数
+    uint16_t width;
+    uint16_t height;
+    uint8_t capType;
+
+    if (!validateImageParameters(width, height, capType)) {
+        return;
+    }
+
+    // 延迟创建 SaveFileBox
+    if (!m_saveFileBox) {
+        m_saveFileBox = new SaveFileBox(this);
+
+        // 连接信号
+        connect(m_saveFileBox, &SaveFileBox::saveCompleted,
+            this, &FX3ToolMainWin::slot_onSaveFileBoxCompleted);
+        connect(m_saveFileBox, &SaveFileBox::saveError,
+            this, &FX3ToolMainWin::slot_onSaveFileBoxError);
+    }
+
+    // 设置图像参数
+    m_saveFileBox->setImageParameters(width, height, capType);
+
+    // 准备显示
+    m_saveFileBox->prepareForShow();
+
+    // 显示对话框
+    m_saveFileBox->show();
+    m_saveFileBox->raise();
+    m_saveFileBox->activateWindow();
+}
+
+// 添加文件保存完成槽函数
+void FX3ToolMainWin::slot_onSaveFileBoxCompleted(const QString& path, uint64_t totalBytes) {
+    LOG_INFO(fromLocal8Bit("文件保存完成：路径=%1，总大小=%2字节")
+        .arg(path).arg(totalBytes));
+
+    // 在这里可以添加保存完成后的处理逻辑
+    // 例如更新状态栏显示等
+}
+
+// 添加文件保存错误槽函数
+void FX3ToolMainWin::slot_onSaveFileBoxError(const QString& error) {
+    LOG_ERROR(fromLocal8Bit("文件保存错误：%1").arg(error));
+
+    // 在这里可以添加错误处理逻辑
 }

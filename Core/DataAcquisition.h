@@ -13,37 +13,37 @@
 
 class USBDevice;
 
-// Êı¾İ°ü½á¹¹
+// æ•°æ®åŒ…ç»“æ„
 struct DataPacket {
     std::vector<uint8_t> data;
     size_t size;
     uint64_t timestamp;
 };
 
-// Êı¾İ´¦ÀíÆ÷½Ó¿Ú
+// æ•°æ®å¤„ç†å™¨æ¥å£
 class IDataProcessor {
 public:
     virtual ~IDataProcessor() = default;
     virtual void processData(const DataPacket& packet) = 0;
 };
 
-// Êı¾İ²É¼¯¹ÜÀíÆ÷
+// æ•°æ®é‡‡é›†ç®¡ç†å™¨
 class DataAcquisitionManager : public QObject,
     public std::enable_shared_from_this<DataAcquisitionManager> {
     Q_OBJECT
 
 public:
-    // ¾²Ì¬¹¤³§·½·¨£¬ÓÃÓÚ´´½¨DataAcquisitionManagerÊµÀı
+    // é™æ€å·¥å‚æ–¹æ³•ï¼Œç”¨äºåˆ›å»ºDataAcquisitionManagerå®ä¾‹
     static std::shared_ptr<DataAcquisitionManager> create(std::shared_ptr<USBDevice> device);
 
-    // Îö¹¹º¯Êı
+    // ææ„å‡½æ•°
     ~DataAcquisitionManager();
 
-    // ½ûÓÃ¿½±´²Ù×÷
+    // ç¦ç”¨æ‹·è´æ“ä½œ
     DataAcquisitionManager(const DataAcquisitionManager&) = delete;
     DataAcquisitionManager& operator=(const DataAcquisitionManager&) = delete;
 
-    // ÅäÖÃºÍ¿ØÖÆ½Ó¿Ú
+    // é…ç½®å’Œæ§åˆ¶æ¥å£
     void setDataProcessor(std::shared_ptr<IDataProcessor> processor) {
         m_processor = processor;
     }
@@ -51,8 +51,8 @@ public:
     void stopAcquisition();
     void prepareForShutdown() {
         m_isShuttingDown = true;
-        stopAcquisition(); // Á¢¼´Í£Ö¹ËùÓĞ»î¶¯
-        // ¶Ï¿ªËùÓĞĞÅºÅÁ¬½ÓÒÔ·ÀÖ¹ĞÂµÄÒì²½µ÷ÓÃ
+        stopAcquisition(); // ç«‹å³åœæ­¢æ‰€æœ‰æ´»åŠ¨
+        // æ–­å¼€æ‰€æœ‰ä¿¡å·è¿æ¥ä»¥é˜²æ­¢æ–°çš„å¼‚æ­¥è°ƒç”¨
         disconnect(this, nullptr, nullptr, nullptr);
     }
 
@@ -64,7 +64,7 @@ public:
             now - m_startTime).count();
     }
 
-    // ×´Ì¬²éÑ¯
+    // çŠ¶æ€æŸ¥è¯¢
     bool isRunning() const { return m_running; }
     bool isShuttingDown() const { return m_isShuttingDown; }
     bool isErrorState() const { return m_errorOccurred; }
@@ -80,7 +80,7 @@ signals:
     void acquisitionStateChanged(const QString& state);
 
 private:
-    // Ë½ÓĞ¹¹Ôìº¯Êı - Ç¿ÖÆÊ¹ÓÃcreate¾²Ì¬·½·¨´´½¨ÊµÀı
+    // ç§æœ‰æ„é€ å‡½æ•° - å¼ºåˆ¶ä½¿ç”¨createé™æ€æ–¹æ³•åˆ›å»ºå®ä¾‹
     explicit DataAcquisitionManager(std::shared_ptr<USBDevice> device);
 
     std::atomic<bool> m_isShuttingDown{ false };
@@ -92,13 +92,13 @@ private:
         }
     }
 
-    // ÄÚ²¿Àà - Ñ­»·»º³åÇø¹ÜÀíÆ÷
+    // å†…éƒ¨ç±» - å¾ªç¯ç¼“å†²åŒºç®¡ç†å™¨
     class CircularBuffer {
     public:
         enum class WarningLevel {
-            C_NORMAL,         // Õı³£
-            C_WARNING,        // ¾¯¸æ£¨Ê¹ÓÃÂÊ³¬¹ı75%£©
-            C_CRITICAL        // ÑÏÖØ£¨Ê¹ÓÃÂÊ³¬¹ı90%£©
+            C_NORMAL,         // æ­£å¸¸
+            C_WARNING,        // è­¦å‘Šï¼ˆä½¿ç”¨ç‡è¶…è¿‡75%ï¼‰
+            C_CRITICAL        // ä¸¥é‡ï¼ˆä½¿ç”¨ç‡è¶…è¿‡90%ï¼‰
         };
 
         CircularBuffer(size_t bufferCount, size_t bufferSize);
@@ -121,7 +121,7 @@ private:
     };
 
 private:
-    // Í£Ö¹Ô­ÒòÃ¶¾Ù
+    // åœæ­¢åŸå› æšä¸¾
     enum class StopReason {
         USER_REQUEST,
         READ_ERROR,
@@ -129,7 +129,7 @@ private:
         BUFFER_OVERFLOW
     };
 
-    // ²É¼¯×´Ì¬Ã¶¾Ù
+    // é‡‡é›†çŠ¶æ€æšä¸¾
     enum class AcquisitionState {
         AC_IDLE,
         AC_CONFIGURING,
@@ -138,34 +138,34 @@ private:
         AC_ERROR
     };
 
-    // Ïß³Ìº¯Êı
+    // çº¿ç¨‹å‡½æ•°
     void acquisitionThread();
     void processingThread();
 
-    // ÄÚ²¿¿ØÖÆº¯Êı
+    // å†…éƒ¨æ§åˆ¶å‡½æ•°
     void signalStop(StopReason reason);
     void updateStats();
     bool validateAcquisitionParams() const;
     void updateAcquisitionState(AcquisitionState newState);
 
-    // Éè±¸ºÍ´¦ÀíÆ÷
+    // è®¾å¤‡å’Œå¤„ç†å™¨
     std::weak_ptr<USBDevice> m_deviceWeak;
     std::shared_ptr<IDataProcessor> m_processor;
     std::unique_ptr<CircularBuffer> m_buffer;
 
-    // Ïß³Ì¿ØÖÆ
+    // çº¿ç¨‹æ§åˆ¶
     std::atomic<bool> m_running{ false };
     std::atomic<bool> m_errorOccurred{ false };
     std::thread m_acquisitionThread;
     std::thread m_processingThread;
 
-    // Í¬²½ºÍ¿ØÖÆ
+    // åŒæ­¥å’Œæ§åˆ¶
     std::mutex m_mutex;
     std::mutex m_stopMutex;
     std::condition_variable m_dataReady;
     std::atomic<AcquisitionState> m_acquisitionState{ AcquisitionState::AC_IDLE };
 
-    // ÅäÖÃ²ÎÊı
+    // é…ç½®å‚æ•°
     struct AcquisitionParams {
         uint16_t width{ 0 };
         uint16_t height{ 0 };
@@ -174,7 +174,7 @@ private:
         bool continuous{ true };
     } m_params;
 
-    // Í³¼ÆĞÅÏ¢
+    // ç»Ÿè®¡ä¿¡æ¯
     struct AcquisitionStats {
         uint64_t totalFrames{ 0 };
         uint64_t droppedFrames{ 0 };
@@ -182,7 +182,7 @@ private:
         std::chrono::steady_clock::time_point lastFrameTime;
     } m_stats;
 
-    // ´«ÊäÍ³¼Æ
+    // ä¼ è¾“ç»Ÿè®¡
     class TransferStats {
     public:
         TransferStats() :
@@ -236,17 +236,17 @@ private:
     };
     TransferStats m_transferStats;
 
-    // Á÷¿ØÖÆºÍ´íÎó´¦Àí²ÎÊı
-    static constexpr size_t MAX_PACKET_SIZE = 16 * 1024;     // 16KB Ã¿°ü
-    static constexpr size_t BUFFER_SIZE = 16 * 1024;         // 16KB Ã¿»º³åÇø
-    static constexpr size_t BUFFER_COUNT = 32;               // 32 ¸ö»º³åÇø
-    static constexpr int MAX_READ_RETRIES = 3;               // ×î´óÖØÊÔ´ÎÊı
-    static constexpr int READ_RETRY_DELAY_MS = 100;          // ÖØÊÔÑÓ³Ù
-    static constexpr int MAX_CONSECUTIVE_FAILURES = 10;      // ´Ó100¸ÄÎª10
-    static constexpr int STOP_CHECK_INTERVAL_MS = 100;       // Í£Ö¹¼ì²é¼ä¸ô
-    static constexpr int STATS_UPDATE_INTERVAL_MS = 200;    // Í³¼Æ¸üĞÂ¼ä¸ô
+    // æµæ§åˆ¶å’Œé”™è¯¯å¤„ç†å‚æ•°
+    static constexpr size_t MAX_PACKET_SIZE = 16 * 1024;     // 16KB æ¯åŒ…
+    static constexpr size_t BUFFER_SIZE = 16 * 1024;         // 16KB æ¯ç¼“å†²åŒº
+    static constexpr size_t BUFFER_COUNT = 32;               // 32 ä¸ªç¼“å†²åŒº
+    static constexpr int MAX_READ_RETRIES = 3;               // æœ€å¤§é‡è¯•æ¬¡æ•°
+    static constexpr int READ_RETRY_DELAY_MS = 100;          // é‡è¯•å»¶è¿Ÿ
+    static constexpr int MAX_CONSECUTIVE_FAILURES = 10;      // ä»100æ”¹ä¸º10
+    static constexpr int STOP_CHECK_INTERVAL_MS = 100;       // åœæ­¢æ£€æŸ¥é—´éš”
+    static constexpr int STATS_UPDATE_INTERVAL_MS = 200;    // ç»Ÿè®¡æ›´æ–°é—´éš”
 
-    // ×´Ì¬×·×Ù
+    // çŠ¶æ€è¿½è¸ª
     std::atomic<uint64_t> m_totalBytes{ 0 };
     std::atomic<double> m_dataRate{ 0.0 };
     std::atomic<int> m_failedReads{ 0 };

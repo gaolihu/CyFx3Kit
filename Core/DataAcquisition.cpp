@@ -5,9 +5,8 @@
 #include "Logger.h"
 #include "ThreadHelper.h"
 
-// ¾²Ì¬¹¤³§·½·¨£¬ÓÃÓÚ´´½¨DataAcquisitionManagerÊµÀı
 std::shared_ptr<DataAcquisitionManager> DataAcquisitionManager::create(std::shared_ptr<USBDevice> device) {
-    // Ê¹ÓÃstd::shared_ptrµÄ¹¹Ôìº¯Êı£¬²»Ê¹ÓÃmake_shared£¬ÒÔ±£Ö¤enable_shared_from_thisÕıÈ·¹¤×÷
+    // ä½¿ç”¨std::shared_ptrçš„æ„é€ å‡½æ•°ï¼Œä¸ä½¿ç”¨make_sharedï¼Œä»¥ä¿è¯enable_shared_from_thisæ­£ç¡®å·¥ä½œ
     std::shared_ptr<DataAcquisitionManager> manager(new DataAcquisitionManager(device));
     return manager;
 }
@@ -20,13 +19,13 @@ DataAcquisitionManager::DataAcquisitionManager(std::shared_ptr<USBDevice> device
         throw std::invalid_argument("Device pointer cannot be null");
     }
 
-    // ´´½¨Ñ­»·»º³åÇø
+    // åˆ›å»ºå¾ªç¯ç¼“å†²åŒº
     m_buffer = std::make_unique<CircularBuffer>(BUFFER_COUNT, BUFFER_SIZE);
     LOG_INFO(QString("Created buffer pool - Count: %1, Size per buffer: %2 bytes")
         .arg(BUFFER_COUNT)
         .arg(BUFFER_SIZE));
 
-    // ¼ÇÂ¼¿ªÊ¼Ê±¼ä
+    // è®°å½•å¼€å§‹æ—¶é—´
     m_startTime = std::chrono::steady_clock::now();
 }
 
@@ -35,10 +34,10 @@ DataAcquisitionManager::~DataAcquisitionManager()
     LOG_INFO("DataAcquisitionManager destructor START");
 
     try {
-        // È·±£ËùÓĞÏß³ÌÒÑÍ£Ö¹
+        // ç¡®ä¿æ‰€æœ‰çº¿ç¨‹å·²åœæ­¢
         stopAcquisition();
 
-        // ·ÀÖ¹Ñ­»·ÒıÓÃ
+        // é˜²æ­¢å¾ªç¯å¼•ç”¨
         m_processor.reset();
 
         LOG_INFO("DataAcquisitionManager destructor END");
@@ -175,14 +174,14 @@ bool DataAcquisitionManager::startAcquisition(uint16_t width, uint16_t height, u
         return false;
     }
 
-    // »ñÈ¡Éè±¸ÒıÓÃ
+    // è·å–è®¾å¤‡å¼•ç”¨
     auto device = m_deviceWeak.lock();
     if (!device) {
         LOG_ERROR("Device no longer available");
         return false;
     }
 
-    // ÅäÖÃ²É¼¯²ÎÊı
+    // é…ç½®é‡‡é›†å‚æ•°
     m_params.width = width;
     m_params.height = height;
     m_params.format = capType;
@@ -192,11 +191,11 @@ bool DataAcquisitionManager::startAcquisition(uint16_t width, uint16_t height, u
         return false;
     }
 
-    // ÖØÖÃ×´Ì¬ºÍÍ³¼ÆĞÅÏ¢
+    // é‡ç½®çŠ¶æ€å’Œç»Ÿè®¡ä¿¡æ¯
     m_transferStats.reset();
     m_buffer->reset();
 
-    // ÉèÖÃÔËĞĞ±êÖ¾
+    // è®¾ç½®è¿è¡Œæ ‡å¿—
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         m_running = true;
@@ -205,14 +204,14 @@ bool DataAcquisitionManager::startAcquisition(uint16_t width, uint16_t height, u
     try {
         LOG_INFO("Start acquisition / process thread");
 
-        // Æô¶¯²É¼¯Ïß³Ì
+        // å¯åŠ¨é‡‡é›†çº¿ç¨‹
         m_acquisitionThread = std::thread([this]() {
             LOG_INFO("Acquisition thread started with ID: " +
                 Logger::instance().getThreadIdAsString(m_acquisitionThread));
             this->acquisitionThread();
             });
 
-        // Æô¶¯´¦ÀíÏß³Ì
+        // å¯åŠ¨å¤„ç†çº¿ç¨‹
         m_processingThread = std::thread([this]() {
             LOG_INFO("Processing thread started with ID: " +
                 Logger::instance().getThreadIdAsString(m_processingThread));
@@ -243,17 +242,17 @@ void DataAcquisitionManager::stopAcquisition() {
 
     LOG_INFO("Stopping acquisition...");
 
-    // Á¢¼´ÉèÖÃÍ£Ö¹±êÖ¾
+    // ç«‹å³è®¾ç½®åœæ­¢æ ‡å¿—
     m_running = false;
     m_dataReady.notify_all();
 
-    // ÔÚ¹Ø±Õ¹ı³ÌÖĞ²»·¢ËÍUI¸üĞÂĞÅºÅ
+    // åœ¨å…³é—­è¿‡ç¨‹ä¸­ä¸å‘é€UIæ›´æ–°ä¿¡å·
     bool shouldUpdateUI = !m_isShuttingDown && !QApplication::closingDown();
 
-    stopLock.unlock(); // ½âËøÒÔÔÊĞíÏß³ÌÖÕÖ¹
+    stopLock.unlock(); // è§£é”ä»¥å…è®¸çº¿ç¨‹ç»ˆæ­¢
 
     try {
-        // °²È«»ØÊÕ²É¼¯Ïß³Ì
+        // å®‰å…¨å›æ”¶é‡‡é›†çº¿ç¨‹
         if (m_acquisitionThread.joinable()) {
             LOG_INFO("Joining acquisition thread...");
 
@@ -263,7 +262,7 @@ void DataAcquisitionManager::stopAcquisition() {
                 }
                 });
 
-            // ×î¶àµÈ´ı300ms
+            // æœ€å¤šç­‰å¾…300ms
             if (joinFuture.wait_for(std::chrono::milliseconds(300)) != std::future_status::ready) {
                 LOG_WARN("Acquisition thread join timed out, detaching");
                 if (m_acquisitionThread.joinable()) {
@@ -272,7 +271,7 @@ void DataAcquisitionManager::stopAcquisition() {
             }
         }
 
-        // °²È«»ØÊÕ´¦ÀíÏß³Ì
+        // å®‰å…¨å›æ”¶å¤„ç†çº¿ç¨‹
         if (m_processingThread.joinable()) {
             LOG_INFO("Joining processing thread...");
 
@@ -282,7 +281,7 @@ void DataAcquisitionManager::stopAcquisition() {
                 }
                 });
 
-            // ×î¶àµÈ´ı300ms
+            // æœ€å¤šç­‰å¾…300ms
             if (joinFuture.wait_for(std::chrono::milliseconds(300)) != std::future_status::ready) {
                 LOG_WARN("Processing thread join timed out, detaching");
                 if (m_processingThread.joinable()) {
@@ -291,7 +290,7 @@ void DataAcquisitionManager::stopAcquisition() {
             }
         }
 
-        // Ö»ÔÚ·Ç¹Ø±Õ×´Ì¬¸üĞÂUI
+        // åªåœ¨éå…³é—­çŠ¶æ€æ›´æ–°UI
         if (shouldUpdateUI) {
             QMetaObject::invokeMethod(QCoreApplication::instance(), [this]() {
                 if (!m_isShuttingDown && !QApplication::closingDown()) {
@@ -314,52 +313,52 @@ void DataAcquisitionManager::stopAcquisition() {
 }
 
 void DataAcquisitionManager::signalStop(StopReason reason) {
-    // ÏÈ¼ì²éÊÇ·ñÒÑ¾­Í£Ö¹£¬±ÜÃâ¶à´Îµ÷ÓÃ
+    // å…ˆæ£€æŸ¥æ˜¯å¦å·²ç»åœæ­¢ï¼Œé¿å…å¤šæ¬¡è°ƒç”¨
     {
         std::lock_guard<std::mutex> lock(m_stopMutex);
         if (!m_running) {
             return;
         }
-        m_running = false; // Á¢¼´ÉèÖÃÍ£Ö¹±êÖ¾
+        m_running = false; // ç«‹å³è®¾ç½®åœæ­¢æ ‡å¿—
     }
 
-    LOG_INFO(QString::fromLocal8Bit("ÕıÔÚÍ£Ö¹²É¼¯£¬Ô­Òò: %1").arg(static_cast<int>(reason)));
+    LOG_INFO(fromLocal8Bit("æ­£åœ¨åœæ­¢é‡‡é›†ï¼ŒåŸå› : %1").arg(static_cast<int>(reason)));
 
-    // Í¨ÖªµÈ´ıÏß³Ì
+    // é€šçŸ¥ç­‰å¾…çº¿ç¨‹
     m_dataReady.notify_all();
 
-    // Ê¹ÓÃÈõÒıÓÃ½øĞĞUI¸üĞÂºÍĞÅºÅ·¢ËÍ
+    // ä½¿ç”¨å¼±å¼•ç”¨è¿›è¡ŒUIæ›´æ–°å’Œä¿¡å·å‘é€
     std::weak_ptr<DataAcquisitionManager> weakSelf = weak_from_this();
 
     QMetaObject::invokeMethod(QApplication::instance(), [weakSelf, reason]() {
-        // ³¢ÊÔ´ÓÈõÒıÓÃ»ñÈ¡¹²ÏíÖ¸Õë
+        // å°è¯•ä»å¼±å¼•ç”¨è·å–å…±äº«æŒ‡é’ˆ
         auto self = weakSelf.lock();
-        if (!self) return; // ¶ÔÏóÒÑ±»Ïú»Ù£¬°²È«ÍË³ö
+        if (!self) return; // å¯¹è±¡å·²è¢«é”€æ¯ï¼Œå®‰å…¨é€€å‡º
 
-        // ¼ì²éÓ¦ÓÃ³ÌĞòÊÇ·ñÕıÔÚ¹Ø±Õ
+        // æ£€æŸ¥åº”ç”¨ç¨‹åºæ˜¯å¦æ­£åœ¨å…³é—­
         if (QApplication::closingDown() || self->isShuttingDown()) {
-            LOG_INFO(QString::fromLocal8Bit("Ó¦ÓÃ³ÌĞòÕıÔÚ¹Ø±Õ£¬Ìø¹ı´íÎó´¦ÀíºÍUI¸üĞÂ"));
+            LOG_INFO(fromLocal8Bit("åº”ç”¨ç¨‹åºæ­£åœ¨å…³é—­ï¼Œè·³è¿‡é”™è¯¯å¤„ç†å’ŒUIæ›´æ–°"));
             return;
         }
 
-        // ¸ù¾İÍ£Ö¹Ô­Òò´¦Àí
+        // æ ¹æ®åœæ­¢åŸå› å¤„ç†
         switch (reason) {
         case StopReason::READ_ERROR:
             LOG_ERROR("Stopping acquisition due to read errors");
             self->m_errorOccurred = true;
-            emit self->errorOccurred(QString::fromLocal8Bit("Êı¾İ¶ÁÈ¡´íÎó£¬²É¼¯ÒÑÍ£Ö¹"));
+            emit self->errorOccurred(fromLocal8Bit("æ•°æ®è¯»å–é”™è¯¯ï¼Œé‡‡é›†å·²åœæ­¢"));
             break;
 
         case StopReason::DEVICE_ERROR:
             LOG_ERROR("Stopping acquisition due to device error");
             self->m_errorOccurred = true;
-            emit self->errorOccurred(QString::fromLocal8Bit("Éè±¸´íÎó£¬²É¼¯ÒÑÍ£Ö¹"));
+            emit self->errorOccurred(fromLocal8Bit("è®¾å¤‡é”™è¯¯ï¼Œé‡‡é›†å·²åœæ­¢"));
             break;
 
         case StopReason::BUFFER_OVERFLOW:
             LOG_ERROR("Stopping acquisition due to buffer overflow");
             self->m_errorOccurred = true;
-            emit self->errorOccurred(QString::fromLocal8Bit("»º³åÇøÒç³ö£¬²É¼¯ÒÑÍ£Ö¹"));
+            emit self->errorOccurred(fromLocal8Bit("ç¼“å†²åŒºæº¢å‡ºï¼Œé‡‡é›†å·²åœæ­¢"));
             break;
 
         case StopReason::USER_REQUEST:
@@ -367,17 +366,19 @@ void DataAcquisitionManager::signalStop(StopReason reason) {
             break;
         }
 
-        // È·±£Éè±¸´«Êä×´Ì¬Ò²±»¸üĞÂ
+        // ç¡®ä¿è®¾å¤‡ä¼ è¾“çŠ¶æ€ä¹Ÿè¢«æ›´æ–°
         auto device = self->m_deviceWeak.lock();
         if (device) {
             device->stopTransfer();
         }
 
-        // Í¨ÖªUI¸üĞÂ×´Ì¬
-        emit self->acquisitionStateChanged(QString::fromLocal8Bit("ÒÑÍ£Ö¹"));
-        emit self->statsUpdated(self->m_totalBytes.load(), 0.0, 0);  // ËÙÂÊÇåÁã
+        // é€šçŸ¥UIæ›´æ–°çŠ¶æ€
+        emit self->acquisitionStateChanged(fromLocal8Bit("å·²åœæ­¢"));
+        emit self->statsUpdated(self->m_totalBytes.load(), self->m_dataRate.load(),
+            std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::steady_clock::now() - self->m_startTime).count());
 
-        // ×îºóÊ¹ÓÃQtµÄĞÅºÅ¶ÓÁĞ»úÖÆ¸üĞÂÒÑÍ£Ö¹×´Ì¬
+        // æœ€åä½¿ç”¨Qtçš„ä¿¡å·é˜Ÿåˆ—æœºåˆ¶æ›´æ–°å·²åœæ­¢çŠ¶æ€
         QTimer::singleShot(0, [weakSelf]() {
             if (auto self = weakSelf.lock()) {
                 if (!self->isShuttingDown()) {
@@ -393,12 +394,12 @@ void DataAcquisitionManager::acquisitionThread()
 {
     LOG_INFO("Data acquisition thread started");
 
-    // »ñÈ¡Éè±¸ÒıÓÃ
+    // è·å–è®¾å¤‡å¼•ç”¨
     auto device = m_deviceWeak.lock();
     if (!device) {
         LOG_ERROR("Device no longer available");
 
-        // Ê¹ÓÃÈõÒıÓÃ°²È«µØµ÷ÓÃsignalStop
+        // ä½¿ç”¨å¼±å¼•ç”¨å®‰å…¨åœ°è°ƒç”¨signalStop
         std::weak_ptr<DataAcquisitionManager> weakSelf = weak_from_this();
         QMetaObject::invokeMethod(QApplication::instance(), [weakSelf]() {
             if (auto self = weakSelf.lock()) {
@@ -410,18 +411,18 @@ void DataAcquisitionManager::acquisitionThread()
         return;
     }
 
-    // Ìí¼ÓÁ¬Ğø¶ÁÈ¡Ê§°Ü¼ÆÊı
+    // æ·»åŠ è¿ç»­è¯»å–å¤±è´¥è®¡æ•°
     int consecutiveFailures = 0;
 
     try {
         while (m_running) {
-            if (!m_running) break;  // ¿ìËÙ¼ì²éÍ£Ö¹±êÖ¾
+            if (!m_running) break;  // å¿«é€Ÿæ£€æŸ¥åœæ­¢æ ‡å¿—
 
-            // ¼ì²é»º³åÇø×´Ì¬
+            // æ£€æŸ¥ç¼“å†²åŒºçŠ¶æ€
             if (m_buffer->checkBufferStatus() == CircularBuffer::WarningLevel::C_CRITICAL) {
                 LOG_ERROR("Buffer overflow detected");
 
-                // Ê¹ÓÃÈõÒıÓÃ°²È«µØµ÷ÓÃsignalStop
+                // ä½¿ç”¨å¼±å¼•ç”¨å®‰å…¨åœ°è°ƒç”¨signalStop
                 std::weak_ptr<DataAcquisitionManager> weakSelf = weak_from_this();
                 QMetaObject::invokeMethod(QApplication::instance(), [weakSelf]() {
                     if (auto self = weakSelf.lock()) {
@@ -444,12 +445,12 @@ void DataAcquisitionManager::acquisitionThread()
                 actualLength = static_cast<LONG>(MAX_PACKET_SIZE);
             }
 
-            // Ñ­»·ÖĞÖØĞÂ»ñÈ¡Éè±¸ÒıÓÃ£¬·ÀÖ¹Éè±¸ÔÚ²Ù×÷ÆÚ¼ä±»Ïú»Ù
+            // å¾ªç¯ä¸­é‡æ–°è·å–è®¾å¤‡å¼•ç”¨ï¼Œé˜²æ­¢è®¾å¤‡åœ¨æ“ä½œæœŸé—´è¢«é”€æ¯
             device = m_deviceWeak.lock();
             if (!device) {
                 LOG_ERROR("Device disconnected during acquisition");
 
-                // Ê¹ÓÃÈõÒıÓÃ°²È«µØµ÷ÓÃsignalStop
+                // ä½¿ç”¨å¼±å¼•ç”¨å®‰å…¨åœ°è°ƒç”¨signalStop
                 std::weak_ptr<DataAcquisitionManager> weakSelf = weak_from_this();
                 QMetaObject::invokeMethod(QApplication::instance(), [weakSelf]() {
                     if (auto self = weakSelf.lock()) {
@@ -464,14 +465,14 @@ void DataAcquisitionManager::acquisitionThread()
             bool readSuccess = device->readData(writeBuffer, actualLength);
 
             if (readSuccess && actualLength > 0) {
-                // ¶ÁÈ¡³É¹¦£¬ÖØÖÃÊ§°Ü¼ÆÊı
+                // è¯»å–æˆåŠŸï¼Œé‡ç½®å¤±è´¥è®¡æ•°
                 consecutiveFailures = 0;
 
                 m_buffer->commitBuffer(actualLength);
                 m_totalBytes += actualLength;
                 m_dataReady.notify_one();
 
-                // ½µµÍÍ³¼Æ¸üĞÂÆµÂÊ
+                // é™ä½ç»Ÿè®¡æ›´æ–°é¢‘ç‡
                 static auto lastUpdate = std::chrono::steady_clock::now();
                 auto now = std::chrono::steady_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -483,13 +484,13 @@ void DataAcquisitionManager::acquisitionThread()
                 }
             }
             else {
-                // ¶ÁÈ¡Ê§°Ü´¦Àí
+                // è¯»å–å¤±è´¥å¤„ç†
                 consecutiveFailures++;
 
                 if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
                     LOG_ERROR("Too many consecutive read failures, stopping acquisition");
 
-                    // Ê¹ÓÃÈõÒıÓÃ°²È«µØµ÷ÓÃsignalStop
+                    // ä½¿ç”¨å¼±å¼•ç”¨å®‰å…¨åœ°è°ƒç”¨signalStop
                     std::weak_ptr<DataAcquisitionManager> weakSelf = weak_from_this();
                     QMetaObject::invokeMethod(QApplication::instance(), [weakSelf]() {
                         if (auto self = weakSelf.lock()) {
@@ -505,27 +506,27 @@ void DataAcquisitionManager::acquisitionThread()
                     .arg(consecutiveFailures)
                     .arg(MAX_CONSECUTIVE_FAILURES));
 
-                // ¶ÌÔİĞ­³Ìºó¼ÌĞø³¢ÊÔ
+                // çŸ­æš‚åç¨‹åç»§ç»­å°è¯•
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
 
-            // ÈÃ³öÊ±¼äÆ¬
+            // è®©å‡ºæ—¶é—´ç‰‡
             std::this_thread::yield();
         }
     }
     catch (const std::exception& e) {
         LOG_ERROR(QString("Exception in acquisition thread: %1").arg(e.what()));
 
-        // Ê¹ÓÃÈõÒıÓÃ°²È«µØµ÷ÓÃsignalStop
+        // ä½¿ç”¨å¼±å¼•ç”¨å®‰å…¨åœ°è°ƒç”¨signalStop
         std::weak_ptr<DataAcquisitionManager> weakSelf = weak_from_this();
         QMetaObject::invokeMethod(QApplication::instance(), [weakSelf, errorMsg = std::string(e.what())]() {
             if (auto self = weakSelf.lock()) {
                 if (self->isRunning() && !self->isShuttingDown()) {
-                    // ±£´æ´íÎóĞÅÏ¢
+                    // ä¿å­˜é”™è¯¯ä¿¡æ¯
                     QString qErrorMsg = QString::fromStdString(errorMsg);
                     self->signalStop(StopReason::DEVICE_ERROR);
                     if (!self->isShuttingDown()) {
-                        emit self->errorOccurred(QString("²É¼¯Ïß³ÌÒì³£: %1").arg(qErrorMsg));
+                        emit self->errorOccurred(QString("é‡‡é›†çº¿ç¨‹å¼‚å¸¸: %1").arg(qErrorMsg));
                     }
                 }
             }
@@ -543,15 +544,15 @@ void DataAcquisitionManager::processingThread()
         while (m_running) {
             std::unique_lock<std::mutex> lock(m_mutex);
 
-            // µÈ´ıÊı¾İ»òÍ£Ö¹ĞÅºÅ
+            // ç­‰å¾…æ•°æ®æˆ–åœæ­¢ä¿¡å·
             m_dataReady.wait_for(lock, std::chrono::milliseconds(STOP_CHECK_INTERVAL_MS),
                 [this]() { return !m_running || m_buffer->getReadBuffer().has_value(); });
 
             if (!m_running) break;
 
-            // »ñÈ¡´ı´¦ÀíµÄÊı¾İ°ü
+            // è·å–å¾…å¤„ç†çš„æ•°æ®åŒ…
             if (auto packet = m_buffer->getReadBuffer()) {
-                lock.unlock();  // ½âËøÒÔÔÊĞí²¢ĞĞ´¦Àí
+                lock.unlock();  // è§£é”ä»¥å…è®¸å¹¶è¡Œå¤„ç†
 
                 if (m_processor) {
                     try {
@@ -560,7 +561,7 @@ void DataAcquisitionManager::processingThread()
                     }
                     catch (const std::exception& e) {
                         LOG_ERROR(QString("Data processing error: %1").arg(e.what()));
-                        emit errorOccurred(QString("Êı¾İ´¦Àí´íÎó: %1").arg(e.what()));
+                        emit errorOccurred(QString("æ•°æ®å¤„ç†é”™è¯¯: %1").arg(e.what()));
                     }
                 }
             }
@@ -569,14 +570,14 @@ void DataAcquisitionManager::processingThread()
     catch (const std::exception& e) {
         LOG_ERROR(QString("Exception in processing thread: %1").arg(e.what()));
 
-        // Ê¹ÓÃÈõÒıÓÃ°²È«µØµ÷ÓÃsignalStop
+        // ä½¿ç”¨å¼±å¼•ç”¨å®‰å…¨åœ°è°ƒç”¨signalStop
         std::weak_ptr<DataAcquisitionManager> weakSelf = weak_from_this();
         QMetaObject::invokeMethod(QApplication::instance(), [weakSelf, errorMsg = std::string(e.what())]() {
             if (auto self = weakSelf.lock()) {
                 if (self->isRunning() && !self->isShuttingDown()) {
                     self->signalStop(StopReason::DEVICE_ERROR);
                     if (!self->isShuttingDown()) {
-                        emit self->errorOccurred(QString("´¦ÀíÏß³ÌÒì³£: %1").arg(QString::fromStdString(errorMsg)));
+                        emit self->errorOccurred(QString("å¤„ç†çº¿ç¨‹å¼‚å¸¸: %1").arg(QString::fromStdString(errorMsg)));
                     }
                 }
             }
@@ -619,19 +620,19 @@ void DataAcquisitionManager::updateStats()
 
 bool DataAcquisitionManager::validateAcquisitionParams() const
 {
-    // Í¼Ïñ¿í¶ÈÑéÖ¤
+    // å›¾åƒå®½åº¦éªŒè¯
     if (m_params.width == 0 || m_params.width > 4096) {
         LOG_ERROR(QString("Invalid image width: %1").arg(m_params.width));
         return false;
     }
 
-    // Í¼Ïñ¸ß¶ÈÑéÖ¤
+    // å›¾åƒé«˜åº¦éªŒè¯
     if (m_params.height == 0 || m_params.height > 4096) {
         LOG_ERROR(QString("Invalid image height: %1").arg(m_params.height));
         return false;
     }
 
-    // ²É¼¯¸ñÊ½ÑéÖ¤
+    // é‡‡é›†æ ¼å¼éªŒè¯
     switch (m_params.format) {
     case 0x38: // RAW8
     case 0x39: // RAW10
@@ -653,23 +654,23 @@ void DataAcquisitionManager::updateAcquisitionState(AcquisitionState newState)
     QString stateStr;
     switch (newState) {
     case AcquisitionState::AC_IDLE:
-        stateStr = QString::fromLocal8Bit("¿ÕÏĞ");
+        stateStr = fromLocal8Bit("ç©ºé—²");
         break;
     case AcquisitionState::AC_CONFIGURING:
-        stateStr = QString::fromLocal8Bit("ÅäÖÃÖĞ");
+        stateStr = fromLocal8Bit("é…ç½®ä¸­");
         break;
     case AcquisitionState::AC_RUNNING:
-        stateStr = QString::fromLocal8Bit("²É¼¯ÖĞ");
+        stateStr = fromLocal8Bit("é‡‡é›†ä¸­");
         break;
     case AcquisitionState::AC_STOPPING:
-        stateStr = QString::fromLocal8Bit("ÕıÔÚÍ£Ö¹");
+        stateStr = fromLocal8Bit("æ­£åœ¨åœæ­¢");
         break;
     case AcquisitionState::AC_ERROR:
-        stateStr = QString::fromLocal8Bit("´íÎó");
+        stateStr = fromLocal8Bit("é”™è¯¯");
         break;
     }
 
-    // Ê¹ÓÃÈõÒıÓÃ°²È«µØ·¢ËÍĞÅºÅ
+    // ä½¿ç”¨å¼±å¼•ç”¨å®‰å…¨åœ°å‘é€ä¿¡å·
     std::weak_ptr<DataAcquisitionManager> weakSelf = weak_from_this();
     QMetaObject::invokeMethod(QApplication::instance(), [weakSelf, stateStr]() {
         if (auto self = weakSelf.lock()) {

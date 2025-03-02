@@ -10,7 +10,7 @@
 
 class ThreadHelper {
 public:
-    // ´øÓĞ³¬Ê±µÄÏß³Ì»ØÊÕº¯Êı
+    // å¸¦æœ‰è¶…æ—¶çš„çº¿ç¨‹å›æ”¶å‡½æ•°
     static bool joinThreadWithTimeout(std::thread& thread,
         int timeoutMs = 2000,
         const QString& threadName = "thread") {
@@ -24,7 +24,7 @@ public:
             return false;
         }
 
-        // Ê¹ÓÃC++11 future»úÖÆÊµÏÖ³¬Ê±
+        // ä½¿ç”¨C++11 futureæœºåˆ¶å®ç°è¶…æ—¶
         auto futureObj = std::async(std::launch::async, [&thread]() {
             try {
                 thread.join();
@@ -35,18 +35,18 @@ public:
             }
             });
 
-        // µÈ´ıÖ¸¶¨µÄ³¬Ê±Ê±¼ä
+        // ç­‰å¾…æŒ‡å®šçš„è¶…æ—¶æ—¶é—´
         std::future_status status = futureObj.wait_for(std::chrono::milliseconds(timeoutMs));
         if (status == std::future_status::timeout) {
             LOG_WARN(QString("%1 join timed out after %2ms, detaching thread")
                 .arg(threadName).arg(timeoutMs));
 
-            // Ïß³Ì³¬Ê±ºó£¬ÎÒÃÇÃ»ÓĞºÃµÄ·½·¨ÖÕÖ¹Ëü£¬Ö»ÄÜ·ÖÀë
+            // çº¿ç¨‹è¶…æ—¶åï¼Œæˆ‘ä»¬æ²¡æœ‰å¥½çš„æ–¹æ³•ç»ˆæ­¢å®ƒï¼Œåªèƒ½åˆ†ç¦»
             thread.detach();
             return false;
         }
 
-        // »ñÈ¡joinµÄ½á¹û
+        // è·å–joinçš„ç»“æœ
         try {
             return futureObj.get();
         }
@@ -56,7 +56,7 @@ public:
         }
     }
 
-    // Ìí¼ÓÒ»¸ö·½·¨´¦ÀíQtÏß³Ì
+    // æ·»åŠ ä¸€ä¸ªæ–¹æ³•å¤„ç†Qtçº¿ç¨‹
     static bool joinQtThreadWithTimeout(QThread* thread,
         int timeoutMs = 2000,
         const QString& threadName = "Qt thread") {

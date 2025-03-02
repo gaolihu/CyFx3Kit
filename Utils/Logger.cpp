@@ -141,7 +141,7 @@ void Logger::appendToWidget(const QString& message, LogLevel level)
 {
     if (!m_logWidget) return;
 
-    // 确保在主线程中更新UI
+    // 纭繚鍦ㄤ富绾跨▼涓洿鏂癠I
     if (QThread::currentThread() != QApplication::instance()->thread()) {
         QMetaObject::invokeMethod(this, [this, message, level]() {
             appendToWidget(message, level);
@@ -179,7 +179,7 @@ QString Logger::formatMessage(const QString& message,
     return QString("[%1][%2][Tid:%3]%4%5 %6")
         .arg(QDateTime::currentDateTime().toString("hh:mm:ss.zzz"))
         .arg(getLevelString(level))
-        .arg(threadId)  // 使用传入的线程ID
+        .arg(threadId)  // 浣跨敤浼犲叆鐨勭嚎绋婭D
         .arg(categoryStr)
         .arg(location)
         .arg(message);

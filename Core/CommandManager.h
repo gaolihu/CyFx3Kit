@@ -11,7 +11,7 @@ class CommandManager : public QObject
     Q_OBJECT
 
 public:
-    // ÃüÁîÀàĞÍÃ¶¾Ù·ÅÔÚÀàÄÚ²¿
+    // å‘½ä»¤ç±»å‹æšä¸¾æ”¾åœ¨ç±»å†…éƒ¨
     enum class CommandType {
         CMD_START,
         CMD_FRAME_SIZE,
@@ -21,16 +21,16 @@ public:
 
         static CommandManager& instance();
 
-    // ÉèÖÃÃüÁîÄ¿Â¼
+    // è®¾ç½®å‘½ä»¤ç›®å½•
     bool setCommandDirectory(const QString& path);
 
-    // »ñÈ¡Ö¸¶¨ÀàĞÍµÄÃüÁîÊı¾İ
+    // è·å–æŒ‡å®šç±»å‹çš„å‘½ä»¤æ•°æ®
     std::vector<uint8_t> getCommand(CommandType type) const;
 
-    // »ñÈ¡µ±Ç°ÃüÁîÄ¿Â¼
+    // è·å–å½“å‰å‘½ä»¤ç›®å½•
     QString getCommandDirectory() const { return m_commandDir; }
 
-    // ¼ì²éÃüÁîÎÄ¼şÊÇ·ñÍêÕû
+    // æ£€æŸ¥å‘½ä»¤æ–‡ä»¶æ˜¯å¦å®Œæ•´
     bool validateCommands() const;
 
 signals:

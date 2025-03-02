@@ -9,81 +9,79 @@ UIStateHandler::UIStateHandler(Ui::FX3ToolMainWinClass& ui, QObject* parent)
     , m_lastTransferred(0)
     , m_lastSpeed(0.0)
 {
-    LOG_INFO(QString::fromLocal8Bit("UIStateHandler¹¹Ôìº¯Êı - ³õÊ¼»¯"));
-
-    // Ö÷¶¯»ñÈ¡µ±Ç°×´Ì¬²¢¸üĞÂUI
+    // ä¸»åŠ¨è·å–å½“å‰çŠ¶æ€å¹¶æ›´æ–°UI
     AppState currentState = AppStateMachine::instance().currentState();
-    LOG_INFO(QString::fromLocal8Bit("UIStateHandler¹¹Ôìº¯Êı - ³õÊ¼»¯UI×´Ì¬Îª: %1")
+    LOG_INFO(fromLocal8Bit("UIStateHandleræ„é€  - åˆå§‹åŒ–UIçŠ¶æ€: %1")
         .arg(AppStateMachine::stateToString(currentState)));
 
-    // È·±£UI³õÊ¼×´Ì¬ÕıÈ·
+    // ç¡®ä¿UIåˆå§‹çŠ¶æ€æ­£ç¡®
     updateButtonStates(currentState);
     updateStatusTexts(currentState);
 }
 
 void UIStateHandler::onStateChanged(AppState newState, AppState oldState, const QString& reason) {
-    // ¼ì²éÊÇ·ñ¿ÉÒÔ¸üĞÂUI
+    // æ£€æŸ¥æ˜¯å¦å¯ä»¥æ›´æ–°UI
     if (!canUpdateUI()) {
-        LOG_INFO(QString::fromLocal8Bit("UI´¦ÀíÆ÷×¼±¸¹Ø±Õ»òÓ¦ÓÃÕıÔÚÍË³ö£¬ºöÂÔ×´Ì¬¸üĞÂ"));
+        LOG_INFO(fromLocal8Bit("UIå¤„ç†å™¨å‡†å¤‡å…³é—­æˆ–åº”ç”¨æ­£åœ¨é€€å‡ºï¼Œå¿½ç•¥çŠ¶æ€æ›´æ–°"));
         return;
     }
 
-    LOG_INFO(QString::fromLocal8Bit("UI×´Ì¬´¦ÀíÆ÷ÊÕµ½×´Ì¬±ä»¯: %1 -> %2, Ô­Òò: %3")
+    LOG_INFO(fromLocal8Bit("UIçŠ¶æ€å¤„ç†å™¨æ”¶åˆ°çŠ¶æ€å˜åŒ–: %1 -> %2, åŸå› : %3")
         .arg(AppStateMachine::stateToString(oldState))
         .arg(AppStateMachine::stateToString(newState))
         .arg(reason));
 
-    // Ê¹ÓÃinvokeMethodÈ·±£ÔÚÖ÷Ïß³ÌÖĞ¸üĞÂUI
+    // ä½¿ç”¨invokeMethodç¡®ä¿åœ¨ä¸»çº¿ç¨‹ä¸­æ›´æ–°UI
     QMetaObject::invokeMethod(this, [this, newState, oldState, reason]() {
         if (!canUpdateUI()) return;
 
-        // ¸üĞÂ°´Å¥×´Ì¬
+        // æ›´æ–°æŒ‰é’®çŠ¶æ€
         updateButtonStates(newState);
 
-        // ¸üĞÂ×´Ì¬ÎÄ±¾
+        // æ›´æ–°çŠ¶æ€æ–‡æœ¬
         updateStatusTexts(newState, reason);
         }, Qt::QueuedConnection);
 }
 
 void UIStateHandler::updateButtonStates(AppState state) {
-    // ¼ì²éÊÇ·ñ¿ÉÒÔ¸üĞÂUI
+    // æ£€æŸ¥æ˜¯å¦å¯ä»¥æ›´æ–°UI
     if (!canUpdateUI()) return;
 
-    // ¸ù¾İ×´Ì¬È·¶¨°´Å¥ÆôÓÃ/½ûÓÃ
+    // æ ¹æ®çŠ¶æ€ç¡®å®šæŒ‰é’®å¯ç”¨/ç¦ç”¨
     bool startEnabled = false;
     bool stopEnabled = false;
     bool resetEnabled = false;
     bool cmdDirEnabled = false;
     bool imageParamsEnabled = false;
 
-    // ¸ù¾İ×´Ì¬ÉèÖÃ°´Å¥×´Ì¬
+    // æ ¹æ®çŠ¶æ€è®¾ç½®æŒ‰é’®çŠ¶æ€
     switch (state) {
     case AppState::INITIALIZING:
     case AppState::STARTING:
     case AppState::STOPPING:
     case AppState::SHUTDOWN:
-        // ËùÓĞ°´Å¥½ûÓÃ
+        // æ‰€æœ‰æŒ‰é’®ç¦ç”¨
         break;
 
     case AppState::DEVICE_ABSENT:
-        // Ö»ÓĞÃüÁîÄ¿Â¼°´Å¥¿ÉÓÃ
+        // åªæœ‰å‘½ä»¤ç›®å½•æŒ‰é’®å¯ç”¨
         cmdDirEnabled = true;
         break;
 
     case AppState::DEVICE_ERROR:
-        // ¿ÉÒÔÖØÖÃÉè±¸ºÍÑ¡ÔñÃüÁîÄ¿Â¼
+        // å¯ä»¥é‡ç½®è®¾å¤‡å’Œé€‰æ‹©å‘½ä»¤ç›®å½•
         resetEnabled = true;
         cmdDirEnabled = true;
         break;
 
     case AppState::COMMANDS_MISSING:
-        // ¿ÉÒÔÖØÖÃÉè±¸ºÍÑ¡ÔñÃüÁîÄ¿Â¼
+        // å¯ä»¥é‡ç½®è®¾å¤‡å’Œé€‰æ‹©å‘½ä»¤ç›®å½•
         resetEnabled = true;
         cmdDirEnabled = true;
         break;
 
     case AppState::CONFIGURED:
-        // ¿ÉÒÔ¿ªÊ¼´«Êä¡¢ÖØÖÃÉè±¸ºÍÑ¡ÔñÃüÁîÄ¿Â¼
+        // å¯ä»¥å¼€å§‹ä¼ è¾“ã€é‡ç½®è®¾å¤‡å’Œé€‰æ‹©å‘½ä»¤ç›®å½•
         startEnabled = true;
         resetEnabled = true;
         cmdDirEnabled = true;
@@ -91,43 +89,43 @@ void UIStateHandler::updateButtonStates(AppState state) {
         break;
 
     case AppState::TRANSFERRING:
-        // Ö»ÄÜÍ£Ö¹´«Êä
+        // åªèƒ½åœæ­¢ä¼ è¾“
         stopEnabled = true;
         break;
 
     case AppState::IDLE:
-        // ¿ÉÒÔÖØÖÃÉè±¸ºÍÑ¡ÔñÃüÁîÄ¿Â¼
+        // å¯ä»¥é‡ç½®è®¾å¤‡å’Œé€‰æ‹©å‘½ä»¤ç›®å½•
         resetEnabled = true;
         cmdDirEnabled = true;
         imageParamsEnabled = true;
         break;
 
     default:
-        LOG_WARN(QString::fromLocal8Bit("updateButtonStates - Î´´¦ÀíµÄ×´Ì¬: %1")
+        LOG_WARN(fromLocal8Bit("updateButtonStates - æœªå¤„ç†çš„çŠ¶æ€: %1")
             .arg(AppStateMachine::stateToString(state)));
         break;
     }
 
-    // Ïß³Ì°²È«µØ¸üĞÂUI
+    // çº¿ç¨‹å®‰å…¨åœ°æ›´æ–°UI
     QMetaObject::invokeMethod(QApplication::instance(), [=, this]() {
         if (!canUpdateUI()) return;
 
-        // Ö±½Ó¸üĞÂ°´Å¥×´Ì¬
+        // ç›´æ¥æ›´æ–°æŒ‰é’®çŠ¶æ€
         if (m_ui.startButton) m_ui.startButton->setEnabled(startEnabled);
         if (m_ui.stopButton) m_ui.stopButton->setEnabled(stopEnabled);
         if (m_ui.resetButton) m_ui.resetButton->setEnabled(resetEnabled);
         if (m_ui.cmdDirButton) m_ui.cmdDirButton->setEnabled(cmdDirEnabled);
 
-        // ¸üĞÂÍ¼Ïñ²ÎÊı¿Ø¼ş×´Ì¬
+        // æ›´æ–°å›¾åƒå‚æ•°æ§ä»¶çŠ¶æ€
         if (m_ui.imageWIdth) m_ui.imageWIdth->setReadOnly(!imageParamsEnabled);
         if (m_ui.imageHeight) m_ui.imageHeight->setReadOnly(!imageParamsEnabled);
         if (m_ui.imageType) m_ui.imageType->setEnabled(imageParamsEnabled);
 
-        LOG_DEBUG(QString::fromLocal8Bit("°´Å¥×´Ì¬ÒÑ¸üĞÂ - ¿ªÊ¼: %1, Í£Ö¹: %2, ÖØÖÃ: %3, ÃüÁîÄ¿Â¼: %4")
-            .arg(startEnabled ? QString::fromLocal8Bit("ÆôÓÃ") : QString::fromLocal8Bit("½ûÓÃ"))
-            .arg(stopEnabled ? QString::fromLocal8Bit("ÆôÓÃ") : QString::fromLocal8Bit("½ûÓÃ"))
-            .arg(resetEnabled ? QString::fromLocal8Bit("ÆôÓÃ") : QString::fromLocal8Bit("½ûÓÃ"))
-            .arg(cmdDirEnabled ? QString::fromLocal8Bit("ÆôÓÃ") : QString::fromLocal8Bit("½ûÓÃ")));
+        LOG_DEBUG(fromLocal8Bit("æŒ‰é’®çŠ¶æ€å·²æ›´æ–° - å¼€å§‹: %1, åœæ­¢: %2, é‡ç½®: %3, å‘½ä»¤ç›®å½•: %4")
+            .arg(startEnabled ? fromLocal8Bit("å¯ç”¨") : fromLocal8Bit("ç¦ç”¨"))
+            .arg(stopEnabled ? fromLocal8Bit("å¯ç”¨") : fromLocal8Bit("ç¦ç”¨"))
+            .arg(resetEnabled ? fromLocal8Bit("å¯ç”¨") : fromLocal8Bit("ç¦ç”¨"))
+            .arg(cmdDirEnabled ? fromLocal8Bit("å¯ç”¨") : fromLocal8Bit("ç¦ç”¨")));
         }, Qt::QueuedConnection);
 }
 
@@ -137,109 +135,126 @@ void UIStateHandler::updateStatusTexts(AppState state, const QString& additional
 
     if (!canUpdateUI()) return;
 
-    // ¸ù¾İ×´Ì¬ÉèÖÃ×´Ì¬ÎÄ±¾
+    // æ ¹æ®çŠ¶æ€è®¾ç½®çŠ¶æ€æ–‡æœ¬
     switch (state) {
     case AppState::INITIALIZING:
-        statusText = QString::fromLocal8Bit("³õÊ¼»¯ÖĞ");
-        transferStatusText = QString::fromLocal8Bit("³õÊ¼»¯ÖĞ");
+        statusText = fromLocal8Bit("åˆå§‹åŒ–ä¸­");
+        transferStatusText = fromLocal8Bit("åˆå§‹åŒ–ä¸­");
         break;
 
     case AppState::DEVICE_ABSENT:
-        statusText = QString::fromLocal8Bit("Î´Á¬½ÓÉè±¸");
-        transferStatusText = QString::fromLocal8Bit("Î´Á¬½Ó");
-        // Çå¿ÕUSBËÙ¶ÈĞÅÏ¢
-        m_ui.usbSpeedLabel->setText(QString::fromLocal8Bit("Éè±¸: Î´Á¬½Ó"));
+        statusText = fromLocal8Bit("æœªè¿æ¥è®¾å¤‡");
+        transferStatusText = fromLocal8Bit("æœªè¿æ¥");
+        // æ¸…ç©ºUSBé€Ÿåº¦ä¿¡æ¯
+        m_ui.usbSpeedLabel->setText(fromLocal8Bit("è®¾å¤‡: æœªè¿æ¥"));
         m_ui.usbSpeedLabel->setStyleSheet("");
         break;
 
     case AppState::DEVICE_ERROR:
-        statusText = QString::fromLocal8Bit("Éè±¸´íÎó");
-        transferStatusText = QString::fromLocal8Bit("´íÎó");
+        statusText = fromLocal8Bit("è®¾å¤‡é”™è¯¯");
+        transferStatusText = fromLocal8Bit("é”™è¯¯");
         m_ui.usbSpeedLabel->setStyleSheet("color: red;");
         break;
 
     case AppState::COMMANDS_MISSING:
-        statusText = QString::fromLocal8Bit("ÃüÁîÎÄ¼şÎ´¼ÓÔØ");
-        transferStatusText = QString::fromLocal8Bit("¿ÕÏĞ");
-        // ¸üĞÂÃüÁî×´Ì¬±êÇ©
-        m_ui.cmdStatusLabel->setText(QString::fromLocal8Bit("ÃüÁîÎÄ¼şÎ´¼ÓÔØ"));
+        statusText = fromLocal8Bit("å‘½ä»¤æ–‡ä»¶æœªåŠ è½½");
+        transferStatusText = fromLocal8Bit("ç©ºé—²");
+        // æ›´æ–°å‘½ä»¤çŠ¶æ€æ ‡ç­¾
+        m_ui.cmdStatusLabel->setText(fromLocal8Bit("å‘½ä»¤æ–‡ä»¶æœªåŠ è½½"));
         m_ui.cmdStatusLabel->setStyleSheet("color: red;");
         break;
 
     case AppState::CONFIGURED:
-        statusText = QString::fromLocal8Bit("¾ÍĞ÷");
-        transferStatusText = QString::fromLocal8Bit("ÒÑÅäÖÃ");
-        // ¸üĞÂÃüÁî×´Ì¬±êÇ©
-        m_ui.cmdStatusLabel->setText(QString::fromLocal8Bit("ÃüÁîÎÄ¼ş¼ÓÔØ³É¹¦"));
+        statusText = fromLocal8Bit("å°±ç»ª");
+        transferStatusText = fromLocal8Bit("å·²é…ç½®");
+        // æ›´æ–°å‘½ä»¤çŠ¶æ€æ ‡ç­¾
+        m_ui.cmdStatusLabel->setText(fromLocal8Bit("å‘½ä»¤æ–‡ä»¶åŠ è½½æˆåŠŸ"));
         m_ui.cmdStatusLabel->setStyleSheet("color: green;");
         break;
 
     case AppState::STARTING:
-        statusText = QString::fromLocal8Bit("Æô¶¯ÖĞ");
-        transferStatusText = QString::fromLocal8Bit("Æô¶¯ÖĞ");
+        statusText = fromLocal8Bit("å¯åŠ¨ä¸­");
+        transferStatusText = fromLocal8Bit("å¯åŠ¨ä¸­");
         break;
 
     case AppState::TRANSFERRING:
-        statusText = QString::fromLocal8Bit("´«ÊäÖĞ");
-        transferStatusText = QString::fromLocal8Bit("´«ÊäÖĞ");
+        statusText = fromLocal8Bit("ä¼ è¾“ä¸­");
+        transferStatusText = fromLocal8Bit("ä¼ è¾“ä¸­");
         break;
 
     case AppState::STOPPING:
-        statusText = QString::fromLocal8Bit("Í£Ö¹ÖĞ");
-        transferStatusText = QString::fromLocal8Bit("Í£Ö¹ÖĞ");
+        statusText = fromLocal8Bit("åœæ­¢ä¸­");
+        transferStatusText = fromLocal8Bit("åœæ­¢ä¸­");
         break;
 
     case AppState::IDLE:
-        statusText = QString::fromLocal8Bit("¾ÍĞ÷");
-        transferStatusText = QString::fromLocal8Bit("¿ÕÏĞ");
+        statusText = fromLocal8Bit("å°±ç»ª");
+        transferStatusText = fromLocal8Bit("ç©ºé—²");
         break;
 
     case AppState::SHUTDOWN:
-        statusText = QString::fromLocal8Bit("¹Ø±ÕÖĞ");
-        transferStatusText = QString::fromLocal8Bit("¹Ø±ÕÖĞ");
+        statusText = fromLocal8Bit("å…³é—­ä¸­");
+        transferStatusText = fromLocal8Bit("å…³é—­ä¸­");
         break;
 
     default:
-        statusText = QString::fromLocal8Bit("Î´Öª×´Ì¬");
-        transferStatusText = QString::fromLocal8Bit("Î´Öª");
+        statusText = fromLocal8Bit("æœªçŸ¥çŠ¶æ€");
+        transferStatusText = fromLocal8Bit("æœªçŸ¥");
         break;
     }
 
-    // ¸üĞÂ×´Ì¬±êÇ©
-    m_ui.usbStatusLabel->setText(QString::fromLocal8Bit("USB×´Ì¬: %1").arg(statusText));
-    m_ui.transferStatusLabel->setText(QString::fromLocal8Bit("´«Êä×´Ì¬: %1").arg(transferStatusText));
+    // æ›´æ–°çŠ¶æ€æ ‡ç­¾
+    m_ui.usbStatusLabel->setText(fromLocal8Bit("USBçŠ¶æ€: %1").arg(statusText));
+    m_ui.transferStatusLabel->setText(fromLocal8Bit("ä¼ è¾“çŠ¶æ€: %1").arg(transferStatusText));
 }
 
 void UIStateHandler::updateTransferStats(uint64_t transferred, double speed, uint64_t elapsedTimeSeconds) {
-    m_lastTransferred = transferred;
-    m_lastSpeed = speed;
+    if (transferred > 0) {
+        // åªåœ¨æœ‰æœ‰æ•ˆæ•°æ®æ—¶æ›´æ–°æœ€åçš„ä¼ è¾“å€¼
+        m_lastTransferred = transferred;
+    }
+
+    if (speed > 0) {
+        // åªåœ¨æœ‰æœ‰æ•ˆé€Ÿåº¦æ—¶æ›´æ–°æœ€åçš„é€Ÿåº¦å€¼
+        m_lastSpeed = speed;
+    }
+    else if (transferred > 0) {
+        // å¦‚æœæœ‰æ•°æ®ä½†é€Ÿåº¦ä¸º0ï¼Œä½¿ç”¨ä¸Šæ¬¡çš„æœ‰æ•ˆé€Ÿåº¦
+        speed = m_lastSpeed;
+    }
 
     if (!canUpdateUI()) return;
 
-    // ¸üĞÂËÙ¶ÈÏÔÊ¾
-    QString speedText = QString::fromLocal8Bit("ËÙ¶È: 0 MB/s");
+    // æ›´æ–°é€Ÿåº¦æ˜¾ç¤º
+    QString speedText = fromLocal8Bit("é€Ÿåº¦: 0 MB/s");
     if (speed > 0) {
         if (speed >= 1024) {
-            speedText = QString::fromLocal8Bit("ËÙ¶È: %1 GB/s")
+            speedText = fromLocal8Bit("é€Ÿåº¦: %1 GB/s")
                 .arg(speed / 1024.0, 0, 'f', 2);
         }
         else {
-            speedText = QString::fromLocal8Bit("ËÙ¶È: %1 MB/s")
+            speedText = fromLocal8Bit("é€Ÿåº¦: %1 MB/s")
                 .arg(speed, 0, 'f', 2);
         }
     }
     m_ui.speedLabel->setText(speedText);
 
-    // ¸üĞÂ×Ü´«ÊäÁ¿ÏÔÊ¾
-    m_ui.totalBytesLabel->setText(QString::fromLocal8Bit("×Ü¼Æ: %1").arg(formatDataSize(transferred)));
+    // æ›´æ–°æ€»ä¼ è¾“é‡æ˜¾ç¤ºï¼Œä½¿ç”¨æœ€åçš„æœ‰æ•ˆä¼ è¾“é‡
+    uint64_t displayTransferred = (transferred > 0) ? transferred : m_lastTransferred;
+    m_ui.totalBytesLabel->setText(fromLocal8Bit("æ€»è®¡: %1").arg(formatDataSize(displayTransferred)));
 
-    // Update elapsed time display
+    // æ›´æ–°æ—¶é—´æ˜¾ç¤º
     QString timeText;
     if (elapsedTimeSeconds > 0) {
-        timeText = QString::fromLocal8Bit("²É¼¯Ê±³¤: %1").arg(formatElapsedTime(elapsedTimeSeconds));
+        m_lastElapsedTime = elapsedTimeSeconds; // ä¿å­˜æœ€åçš„æœ‰æ•ˆæ—¶é—´
+        timeText = fromLocal8Bit("é‡‡é›†æ—¶é•¿: %1").arg(formatElapsedTime(elapsedTimeSeconds));
+    }
+    else if (m_lastElapsedTime > 0) {
+        // ä½¿ç”¨ä¸Šæ¬¡çš„æœ‰æ•ˆæ—¶é—´
+        timeText = fromLocal8Bit("é‡‡é›†æ—¶é•¿: %1").arg(formatElapsedTime(m_lastElapsedTime));
     }
     else {
-        timeText = QString::fromLocal8Bit("²É¼¯Ê±³¤: 00:00:00");
+        timeText = fromLocal8Bit("é‡‡é›†æ—¶é•¿: 00:00:00");
     }
     m_ui.totalTimeLabel->setText(timeText);
 
@@ -247,26 +262,26 @@ void UIStateHandler::updateTransferStats(uint64_t transferred, double speed, uin
 }
 
 void UIStateHandler::updateUsbSpeedDisplay(const QString& speedDesc, bool isUSB3) {
-    m_ui.usbSpeedLabel->setText(QString::fromLocal8Bit("Éè±¸: %1").arg(speedDesc));
+    m_ui.usbSpeedLabel->setText(fromLocal8Bit("è®¾å¤‡: %1").arg(speedDesc));
 
     if (!canUpdateUI()) return;
 
-    // ¸ù¾İUSBËÙ¶ÈÉèÖÃ²»Í¬ÑùÊ½
+    // æ ¹æ®USBé€Ÿåº¦è®¾ç½®ä¸åŒæ ·å¼
     if (isUSB3) {
         m_ui.usbSpeedLabel->setStyleSheet("color: blue;");
     }
-    else if (!speedDesc.contains(QString::fromLocal8Bit("Î´Á¬½Ó"))) {
+    else if (!speedDesc.contains(fromLocal8Bit("æœªè¿æ¥"))) {
         m_ui.usbSpeedLabel->setStyleSheet("color: green;");
     }
     else {
         m_ui.usbSpeedLabel->setStyleSheet("");
     }
 
-    LOG_INFO(QString::fromLocal8Bit("½ÓÊÕĞÅºÅ£¬USBËÙ¶È¸üĞÂ: %1").arg(speedDesc));
+    LOG_INFO(fromLocal8Bit("æ¥æ”¶ä¿¡å·ï¼ŒUSBé€Ÿåº¦æ›´æ–°: %1").arg(speedDesc));
 }
 
 void UIStateHandler::showErrorMessage(const QString& title, const QString& message) {
-    LOG_ERROR(QString::fromLocal8Bit("´íÎó¶Ô»°¿ò: %1 - %2").arg(title).arg(message));
+    LOG_ERROR(fromLocal8Bit("é”™è¯¯å¯¹è¯æ¡†: %1 - %2").arg(title).arg(message));
     if (!canUpdateUI()) return;
 
     QMessageBox::critical(nullptr, title, message);

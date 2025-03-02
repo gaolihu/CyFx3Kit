@@ -27,7 +27,7 @@ bool CommandManager::setCommandDirectory(const QString& path)
     QDir dir(path);
     if (!dir.exists()) {
         LOG_ERROR("Command directory does not exist");
-        emit commandLoadError("指定的目录不存在");
+        emit commandLoadError("鎸囧畾鐨勭洰褰曚笉瀛樺湪");
         return false;
     }
 
@@ -54,7 +54,7 @@ bool CommandManager::setCommandDirectory(const QString& path)
     }
     else {
         LOG_ERROR("Failed to load some command files");
-        emit commandLoadError("部分命令文件加载失败");
+        emit commandLoadError("閮ㄥ垎鍛戒护鏂囦欢鍔犺浇澶辫触");
     }
 
     return success;

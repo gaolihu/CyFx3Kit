@@ -1,7 +1,7 @@
 #pragma once
 #include <QString>
 #include <QDateTime>
-#include "Logger.h"  // 包含Logger以使用其枚举类型
+#include "Logger.h"  // 鍖呭惈Logger浠ヤ娇鐢ㄥ叾鏋氫妇绫诲瀷
 
 struct LogEntry {
     QString message;

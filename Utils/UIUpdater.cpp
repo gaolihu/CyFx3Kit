@@ -8,7 +8,7 @@ UIUpdater::UIUpdater(Logger* logger)
     , m_logger(logger)
     , m_batchTimer(new QTimer(this))
 {
-    m_batchTimer->setInterval(100); // 100ms 批量更新
+    m_batchTimer->setInterval(100); // 100ms 鎵归噺鏇存柊
     connect(m_batchTimer, &QTimer::timeout, this, &UIUpdater::processLogBatch);
     m_batchTimer->start();
 }

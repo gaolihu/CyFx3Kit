@@ -16,6 +16,8 @@
 #include <memory>
 #include <sstream>
 
+#include <QtCompat.h>
+
 class LogWriter;
 class UIUpdater;
 
@@ -23,7 +25,7 @@ class Logger : public QObject {
     Q_OBJECT
 
 public:
-    // ½«Ã¶¾Ù±£ÁôÔÚLoggerÀàÖĞ£¬ÒÔ±£³ÖÔ­ÓĞ´úÂëµÄ¼æÈİĞÔ
+    // å°†æšä¸¾ä¿ç•™åœ¨Loggerç±»ä¸­ï¼Œä»¥ä¿æŒåŸæœ‰ä»£ç çš„å…¼å®¹æ€§
     enum LogLevel {
         LDEBUG,
         LINFO,
@@ -58,7 +60,7 @@ public:
     void warning(const QString& warning, const QString& file = "", int line = 0);
     void debug(const QString& message, const QString& file = "", int line = 0);
 
-    // ±£ÁôÔ­ÓĞµÄ¹¤¾ß·½·¨
+    // ä¿ç•™åŸæœ‰çš„å·¥å…·æ–¹æ³•
     void writeToFile(const QString& message);
     void appendToWidget(const QString& message, LogLevel level);
     QString formatMessage(const QString& message, const QString& threadId, LogLevel level,
@@ -88,7 +90,7 @@ private:
     std::unique_ptr<UIUpdater> m_uiUpdater;
 };
 
-// ±£³ÖÔ­ÓĞµÄºê¶¨Òå
+// ä¿æŒåŸæœ‰çš„å®å®šä¹‰
 #define LOG_DEBUG(msg) Logger::instance().debug(msg, __FILE__, __LINE__)
 #define LOG_INFO(msg)  Logger::instance().log(msg, Logger::LINFO, __FILE__, __LINE__)
 #define LOG_WARN(msg)  Logger::instance().warning(msg, __FILE__, __LINE__)

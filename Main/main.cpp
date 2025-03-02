@@ -1,22 +1,28 @@
 #include "FX3ToolMainWin.h"
 #include <QtWidgets/QApplication>
+#if QT_VERSION <= QT_VERSION_CHECK(6, 0, 0)
 #include <QTextCodec>
+#endif
 
 int main(int argc, char* argv[])
 {
-    // 设置高DPI支持
+    // 璁剧疆楂楧PI鏀寔
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
 
     QApplication a(argc, argv);
 
-    // 设置应用程序信息
+    // 璁剧疆搴旂敤绋嬪簭淇℃伅
     QCoreApplication::setOrganizationName("Your Company");
     QCoreApplication::setApplicationName("FX3 Test Tool");
 
-    // 设置UTF-8编码
+#if QT_VERSION <= QT_VERSION_CHECK(6, 0, 0)
+    // 璁剧疆UTF-8缂栫爜
     QTextCodec::setCodecForLocale(QTextCodec::codecForName("System"));
+#endif
 
-    // 创建并显示主窗口
+    // 鍒涘缓骞舵樉绀轰富绐楀彛
     FX3ToolMainWin w;
     w.show();
 

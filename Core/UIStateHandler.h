@@ -5,7 +5,7 @@
 #include "ui_FX3ToolMainWin.h"
 #include "Logger.h"
 
-// UI×´Ì¬´¦ÀíÀà - ¸ºÔğ¸ù¾İÓ¦ÓÃ×´Ì¬¸üĞÂUI
+// UIçŠ¶æ€å¤„ç†ç±» - è´Ÿè´£æ ¹æ®åº”ç”¨çŠ¶æ€æ›´æ–°UI
 class UIStateHandler : public QObject {
     Q_OBJECT
 
@@ -13,27 +13,27 @@ public:
     explicit UIStateHandler(Ui::FX3ToolMainWinClass& ui, QObject* parent = nullptr);
     ~UIStateHandler() = default;
 
-    // ×¼±¸¹Ø±Õ£¬Í£Ö¹ËùÓĞUI¸üĞÂ
+    // å‡†å¤‡å…³é—­ï¼Œåœæ­¢æ‰€æœ‰UIæ›´æ–°
     void prepareForClose() {
         m_isClosing = true;
-        LOG_INFO(QString::fromLocal8Bit("UI×´Ì¬´¦ÀíÆ÷ÒÑ×¼±¸¹Ø±Õ"));
+        LOG_INFO(fromLocal8Bit("UIçŠ¶æ€å¤„ç†å™¨å·²å‡†å¤‡å…³é—­"));
     }
 
-    // ¼ì²éÊÇ·ñ¿ÉÒÔ°²È«¸üĞÂUI
+    // æ£€æŸ¥æ˜¯å¦å¯ä»¥å®‰å…¨æ›´æ–°UI
     bool canUpdateUI() const {
-        // ¼ì²éÓ¦ÓÃ³ÌĞòÊÇ·ñÕıÔÚ¹Ø±Õ
+        // æ£€æŸ¥åº”ç”¨ç¨‹åºæ˜¯å¦æ­£åœ¨å…³é—­
         if (QApplication::closingDown()) {
             return false;
         }
 
-        // ¼ì²éUI´¦ÀíÆ÷ÊÇ·ñÕıÔÚ¹Ø±Õ
+        // æ£€æŸ¥UIå¤„ç†å™¨æ˜¯å¦æ­£åœ¨å…³é—­
         if (m_isClosing.load()) {
             return false;
         }
 
-        // È·±£ÔÚÖ÷Ïß³ÌÖĞµ÷ÓÃ
+        // ç¡®ä¿åœ¨ä¸»çº¿ç¨‹ä¸­è°ƒç”¨
         if (QThread::currentThread() != QApplication::instance()->thread()) {
-            // Èç¹û²»ÔÚÖ÷Ïß³Ì£¬Ö»ÔÊĞíÄ³Ğ©²Ù×÷
+            // å¦‚æœä¸åœ¨ä¸»çº¿ç¨‹ï¼Œåªå…è®¸æŸäº›æ“ä½œ
             return false;
         }
 
@@ -41,26 +41,26 @@ public:
     }
 
 public slots:
-    // µ±Ó¦ÓÃ×´Ì¬¸Ä±äÊ±¸üĞÂUI
+    // å½“åº”ç”¨çŠ¶æ€æ”¹å˜æ—¶æ›´æ–°UI
     void onStateChanged(AppState newState, AppState oldState, const QString& reason);
 
-    // ¸üĞÂ´«ÊäËÙ¶ÈºÍÊı¾İÍ³¼Æ
+    // æ›´æ–°ä¼ è¾“é€Ÿåº¦å’Œæ•°æ®ç»Ÿè®¡
     void updateTransferStats(uint64_t transferred, double speed, uint64_t elapsedTimeSeconds = 0);
 
-    // ¸üĞÂUSBÉè±¸ËÙ¶ÈÏÔÊ¾
+    // æ›´æ–°USBè®¾å¤‡é€Ÿåº¦æ˜¾ç¤º
     void updateUsbSpeedDisplay(const QString& speedDesc, bool isUSB3);
 
-    // ÏÔÊ¾´íÎóÏûÏ¢
+    // æ˜¾ç¤ºé”™è¯¯æ¶ˆæ¯
     void showErrorMessage(const QString& title, const QString& message);
 
 private:
-    // ¸ù¾İÓ¦ÓÃ×´Ì¬¸üĞÂ°´Å¥×´Ì¬
+    // æ ¹æ®åº”ç”¨çŠ¶æ€æ›´æ–°æŒ‰é’®çŠ¶æ€
     void updateButtonStates(AppState state);
 
-    // ¸üĞÂ×´Ì¬À¸ÎÄ±¾
+    // æ›´æ–°çŠ¶æ€æ æ–‡æœ¬
     void updateStatusTexts(AppState state, const QString& additionalInfo = QString());
 
-    // ¸ñÊ½»¯Êı¾İ´óĞ¡ÏÔÊ¾
+    // æ ¼å¼åŒ–æ•°æ®å¤§å°æ˜¾ç¤º
     QString formatDataSize(uint64_t bytes);
 
     QString formatElapsedTime(uint64_t seconds) {
@@ -74,11 +74,12 @@ private:
             .arg(secs, 2, 10, QChar('0'));
     }
 
-    // UIÒıÓÃ
+    // UIå¼•ç”¨
     Ui::FX3ToolMainWinClass& m_ui;
 
-    // ÉÏ´Î¸üĞÂµÄ´«Êä×´Ì¬
+    // ä¸Šæ¬¡æ›´æ–°çš„ä¼ è¾“çŠ¶æ€
     uint64_t m_lastTransferred = 0;
     double m_lastSpeed = 0.0;
+    uint64_t m_lastElapsedTime = 0;
     std::atomic<bool> m_isClosing{ false };
 };

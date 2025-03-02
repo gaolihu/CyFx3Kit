@@ -21,7 +21,7 @@ bool AppStateMachine::processEvent(StateEvent event, const QString& reason) {
     QString eventStr = eventToString(event);
     QString stateStr = stateToString(currentState);
 
-    LOG_INFO(QString::fromLocal8Bit("´¦Àí×´Ì¬ÊÂ¼ş: %1, ×´Ì¬: %2, Ô­Òò: %3")
+    LOG_INFO(fromLocal8Bit("å¤„ç†çŠ¶æ€äº‹ä»¶: %1, çŠ¶æ€: %2, åŸå› : %3")
         .arg(eventStr)
         .arg(stateStr)
         .arg(reason));
@@ -42,41 +42,41 @@ void AppStateMachine::executeStateChange(AppState newState, const QString& reaso
     QString oldStateStr = stateToString(oldState);
     QString newStateStr = stateToString(newState);
 
-    LOG_INFO(QString::fromLocal8Bit("Ö´ĞĞ×´Ì¬×ª»»: %1 -> %2, Ô­Òò: %3")
+    LOG_INFO(fromLocal8Bit("æ‰§è¡ŒçŠ¶æ€è½¬æ¢: %1 -> %2, åŸå› : %3")
         .arg(oldStateStr)
         .arg(newStateStr)
         .arg(reason));
 
-    // Ê¹ÓÃQMetaObject::invokeMethodÈ·±£ĞÅºÅÔÚÕıÈ·µÄÏß³ÌÉÏÏÂÎÄÖĞ·¢ËÍ
+    // ä½¿ç”¨QMetaObject::invokeMethodç¡®ä¿ä¿¡å·åœ¨æ­£ç¡®çš„çº¿ç¨‹ä¸Šä¸‹æ–‡ä¸­å‘é€
     QMetaObject::invokeMethod(this, [this, oldState, newState, reason]() {
-        LOG_WARN(QString::fromLocal8Bit("·¢³öleavingStateĞÅºÅ£¬ĞÂ×´Ì¬: %1, ¾É×´Ì¬: %2").arg(stateToString(newState)).arg(stateToString(oldState)));
+        LOG_WARN(fromLocal8Bit("å‘å‡ºleavingStateä¿¡å·ï¼Œæ–°çŠ¶æ€: %1, æ—§çŠ¶æ€: %2").arg(stateToString(newState)).arg(stateToString(oldState)));
         emit leavingState(oldState, reason);
 
-        LOG_WARN(QString::fromLocal8Bit("·¢³östateChangedĞÅºÅ£¬ĞÂ×´Ì¬: %1, ¾É×´Ì¬: %2").arg(stateToString(newState)).arg(stateToString(oldState)));
+        LOG_WARN(fromLocal8Bit("å‘å‡ºstateChangedä¿¡å·ï¼Œæ–°çŠ¶æ€: %1, æ—§çŠ¶æ€: %2").arg(stateToString(newState)).arg(stateToString(oldState)));
         emit stateChanged(newState, oldState, reason);
 
-        LOG_WARN(QString::fromLocal8Bit("·¢³öenteringStateĞÅºÅ£¬ĞÂ×´Ì¬: %1, ¾É×´Ì¬: %2").arg(stateToString(newState)).arg(stateToString(oldState)));
+        LOG_WARN(fromLocal8Bit("å‘å‡ºenteringStateä¿¡å·ï¼Œæ–°çŠ¶æ€: %1, æ—§çŠ¶æ€: %2").arg(stateToString(newState)).arg(stateToString(oldState)));
         emit enteringState(newState, reason);
         }, Qt::QueuedConnection);
 
     if (isError) {
-        LOG_ERROR(QString::fromLocal8Bit("·¢³öerrorOccurredĞÅºÅ£¬Ô­Òò: %1").arg(reason));
+        LOG_ERROR(fromLocal8Bit("å‘å‡ºerrorOccurredä¿¡å·ï¼ŒåŸå› : %1").arg(reason));
         emit errorOccurred(reason);
     }
 }
 
 StateTransitionResult AppStateMachine::handleEvent(AppState currentState, StateEvent event, const QString& reason) {
-    // ´¦Àí¹Ø±ÕÓ¦ÓÃÊÂ¼ş - ÔÚÈÎºÎ×´Ì¬ÏÂ¶¼¿ÉÒÔ¹Ø±Õ
+    // å¤„ç†å…³é—­åº”ç”¨äº‹ä»¶ - åœ¨ä»»ä½•çŠ¶æ€ä¸‹éƒ½å¯ä»¥å…³é—­
     if (event == StateEvent::APP_SHUTDOWN) {
-        return StateTransitionResult(AppState::SHUTDOWN, QString::fromLocal8Bit("Ó¦ÓÃ³ÌĞòÕıÔÚ¹Ø±Õ"));
+        return StateTransitionResult(AppState::SHUTDOWN, fromLocal8Bit("åº”ç”¨ç¨‹åºæ­£åœ¨å…³é—­"));
     }
 
-    // »ùÓÚµ±Ç°×´Ì¬ºÍÊÕµ½µÄÊÂ¼şµÄ×´Ì¬×ª»»Âß¼­
+    // åŸºäºå½“å‰çŠ¶æ€å’Œæ”¶åˆ°çš„äº‹ä»¶çš„çŠ¶æ€è½¬æ¢é€»è¾‘
     switch (currentState) {
     case AppState::INITIALIZING:
         switch (event) {
         case StateEvent::DEVICE_CONNECTED:
-            return StateTransitionResult(AppState::COMMANDS_MISSING, QString::fromLocal8Bit("Éè±¸ÒÑÁ¬½Ó£¬µÈ´ıÃüÁîÎÄ¼ş"));
+            return StateTransitionResult(AppState::COMMANDS_MISSING, fromLocal8Bit("è®¾å¤‡å·²è¿æ¥ï¼Œç­‰å¾…å‘½ä»¤æ–‡ä»¶"));
         case StateEvent::ERROR_OCCURRED:
             return StateTransitionResult(AppState::DEVICE_ERROR, reason, true);
         default:
@@ -87,7 +87,7 @@ StateTransitionResult AppStateMachine::handleEvent(AppState currentState, StateE
     case AppState::DEVICE_ABSENT:
         switch (event) {
         case StateEvent::DEVICE_CONNECTED:
-            return StateTransitionResult(AppState::COMMANDS_MISSING, QString::fromLocal8Bit("Éè±¸ÒÑÁ¬½Ó£¬µÈ´ıÃüÁîÎÄ¼ş"));
+            return StateTransitionResult(AppState::COMMANDS_MISSING, fromLocal8Bit("è®¾å¤‡å·²è¿æ¥ï¼Œç­‰å¾…å‘½ä»¤æ–‡ä»¶"));
         default:
             break;
         }
@@ -96,9 +96,9 @@ StateTransitionResult AppStateMachine::handleEvent(AppState currentState, StateE
     case AppState::DEVICE_ERROR:
         switch (event) {
         case StateEvent::DEVICE_CONNECTED:
-            return StateTransitionResult(AppState::COMMANDS_MISSING, QString::fromLocal8Bit("Éè±¸ÒÑÖØĞÂÁ¬½Ó£¬µÈ´ıÃüÁîÎÄ¼ş"));
+            return StateTransitionResult(AppState::COMMANDS_MISSING, fromLocal8Bit("è®¾å¤‡å·²é‡æ–°è¿æ¥ï¼Œç­‰å¾…å‘½ä»¤æ–‡ä»¶"));
         case StateEvent::DEVICE_DISCONNECTED:
-            return StateTransitionResult(AppState::DEVICE_ABSENT, QString::fromLocal8Bit("Éè±¸ÒÑ¶Ï¿ªÁ¬½Ó"));
+            return StateTransitionResult(AppState::DEVICE_ABSENT, fromLocal8Bit("è®¾å¤‡å·²æ–­å¼€è¿æ¥"));
         default:
             break;
         }
@@ -107,9 +107,9 @@ StateTransitionResult AppStateMachine::handleEvent(AppState currentState, StateE
     case AppState::COMMANDS_MISSING:
         switch (event) {
         case StateEvent::COMMANDS_LOADED:
-            return StateTransitionResult(AppState::CONFIGURED, QString::fromLocal8Bit("ÃüÁîÎÄ¼şÒÑ¼ÓÔØ£¬ÏµÍ³ÒÑÅäÖÃ"));
+            return StateTransitionResult(AppState::CONFIGURED, fromLocal8Bit("å‘½ä»¤æ–‡ä»¶å·²åŠ è½½ï¼Œç³»ç»Ÿå·²é…ç½®"));
         case StateEvent::DEVICE_DISCONNECTED:
-            return StateTransitionResult(AppState::DEVICE_ABSENT, QString::fromLocal8Bit("Éè±¸ÒÑ¶Ï¿ªÁ¬½Ó"));
+            return StateTransitionResult(AppState::DEVICE_ABSENT, fromLocal8Bit("è®¾å¤‡å·²æ–­å¼€è¿æ¥"));
         case StateEvent::ERROR_OCCURRED:
             return StateTransitionResult(AppState::DEVICE_ERROR, reason, true);
         default:
@@ -120,11 +120,11 @@ StateTransitionResult AppStateMachine::handleEvent(AppState currentState, StateE
     case AppState::CONFIGURED:
         switch (event) {
         case StateEvent::START_REQUESTED:
-            return StateTransitionResult(AppState::STARTING, QString::fromLocal8Bit("ÕıÔÚÆô¶¯Êı¾İ´«Êä"));
+            return StateTransitionResult(AppState::STARTING, fromLocal8Bit("æ­£åœ¨å¯åŠ¨æ•°æ®ä¼ è¾“"));
         case StateEvent::COMMANDS_UNLOADED:
-            return StateTransitionResult(AppState::COMMANDS_MISSING, QString::fromLocal8Bit("ÃüÁîÎÄ¼şÒÑĞ¶ÔØ"));
+            return StateTransitionResult(AppState::COMMANDS_MISSING, fromLocal8Bit("å‘½ä»¤æ–‡ä»¶å·²å¸è½½"));
         case StateEvent::DEVICE_DISCONNECTED:
-            return StateTransitionResult(AppState::DEVICE_ABSENT, QString::fromLocal8Bit("Éè±¸ÒÑ¶Ï¿ªÁ¬½Ó"));
+            return StateTransitionResult(AppState::DEVICE_ABSENT, fromLocal8Bit("è®¾å¤‡å·²æ–­å¼€è¿æ¥"));
         case StateEvent::ERROR_OCCURRED:
             return StateTransitionResult(AppState::DEVICE_ERROR, reason, true);
         default:
@@ -135,11 +135,11 @@ StateTransitionResult AppStateMachine::handleEvent(AppState currentState, StateE
     case AppState::STARTING:
         switch (event) {
         case StateEvent::START_SUCCEEDED:
-            return StateTransitionResult(AppState::TRANSFERRING, QString::fromLocal8Bit("Êı¾İ´«ÊäÒÑ¿ªÊ¼"));
+            return StateTransitionResult(AppState::TRANSFERRING, fromLocal8Bit("æ•°æ®ä¼ è¾“å·²å¼€å§‹"));
         case StateEvent::START_FAILED:
-            return StateTransitionResult(AppState::DEVICE_ERROR, QString::fromLocal8Bit("Æô¶¯Êı¾İ´«ÊäÊ§°Ü: ") + reason, true);
+            return StateTransitionResult(AppState::DEVICE_ERROR, fromLocal8Bit("å¯åŠ¨æ•°æ®ä¼ è¾“å¤±è´¥: ") + reason, true);
         case StateEvent::DEVICE_DISCONNECTED:
-            return StateTransitionResult(AppState::DEVICE_ABSENT, QString::fromLocal8Bit("Éè±¸ÒÑ¶Ï¿ªÁ¬½Ó"));
+            return StateTransitionResult(AppState::DEVICE_ABSENT, fromLocal8Bit("è®¾å¤‡å·²æ–­å¼€è¿æ¥"));
         case StateEvent::ERROR_OCCURRED:
             return StateTransitionResult(AppState::DEVICE_ERROR, reason, true);
         default:
@@ -150,9 +150,9 @@ StateTransitionResult AppStateMachine::handleEvent(AppState currentState, StateE
     case AppState::TRANSFERRING:
         switch (event) {
         case StateEvent::STOP_REQUESTED:
-            return StateTransitionResult(AppState::STOPPING, QString::fromLocal8Bit("ÕıÔÚÍ£Ö¹Êı¾İ´«Êä"));
+            return StateTransitionResult(AppState::STOPPING, fromLocal8Bit("æ­£åœ¨åœæ­¢æ•°æ®ä¼ è¾“"));
         case StateEvent::DEVICE_DISCONNECTED:
-            return StateTransitionResult(AppState::DEVICE_ABSENT, QString::fromLocal8Bit("Éè±¸ÒÑ¶Ï¿ªÁ¬½Ó"));
+            return StateTransitionResult(AppState::DEVICE_ABSENT, fromLocal8Bit("è®¾å¤‡å·²æ–­å¼€è¿æ¥"));
         case StateEvent::ERROR_OCCURRED:
             return StateTransitionResult(AppState::DEVICE_ERROR, reason, true);
         default:
@@ -163,11 +163,11 @@ StateTransitionResult AppStateMachine::handleEvent(AppState currentState, StateE
     case AppState::STOPPING:
         switch (event) {
         case StateEvent::STOP_SUCCEEDED:
-            return StateTransitionResult(AppState::CONFIGURED, QString::fromLocal8Bit("Êı¾İ´«ÊäÒÑÍ£Ö¹"));
+            return StateTransitionResult(AppState::CONFIGURED, fromLocal8Bit("æ•°æ®ä¼ è¾“å·²åœæ­¢"));
         case StateEvent::STOP_FAILED:
-            return StateTransitionResult(AppState::DEVICE_ERROR, QString::fromLocal8Bit("Í£Ö¹Êı¾İ´«ÊäÊ§°Ü: ") + reason, true);
+            return StateTransitionResult(AppState::DEVICE_ERROR, fromLocal8Bit("åœæ­¢æ•°æ®ä¼ è¾“å¤±è´¥: ") + reason, true);
         case StateEvent::DEVICE_DISCONNECTED:
-            return StateTransitionResult(AppState::DEVICE_ABSENT, QString::fromLocal8Bit("Éè±¸ÒÑ¶Ï¿ªÁ¬½Ó"));
+            return StateTransitionResult(AppState::DEVICE_ABSENT, fromLocal8Bit("è®¾å¤‡å·²æ–­å¼€è¿æ¥"));
         case StateEvent::ERROR_OCCURRED:
             return StateTransitionResult(AppState::DEVICE_ERROR, reason, true);
         default:
@@ -176,31 +176,31 @@ StateTransitionResult AppStateMachine::handleEvent(AppState currentState, StateE
         break;
 
     case AppState::SHUTDOWN:
-        // ÒÑ¾­´¦ÓÚ¹Ø±Õ×´Ì¬£¬ºöÂÔËùÓĞÊÂ¼ş
+        // å·²ç»å¤„äºå…³é—­çŠ¶æ€ï¼Œå¿½ç•¥æ‰€æœ‰äº‹ä»¶
         break;
 
     default:
-        LOG_ERROR(QString::fromLocal8Bit("Î´Öª×´Ì¬: %1").arg(static_cast<int>(currentState)));
+        LOG_ERROR(fromLocal8Bit("æœªçŸ¥çŠ¶æ€: %1").arg(static_cast<int>(currentState)));
         break;
     }
 
-    // Èç¹ûÃ»ÓĞÓĞĞ§µÄ×ª»»£¬·µ»Øµ±Ç°×´Ì¬
+    // å¦‚æœæ²¡æœ‰æœ‰æ•ˆçš„è½¬æ¢ï¼Œè¿”å›å½“å‰çŠ¶æ€
     return StateTransitionResult(currentState);
 }
 
 QString AppStateMachine::stateToString(AppState state) {
     switch (state) {
-    case AppState::INITIALIZING: return QString::fromLocal8Bit("³õÊ¼»¯ÖĞ");
-    case AppState::DEVICE_ABSENT: return QString::fromLocal8Bit("Éè±¸Î´Á¬½Ó");
-    case AppState::DEVICE_ERROR: return QString::fromLocal8Bit("Éè±¸´íÎó");
-    case AppState::IDLE: return QString::fromLocal8Bit("¿ÕÏĞ");
-    case AppState::COMMANDS_MISSING: return QString::fromLocal8Bit("ÃüÁîÎ´¼ÓÔØ");
-    case AppState::CONFIGURED: return QString::fromLocal8Bit("ÒÑÅäÖÃ");
-    case AppState::STARTING: return QString::fromLocal8Bit("Æô¶¯ÖĞ");
-    case AppState::TRANSFERRING: return QString::fromLocal8Bit("´«ÊäÖĞ");
-    case AppState::STOPPING: return QString::fromLocal8Bit("Í£Ö¹ÖĞ");
-    case AppState::SHUTDOWN: return QString::fromLocal8Bit("¹Ø±ÕÖĞ");
-    default: return QString::fromLocal8Bit("Î´Öª×´Ì¬");
+    case AppState::INITIALIZING: return fromLocal8Bit("åˆå§‹åŒ–ä¸­");
+    case AppState::DEVICE_ABSENT: return fromLocal8Bit("è®¾å¤‡æœªè¿æ¥");
+    case AppState::DEVICE_ERROR: return fromLocal8Bit("è®¾å¤‡é”™è¯¯");
+    case AppState::IDLE: return fromLocal8Bit("ç©ºé—²");
+    case AppState::COMMANDS_MISSING: return fromLocal8Bit("å‘½ä»¤æœªåŠ è½½");
+    case AppState::CONFIGURED: return fromLocal8Bit("å·²é…ç½®");
+    case AppState::STARTING: return fromLocal8Bit("å¯åŠ¨ä¸­");
+    case AppState::TRANSFERRING: return fromLocal8Bit("ä¼ è¾“ä¸­");
+    case AppState::STOPPING: return fromLocal8Bit("åœæ­¢ä¸­");
+    case AppState::SHUTDOWN: return fromLocal8Bit("å…³é—­ä¸­");
+    default: return fromLocal8Bit("æœªçŸ¥çŠ¶æ€");
     }
 }
 
@@ -219,6 +219,6 @@ QString AppStateMachine::eventToString(StateEvent event) {
     case StateEvent::STOP_SUCCEEDED: return "STOP_SUCCEEDED";
     case StateEvent::STOP_FAILED: return "STOP_FAILED";
     case StateEvent::APP_SHUTDOWN: return "APP_SHUTDOWN";
-    default: return QString::fromLocal8Bit("Î´ÖªÊÂ¼ş");
+    default: return fromLocal8Bit("æœªçŸ¥äº‹ä»¶");
     }
 }

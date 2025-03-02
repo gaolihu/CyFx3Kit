@@ -10,7 +10,7 @@
 #include "CommandManager.h"
 #include "AppStateMachine.h"
 
-// Éè±¸¹ÜÀíÀà - ´¦ÀíÓëFX3Éè±¸µÄËùÓĞ½»»¥
+// è®¾å¤‡ç®¡ç†ç±» - å¤„ç†ä¸FX3è®¾å¤‡çš„æ‰€æœ‰äº¤äº’
 class FX3DeviceManager : public QObject {
     Q_OBJECT
 
@@ -18,23 +18,23 @@ public:
     explicit FX3DeviceManager(QObject* parent = nullptr);
     ~FX3DeviceManager();
 
-    // ³õÊ¼»¯Éè±¸ºÍ²É¼¯¹ÜÀíÆ÷
+    // åˆå§‹åŒ–è®¾å¤‡å’Œé‡‡é›†ç®¡ç†å™¨
     bool initializeDeviceAndManager(HWND windowHandle);
 
-    // Éè±¸²Ù×÷
+    // è®¾å¤‡æ“ä½œ
     bool checkAndOpenDevice();
     bool resetDevice();
 
-    // ÃüÁî²Ù×÷
+    // å‘½ä»¤æ“ä½œ
     bool loadCommandFiles(const QString& directoryPath);
 
-    // ´«Êä²Ù×÷
+    // ä¼ è¾“æ“ä½œ
     bool startTransfer(uint16_t width, uint16_t height, uint8_t capType);
     bool stopTransfer();
     void stopAllTransfers();
     void releaseResources();
 
-    // ×´Ì¬²éÑ¯
+    // çŠ¶æ€æŸ¥è¯¢
     bool isDeviceConnected() const;
     bool isTransferring() const;
     QString getDeviceInfo() const;
@@ -42,16 +42,16 @@ public:
     bool isUSB3() const;
 
 public slots:
-    // Éè±¸ÊÂ¼ş´¦Àí
+    // è®¾å¤‡äº‹ä»¶å¤„ç†
     void onDeviceArrival();
     void onDeviceRemoval();
 
-    // Éè±¸ĞÅºÅ´¦Àí
+    // è®¾å¤‡ä¿¡å·å¤„ç†
     void onUsbStatusChanged(const std::string& status);
     void onTransferProgress(uint64_t transferred, int length, int success, int failed);
     void onDeviceError(const QString& error);
 
-    // ²É¼¯¹ÜÀíÆ÷ĞÅºÅ´¦Àí
+    // é‡‡é›†ç®¡ç†å™¨ä¿¡å·å¤„ç†
     void onAcquisitionStarted();
     void onAcquisitionStopped();
     void onDataReceived(const DataPacket& packet);
@@ -59,7 +59,7 @@ public slots:
     void onStatsUpdated(uint64_t receivedBytes, double dataRate, uint64_t elapsedTimeSeconds);
     void onAcquisitionStateChanged(const QString& state);
 
-    // ĞÅºÅ´«µİ - ÓÃÓÚUI¸üĞÂ
+    // ä¿¡å·ä¼ é€’ - ç”¨äºUIæ›´æ–°
 signals:
     void transferStatsUpdated(uint64_t transferred, double speed, uint64_t elapsedTimeSeconds);
     void usbSpeedUpdated(const QString& speedDesc, bool isUSB3);
@@ -67,29 +67,29 @@ signals:
     void dataProcessed(const DataPacket& packet);
 
 private:
-    // ³õÊ¼»¯ĞÅºÅÁ¬½Ó
+    // åˆå§‹åŒ–ä¿¡å·è¿æ¥
     void initConnections();
 
-    // ·À¶¶´¦Àí
+    // é˜²æŠ–å¤„ç†
     void debounceDeviceEvent(std::function<void()> action);
 
-    // Éè±¸ºÍ²É¼¯¹ÜÀíÆ÷Ö¸Õë
+    // è®¾å¤‡å’Œé‡‡é›†ç®¡ç†å™¨æŒ‡é’ˆ
     std::shared_ptr<USBDevice> m_usbDevice;
     std::shared_ptr<DataAcquisitionManager> m_acquisitionManager;
 
-    // ·À¶¶Ïà¹Ø
+    // é˜²æŠ–ç›¸å…³
     QTimer m_debounceTimer;
     static const int DEBOUNCE_DELAY = 500; // ms
     QElapsedTimer m_lastDeviceEventTime;
 
-    // ´«ÊäÍ³¼Æ
+    // ä¼ è¾“ç»Ÿè®¡
     std::chrono::steady_clock::time_point m_transferStartTime;
     uint64_t m_lastTransferred = 0;
 
-    // Ëø
+    // é”
     std::mutex m_shutdownMutex;
 
-    // ±ÜÃâÔÚ¹Ø±ÕÆÚ¼ä´¦ÀíÊÂ¼ş
+    // é¿å…åœ¨å…³é—­æœŸé—´å¤„ç†äº‹ä»¶
     std::atomic<bool> m_shuttingDown{ false };
     std::atomic<bool> m_isTransferring{false};
     std::atomic<bool> m_running{false};
