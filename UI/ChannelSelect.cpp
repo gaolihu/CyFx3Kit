@@ -13,18 +13,18 @@ ChannelSelect::ChannelSelect(QWidget* parent)
     // 连接信号槽
     connectSignals();
 
-    LOG_INFO(fromLocal8Bit("通道选择窗口已创建"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("通道选择窗口已创建"));
 }
 
 ChannelSelect::~ChannelSelect()
 {
-    LOG_INFO(fromLocal8Bit("通道选择窗口被销毁"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("通道选择窗口被销毁"));
 }
 
 void ChannelSelect::initializeUI()
 {
     // 设置窗口标题
-    setWindowTitle(fromLocal8Bit("通道配置"));
+    setWindowTitle(LocalQTCompat::fromLocal8Bit("通道配置"));
 
     // 设置窗口模态属性（应用程序级别模态）
     setWindowModality(Qt::ApplicationModal);
@@ -162,7 +162,7 @@ bool ChannelSelect::validateParameters()
     int width = ui.videoWidth->text().toInt(&ok);
     if (!ok || width <= 0 || width > 4096) {
         isValid = false;
-        errorMsg += fromLocal8Bit("- 视频宽度必须是1-4096之间的有效数字\n");
+        errorMsg += LocalQTCompat::fromLocal8Bit("- 视频宽度必须是1-4096之间的有效数字\n");
     }
 
     // 验证视频高度
@@ -170,7 +170,7 @@ bool ChannelSelect::validateParameters()
     int height = ui.videoHeigh->text().toInt(&ok);
     if (!ok || height <= 0 || height > 4096) {
         isValid = false;
-        errorMsg += fromLocal8Bit("- 视频高度必须是1-4096之间的有效数字\n");
+        errorMsg += LocalQTCompat::fromLocal8Bit("- 视频高度必须是1-4096之间的有效数字\n");
     }
 
     // 如果有TE值，验证其有效性
@@ -179,15 +179,15 @@ bool ChannelSelect::validateParameters()
         double te = ui.TE_Value->text().toDouble(&ok);
         if (!ok || te <= 0) {
             isValid = false;
-            errorMsg += fromLocal8Bit("- TE值必须是正数\n");
+            errorMsg += LocalQTCompat::fromLocal8Bit("- TE值必须是正数\n");
         }
     }
 
     // 如果验证失败，显示错误信息
     if (!isValid) {
         QMessageBox::warning(this,
-            fromLocal8Bit("参数错误"),
-            fromLocal8Bit("请修正以下错误：\n") + errorMsg);
+            LocalQTCompat::fromLocal8Bit("参数错误"),
+            LocalQTCompat::fromLocal8Bit("请修正以下错误：\n") + errorMsg);
     }
 
     return isValid;
@@ -195,7 +195,7 @@ bool ChannelSelect::validateParameters()
 
 void ChannelSelect::onSaveButtonClicked()
 {
-    LOG_INFO(fromLocal8Bit("通道配置保存按钮点击"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("通道配置保存按钮点击"));
 
     // 验证参数有效性
     if (!validateParameters()) {
@@ -211,12 +211,12 @@ void ChannelSelect::onSaveButtonClicked()
     // 关闭窗口
     close();
 
-    LOG_INFO(fromLocal8Bit("通道配置已保存并应用"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("通道配置已保存并应用"));
 }
 
 void ChannelSelect::onCancelButtonClicked()
 {
-    LOG_INFO(fromLocal8Bit("通道配置取消按钮点击"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("通道配置取消按钮点击"));
 
     // 直接关闭窗口，不保存更改
     close();
@@ -224,17 +224,17 @@ void ChannelSelect::onCancelButtonClicked()
 
 void ChannelSelect::onChannelEnableChanged(bool checked)
 {
-    LOG_INFO(fromLocal8Bit("通道使能状态已更改"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("通道使能状态已更改"));
     updateUIState();
 }
 
 void ChannelSelect::onPNStatusChanged(bool checked)
 {
-    LOG_INFO(fromLocal8Bit("PN交换状态已更改"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("PN交换状态已更改"));
 }
 
 void ChannelSelect::onCaptureTypeChanged(int index)
 {
-    LOG_INFO(fromLocal8Bit("抓取类型已更改为: %1").arg(index));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("抓取类型已更改为: %1").arg(index));
     updateUIState();
 }

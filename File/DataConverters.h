@@ -152,13 +152,13 @@ protected:
             case 0x3A: // RAW12
                 return convertRaw12ToImage(packet.data.data(), packet.size, width, height);
             default:
-                LOG_ERROR(fromLocal8Bit("不支持的图像格式: 0x%1")
+                LOG_ERROR(LocalQTCompat::fromLocal8Bit("不支持的图像格式: 0x%1")
                     .arg(format, 2, 16, QChar('0')));
                 throw std::runtime_error("Unsupported image format");
             }
         }
         catch (const std::exception& e) {
-            LOG_ERROR(fromLocal8Bit("图像转换错误: %1").arg(e.what()));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("图像转换错误: %1").arg(e.what()));
             throw;
         }
     }
@@ -166,7 +166,7 @@ protected:
     // 将图像保存为特定格式
     QByteArray saveImageToFormat(const QImage& image, const QString& format, int quality = -1) {
         if (image.isNull()) {
-            LOG_ERROR(fromLocal8Bit("尝试保存空图像为 %1").arg(format));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("尝试保存空图像为 %1").arg(format));
             return QByteArray();
         }
 
@@ -176,7 +176,7 @@ protected:
         buffer.open(QIODevice::WriteOnly);
 
         if (!image.save(&buffer, format.toUtf8().constData(), quality)) {
-            LOG_ERROR(fromLocal8Bit("保存%1图像失败").arg(format));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("保存%1图像失败").arg(format));
             return QByteArray();
         }
 
@@ -217,7 +217,7 @@ public:
             return saveImageToFormat(image, "BMP");
         }
         catch (const std::exception& e) {
-            LOG_ERROR(fromLocal8Bit("BMP转换错误: %1").arg(e.what()));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("BMP转换错误: %1").arg(e.what()));
             return QByteArray();
         }
     }
@@ -245,7 +245,7 @@ public:
             return saveImageToFormat(image, "TIFF", compressionLevel);
         }
         catch (const std::exception& e) {
-            LOG_ERROR(fromLocal8Bit("TIFF转换错误: %1").arg(e.what()));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("TIFF转换错误: %1").arg(e.what()));
             return QByteArray();
         }
     }
@@ -275,7 +275,7 @@ public:
             return saveImageToFormat(image, "PNG", compressionLevel);
         }
         catch (const std::exception& e) {
-            LOG_ERROR(fromLocal8Bit("PNG转换错误: %1").arg(e.what()));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("PNG转换错误: %1").arg(e.what()));
             return QByteArray();
         }
     }
@@ -339,7 +339,7 @@ public:
         case FileFormat::CSV:
             return std::make_shared<CsvMetadataConverter>();
         default:
-            LOG_WARN(fromLocal8Bit("未知的文件格式: %1, 使用RAW转换器").arg(static_cast<int>(format)));
+            LOG_WARN(LocalQTCompat::fromLocal8Bit("未知的文件格式: %1, 使用RAW转换器").arg(static_cast<int>(format)));
             return std::make_shared<RawDataConverter>();
         }
     }

@@ -31,7 +31,7 @@ bool AsyncFileWriter::open(const QString& filename) {
 
 bool AsyncFileWriter::write(const QByteArray& data) {
     if (!m_isOpen) {
-        m_lastError = fromLocal8Bit("文件未打开");
+        m_lastError = LocalQTCompat::fromLocal8Bit("文件未打开");
         return false;
     }
 
@@ -41,7 +41,7 @@ bool AsyncFileWriter::write(const QByteArray& data) {
 
     if (m_writeQueue.size() >= MAX_QUEUE_SIZE) {
         queueWasFull = true;
-        LOG_WARN(fromLocal8Bit("写入队列已满 (%1 个项目), 等待空间...").arg(MAX_QUEUE_SIZE));
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("写入队列已满 (%1 个项目), 等待空间...").arg(MAX_QUEUE_SIZE));
     }
 
     // 将数据添加到写入队列
@@ -52,7 +52,7 @@ bool AsyncFileWriter::write(const QByteArray& data) {
     m_queueCondition.notify_one();
 
     if (queueWasFull) {
-        LOG_INFO(fromLocal8Bit("写入队列恢复可用"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("写入队列恢复可用"));
     }
 
     return true;
@@ -88,7 +88,7 @@ bool AsyncFileWriter::isOpen() const {
 }
 
 void AsyncFileWriter::writerThreadFunc() {
-    LOG_INFO(fromLocal8Bit("异步写入线程已启动"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("异步写入线程已启动"));
 
     while (m_running) {
         QByteArray data;
@@ -120,7 +120,7 @@ void AsyncFileWriter::writerThreadFunc() {
             qint64 written = m_file.write(data);
             if (written != data.size()) {
                 m_lastError = m_file.errorString();
-                LOG_ERROR(fromLocal8Bit("异步文件写入错误: %1").arg(m_lastError));
+                LOG_ERROR(LocalQTCompat::fromLocal8Bit("异步文件写入错误: %1").arg(m_lastError));
             }
 
             // 每次写入后刷新以确保数据写入磁盘
@@ -140,5 +140,5 @@ void AsyncFileWriter::writerThreadFunc() {
         m_file.flush();
     }
 
-    LOG_INFO(fromLocal8Bit("异步写入线程已退出"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("异步写入线程已退出"));
 }

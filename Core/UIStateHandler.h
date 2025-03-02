@@ -16,7 +16,7 @@ public:
     // 准备关闭，停止所有UI更新
     void prepareForClose() {
         m_isClosing = true;
-        LOG_INFO(fromLocal8Bit("UI状态处理器已准备关闭"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态处理器已准备关闭"));
     }
 
     // 检查是否可以安全更新UI

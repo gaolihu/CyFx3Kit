@@ -26,7 +26,7 @@ void FileCacheManager::addToCache(const QByteArray& data) {
         if (data.size() >= static_cast<int>(m_maxCacheSize)) {
             m_cache.clear();
             m_cache.append(data.right(static_cast<int>(m_maxCacheSize * 0.9)));
-            LOG_WARN(fromLocal8Bit("数据大小(%1)超过最大缓存(%2), 只保留尾部")
+            LOG_WARN(LocalQTCompat::fromLocal8Bit("数据大小(%1)超过最大缓存(%2), 只保留尾部")
                 .arg(data.size())
                 .arg(m_maxCacheSize));
         }
@@ -64,7 +64,7 @@ void FileCacheManager::setMaxCacheSize(size_t maxSize) {
     std::lock_guard<std::mutex> lock(m_cacheMutex);
 
     if (maxSize == 0) {
-        LOG_WARN(fromLocal8Bit("尝试设置缓存大小为0，使用默认值"));
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("尝试设置缓存大小为0，使用默认值"));
         maxSize = DEFAULT_CACHE_SIZE;
     }
 
@@ -74,6 +74,6 @@ void FileCacheManager::setMaxCacheSize(size_t maxSize) {
     if (m_cache.size() > static_cast<int>(maxSize)) {
         int excessSize = m_cache.size() - static_cast<int>(maxSize);
         m_cache.remove(0, excessSize);
-        LOG_INFO(fromLocal8Bit("缓存已裁剪，移除 %1 字节以适应新的最大大小").arg(excessSize));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("缓存已裁剪，移除 %1 字节以适应新的最大大小").arg(excessSize));
     }
 }

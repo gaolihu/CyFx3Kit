@@ -89,6 +89,9 @@
     <ClCompile Include="UI\VideoDisplay.cpp">
       <Filter>Source Files\UI</Filter>
     </ClCompile>
+    <ClCompile Include="UI\WaveformAnalysis.cpp">
+      <Filter>Source Files\UI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Utils\Logger.h">
@@ -140,6 +143,9 @@
       <Filter>Source Files\UI</Filter>
     </QtMoc>
     <QtMoc Include="UI\ChannelSelect.h">
+      <Filter>Source Files\UI</Filter>
+    </QtMoc>
+    <QtMoc Include="UI\WaveformAnalysis.h">
       <Filter>Source Files\UI</Filter>
     </QtMoc>
   </ItemGroup>

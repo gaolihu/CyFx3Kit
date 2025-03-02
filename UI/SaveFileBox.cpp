@@ -14,11 +14,11 @@ SaveFileBox::SaveFileBox(QWidget* parent)
 
     // 初始化文件保存组件
     if (!initializeFileSaveComponents()) {
-        LOG_ERROR(fromLocal8Bit("初始化文件保存组件失败"));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("初始化文件保存组件失败"));
     }
 
     // 设置窗口属性
-    setWindowTitle(fromLocal8Bit("文件保存设置"));
+    setWindowTitle(LocalQTCompat::fromLocal8Bit("文件保存设置"));
     setWindowFlags(Qt::Dialog);
     setWindowModality(Qt::ApplicationModal);
 
@@ -63,7 +63,7 @@ void SaveFileBox::setImageParameters(uint16_t width, uint16_t height, uint8_t fo
     m_height = height;
     m_format = format;
 
-    LOG_INFO(fromLocal8Bit("设置图像参数：宽度=%1，高度=%2，格式=0x%3")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置图像参数：宽度=%1，高度=%2，格式=0x%3")
         .arg(width).arg(height).arg(format, 2, 16, QChar('0')));
 }
 
@@ -108,7 +108,7 @@ bool SaveFileBox::initializeFileSaveComponents()
         // 获取容器
         QFrame* container = ui.fileSaveContainer;
         if (!container) {
-            LOG_ERROR(fromLocal8Bit("未找到文件保存容器控件"));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("未找到文件保存容器控件"));
             return false;
         }
 
@@ -126,7 +126,7 @@ bool SaveFileBox::initializeFileSaveComponents()
         // 创建文件保存面板
         m_fileSavePanel = new FileSavePanel(container);
         if (!m_fileSavePanel) {
-            LOG_ERROR(fromLocal8Bit("创建文件保存面板失败"));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("创建文件保存面板失败"));
             return false;
         }
 
@@ -134,11 +134,11 @@ bool SaveFileBox::initializeFileSaveComponents()
         layout->addWidget(m_fileSavePanel);
         container->setLayout(layout);
 
-        LOG_INFO(fromLocal8Bit("文件保存面板初始化成功"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存面板初始化成功"));
         return true;
     }
     catch (const std::exception& e) {
-        LOG_ERROR(fromLocal8Bit("初始化文件保存组件异常: %1").arg(e.what()));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("初始化文件保存组件异常: %1").arg(e.what()));
         return false;
     }
 }
@@ -204,7 +204,7 @@ void SaveFileBox::updateSaveParameters()
     // 更新保存参数
     FileSaveManager::instance().setSaveParameters(params);
 
-    LOG_INFO(fromLocal8Bit("更新文件保存参数：路径=%1，格式=%2")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新文件保存参数：路径=%1，格式=%2")
         .arg(params.basePath)
         .arg(static_cast<int>(params.format)));
 }
@@ -236,21 +236,21 @@ void SaveFileBox::cleanupResources()
 {
     // 停止文件保存（如果正在进行）
     if (m_fileSavePanel && m_fileSavePanel->isSaving()) {
-        LOG_INFO(fromLocal8Bit("停止文件保存"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("停止文件保存"));
         m_fileSavePanel->stopSaving();
     }
 
-    LOG_INFO(fromLocal8Bit("文件保存资源已清理"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存资源已清理"));
 }
 
 void SaveFileBox::onSaveButtonClicked()
 {
-    LOG_INFO(fromLocal8Bit("保存按钮点击"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("保存按钮点击"));
 
     // 如果已经在保存中，则停止保存
     if (m_fileSavePanel && m_fileSavePanel->isSaving()) {
         m_fileSavePanel->stopSaving();
-        ui.saveButton->setText(fromLocal8Bit("开始保存"));
+        ui.saveButton->setText(LocalQTCompat::fromLocal8Bit("开始保存"));
         return;
     }
 
@@ -260,33 +260,33 @@ void SaveFileBox::onSaveButtonClicked()
     // 如果路径为空，提示选择路径
     if (ui.pathEdit->text().isEmpty()) {
         QMessageBox::warning(this,
-            fromLocal8Bit("警告"),
-            fromLocal8Bit("请选择保存路径"));
+            LocalQTCompat::fromLocal8Bit("警告"),
+            LocalQTCompat::fromLocal8Bit("请选择保存路径"));
         return;
     }
 
     // 启动保存
     if (m_fileSavePanel) {
         m_fileSavePanel->startSaving();
-        ui.saveButton->setText(fromLocal8Bit("停止保存"));
+        ui.saveButton->setText(LocalQTCompat::fromLocal8Bit("停止保存"));
     }
     else {
         QMessageBox::warning(this,
-            fromLocal8Bit("错误"),
-            fromLocal8Bit("文件保存面板未初始化"));
+            LocalQTCompat::fromLocal8Bit("错误"),
+            LocalQTCompat::fromLocal8Bit("文件保存面板未初始化"));
         close();
     }
 }
 
 void SaveFileBox::onCancelButtonClicked()
 {
-    LOG_INFO(fromLocal8Bit("取消按钮点击"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("取消按钮点击"));
 
     // 如果正在保存，询问是否停止
     if (m_fileSavePanel && m_fileSavePanel->isSaving()) {
         QMessageBox::StandardButton reply = QMessageBox::question(this,
-            fromLocal8Bit("确认"),
-            fromLocal8Bit("当前正在保存文件，是否停止并退出？"),
+            LocalQTCompat::fromLocal8Bit("确认"),
+            LocalQTCompat::fromLocal8Bit("当前正在保存文件，是否停止并退出？"),
             QMessageBox::Yes | QMessageBox::No);
 
         if (reply == QMessageBox::Yes) {
@@ -302,11 +302,11 @@ void SaveFileBox::onCancelButtonClicked()
 
 void SaveFileBox::onBrowseFolderButtonClicked()
 {
-    LOG_INFO(fromLocal8Bit("选择文件路径按钮点击"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("选择文件路径按钮点击"));
 
     QString dir = QFileDialog::getExistingDirectory(
         this,
-        fromLocal8Bit("选择保存目录"),
+        LocalQTCompat::fromLocal8Bit("选择保存目录"),
         ui.pathEdit->text().isEmpty() ? QDir::homePath() : ui.pathEdit->text(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
@@ -339,35 +339,35 @@ void SaveFileBox::onFileFormatChanged()
 
 void SaveFileBox::onSaveManagerCompleted(const QString& path, uint64_t totalBytes)
 {
-    LOG_INFO(fromLocal8Bit("文件保存完成：路径=%1，总大小=%2字节")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存完成：路径=%1，总大小=%2字节")
         .arg(path).arg(totalBytes));
 
     // 更新按钮文本
-    ui.saveButton->setText(fromLocal8Bit("开始保存"));
+    ui.saveButton->setText(LocalQTCompat::fromLocal8Bit("开始保存"));
 
     // 发送保存完成信号
     emit saveCompleted(path, totalBytes);
 
     // 显示保存完成消息
     QMessageBox::information(this,
-        fromLocal8Bit("保存完成"),
-        fromLocal8Bit("文件保存完成\n路径: %1\n总大小: %2 MB")
+        LocalQTCompat::fromLocal8Bit("保存完成"),
+        LocalQTCompat::fromLocal8Bit("文件保存完成\n路径: %1\n总大小: %2 MB")
         .arg(path)
         .arg(totalBytes / (1024.0 * 1024.0), 0, 'f', 2));
 }
 
 void SaveFileBox::onSaveManagerError(const QString& error)
 {
-    LOG_ERROR(fromLocal8Bit("文件保存错误：%1").arg(error));
+    LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件保存错误：%1").arg(error));
 
     // 更新按钮文本
-    ui.saveButton->setText(fromLocal8Bit("开始保存"));
+    ui.saveButton->setText(LocalQTCompat::fromLocal8Bit("开始保存"));
 
     // 发送保存错误信号
     emit saveError(error);
 
     // 显示错误消息
     QMessageBox::critical(this,
-        fromLocal8Bit("保存错误"),
-        fromLocal8Bit("文件保存错误：%1").arg(error));
+        LocalQTCompat::fromLocal8Bit("保存错误"),
+        LocalQTCompat::fromLocal8Bit("文件保存错误：%1").arg(error));
 }

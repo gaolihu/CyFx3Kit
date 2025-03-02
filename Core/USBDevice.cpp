@@ -342,7 +342,7 @@ QString USBDevice::getDeviceInfo() const
     return QString("VID:0x%1 PID:0x%2 %3")
         .arg(m_device->VendorID, 4, 16, QChar('0'))
         .arg(m_device->ProductID, 4, 16, QChar('0'))
-        .arg(fromLocal8Bit(m_device->FriendlyName));
+        .arg(LocalQTCompat::fromLocal8Bit(m_device->FriendlyName));
 }
 
 bool USBDevice::isUSB3() const
@@ -372,18 +372,18 @@ QString USBDevice::getUsbSpeedDescription() const
 
     switch (speedType) {
     case USBSpeedType::LOW_SPEED:
-        return fromLocal8Bit("USB1.0低速(1.5Mbps)");
+        return LocalQTCompat::fromLocal8Bit("USB1.0低速(1.5Mbps)");
     case USBSpeedType::FULL_SPEED:
-        return fromLocal8Bit("USB1.1全速(12Mbps)");
+        return LocalQTCompat::fromLocal8Bit("USB1.1全速(12Mbps)");
     case USBSpeedType::HIGH_SPEED:
-        return fromLocal8Bit("USB2.0高速(480Mbps)");
+        return LocalQTCompat::fromLocal8Bit("USB2.0高速(480Mbps)");
     case USBSpeedType::SUPER_SPEED:
-        return fromLocal8Bit("USB3.0超速(5Gbps)");
+        return LocalQTCompat::fromLocal8Bit("USB3.0超速(5Gbps)");
     case USBSpeedType::SUPER_SPEED_P:
-        return fromLocal8Bit("USB3.1+超速+(10+Gbps)");
+        return LocalQTCompat::fromLocal8Bit("USB3.1+超速+(10+Gbps)");
     case USBSpeedType::UNKNOWN:
     default:
-        return fromLocal8Bit("未知 USB 速度");
+        return LocalQTCompat::fromLocal8Bit("未知 USB 速度");
     }
 }
 

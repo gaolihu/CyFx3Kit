@@ -64,7 +64,7 @@ void FileSaveManager::setSaveParameters(const SaveParameters& params) {
         m_saveParams.appendTimestamp = params.appendTimestamp;
         m_saveParams.autoNaming = params.autoNaming;
 
-        LOG_INFO(fromLocal8Bit("保存过程中更新参数 - 压缩级别: %1, 时间戳: %2, 自动命名: %3")
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("保存过程中更新参数 - 压缩级别: %1, 时间戳: %2, 自动命名: %3")
             .arg(params.compressionLevel)
             .arg(params.appendTimestamp ? "是" : "否")
             .arg(params.autoNaming ? "是" : "否"));
@@ -73,7 +73,7 @@ void FileSaveManager::setSaveParameters(const SaveParameters& params) {
         // 非保存状态，可以完全更改参数
         m_saveParams = params;
 
-        LOG_INFO(fromLocal8Bit("完全更新保存参数 - 路径: %1, 格式: %2")
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("完全更新保存参数 - 路径: %1, 格式: %2")
             .arg(params.basePath)
             .arg(static_cast<int>(params.format)));
     }
@@ -86,14 +86,14 @@ const SaveParameters& FileSaveManager::getSaveParameters() const {
 void FileSaveManager::setUseAsyncWriter(bool useAsync) {
     // 如果保存正在进行中不允许切换
     if (m_running) {
-        LOG_WARN(fromLocal8Bit("保存进行中无法切换写入器模式"));
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("保存进行中无法切换写入器模式"));
         return;
     }
 
     bool oldValue = m_useAsyncWriter.exchange(useAsync);
     if (oldValue != useAsync) {
         resetFileWriter();
-        LOG_INFO(fromLocal8Bit("文件写入器已切换为%1模式")
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("文件写入器已切换为%1模式")
             .arg(useAsync ? "异步" : "同步"));
     }
 }
@@ -101,17 +101,17 @@ void FileSaveManager::setUseAsyncWriter(bool useAsync) {
 void FileSaveManager::resetFileWriter() {
     if (m_useAsyncWriter) {
         m_fileWriter = std::make_unique<AsyncFileWriter>();
-        LOG_INFO(fromLocal8Bit("使用异步文件写入器"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("使用异步文件写入器"));
     }
     else {
         m_fileWriter = std::make_unique<StandardFileWriter>();
-        LOG_INFO(fromLocal8Bit("使用标准文件写入器"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("使用标准文件写入器"));
     }
 }
 
 bool FileSaveManager::startSaving() {
     if (m_running) {
-        LOG_WARN(fromLocal8Bit("保存已在进行中"));
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("保存已在进行中"));
         return false;
     }
 
@@ -119,16 +119,16 @@ bool FileSaveManager::startSaving() {
     {
         std::lock_guard<std::mutex> lock(m_paramsMutex);
         if (m_saveParams.basePath.isEmpty()) {
-            LOG_ERROR(fromLocal8Bit("未设置保存路径"));
-            emit saveError(fromLocal8Bit("未设置保存路径"));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("未设置保存路径"));
+            emit saveError(LocalQTCompat::fromLocal8Bit("未设置保存路径"));
             return false;
         }
     }
 
     // 创建保存目录
     if (!createSaveDirectory()) {
-        LOG_ERROR(fromLocal8Bit("创建保存目录失败"));
-        emit saveError(fromLocal8Bit("创建保存目录失败"));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("创建保存目录失败"));
+        emit saveError(LocalQTCompat::fromLocal8Bit("创建保存目录失败"));
         return false;
     }
 
@@ -157,7 +157,7 @@ bool FileSaveManager::startSaving() {
     // 启动保存线程
     try {
         m_saveThread = std::thread(&FileSaveManager::saveThreadFunction, this);
-        LOG_INFO(fromLocal8Bit("文件保存线程已启动"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存线程已启动"));
 
         // 发送状态更新信号
         emit saveStatusChanged(SaveStatus::FS_SAVING);
@@ -165,8 +165,8 @@ bool FileSaveManager::startSaving() {
     }
     catch (const std::exception& e) {
         m_running = false;
-        LOG_ERROR(fromLocal8Bit("启动保存线程失败: %1").arg(e.what()));
-        emit saveError(fromLocal8Bit("启动保存线程失败: %1").arg(e.what()));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("启动保存线程失败: %1").arg(e.what()));
+        emit saveError(LocalQTCompat::fromLocal8Bit("启动保存线程失败: %1").arg(e.what()));
         return false;
     }
 }
@@ -176,7 +176,7 @@ bool FileSaveManager::stopSaving() {
         return true;
     }
 
-    LOG_INFO(fromLocal8Bit("停止文件保存"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("停止文件保存"));
 
     // 设置停止标志
     m_running = false;
@@ -199,14 +199,14 @@ bool FileSaveManager::stopSaving() {
 
             // 等待线程结束，最多等待3秒
             if (joinResult.wait_for(std::chrono::seconds(3)) == std::future_status::timeout) {
-                LOG_ERROR(fromLocal8Bit("停止保存线程超时，可能存在资源泄漏"));
+                LOG_ERROR(LocalQTCompat::fromLocal8Bit("停止保存线程超时，可能存在资源泄漏"));
                 // 此处我们不调用detach()，因为这可能导致更严重的资源泄漏
                 // 但我们也不能强制终止线程，因为这可能导致资源损坏
                 return false;
             }
         }
         catch (const std::exception& e) {
-            LOG_ERROR(fromLocal8Bit("停止保存线程异常: %1").arg(e.what()));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("停止保存线程异常: %1").arg(e.what()));
             return false;
         }
     }
@@ -230,7 +230,7 @@ bool FileSaveManager::stopSaving() {
 
 bool FileSaveManager::pauseSaving(bool pause) {
     if (!m_running) {
-        LOG_WARN(fromLocal8Bit("未进行保存，无法暂停/恢复"));
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("未进行保存，无法暂停/恢复"));
         return false;
     }
 
@@ -245,7 +245,7 @@ bool FileSaveManager::pauseSaving(bool pause) {
         m_statistics.status = pause ? SaveStatus::FS_PAUSED : SaveStatus::FS_SAVING;
     }
 
-    LOG_INFO(fromLocal8Bit("保存状态变更为: %1")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("保存状态变更为: %1")
         .arg(pause ? "暂停" : "保存中"));
 
     // 如果从暂停恢复，通知线程继续处理
@@ -266,12 +266,12 @@ SaveStatistics FileSaveManager::getStatistics() {
 
 void FileSaveManager::registerConverter(FileFormat format, std::shared_ptr<IDataConverter> converter) {
     if (!converter) {
-        LOG_ERROR(fromLocal8Bit("尝试注册空转换器"));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("尝试注册空转换器"));
         return;
     }
 
     m_converters[format] = converter;
-    LOG_INFO(fromLocal8Bit("已注册格式转换器: %1").arg(static_cast<int>(format)));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("已注册格式转换器: %1").arg(static_cast<int>(format)));
 }
 
 QStringList FileSaveManager::getSupportedFormats() const {
@@ -297,7 +297,7 @@ void FileSaveManager::processDataPacket(const DataPacket& packet) {
 
         // 如果队列积累过多，发出警告
         if (m_dataQueue.size() > 100) {
-            LOG_WARN(fromLocal8Bit("数据队列积累过多: %1 个包").arg(m_dataQueue.size()));
+            LOG_WARN(LocalQTCompat::fromLocal8Bit("数据队列积累过多: %1 个包").arg(m_dataQueue.size()));
         }
     }
 
@@ -364,7 +364,7 @@ bool FileSaveManager::createSaveDirectory() {
     // 创建基本目录
     if (!baseDir.exists()) {
         if (!baseDir.mkpath(".")) {
-            LOG_ERROR(fromLocal8Bit("无法创建基本目录: %1").arg(m_saveParams.basePath));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法创建基本目录: %1").arg(m_saveParams.basePath));
             return false;
         }
     }
@@ -378,7 +378,7 @@ bool FileSaveManager::createSaveDirectory() {
 
         QDir subDir(savePath);
         if (!subDir.exists() && !subDir.mkpath(".")) {
-            LOG_ERROR(fromLocal8Bit("无法创建子文件夹: %1").arg(savePath));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法创建子文件夹: %1").arg(savePath));
             return false;
         }
     }
@@ -389,7 +389,7 @@ bool FileSaveManager::createSaveDirectory() {
         m_statistics.savePath = savePath;
     }
 
-    LOG_INFO(fromLocal8Bit("保存目录已创建: %1").arg(savePath));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("保存目录已创建: %1").arg(savePath));
     return true;
 }
 
@@ -444,19 +444,19 @@ bool FileSaveManager::saveMetadata() {
     QJsonDocument doc(metadata);
     QFile file(metadataPath);
     if (!file.open(QIODevice::WriteOnly)) {
-        LOG_ERROR(fromLocal8Bit("无法打开元数据文件: %1").arg(metadataPath));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开元数据文件: %1").arg(metadataPath));
         return false;
     }
 
     file.write(doc.toJson());
     file.close();
 
-    LOG_INFO(fromLocal8Bit("元数据已保存: %1").arg(metadataPath));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("元数据已保存: %1").arg(metadataPath));
     return true;
 }
 
 void FileSaveManager::saveThreadFunction() {
-    LOG_INFO(fromLocal8Bit("保存线程已启动"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("保存线程已启动"));
 
     // 设置线程优先级
     QThread::currentThread()->setPriority(QThread::LowPriority);
@@ -515,7 +515,7 @@ void FileSaveManager::saveThreadFunction() {
                 QString fullPath = m_statistics.savePath + "/" + filename;
 
                 if (!m_fileWriter->open(fullPath)) {
-                    throw std::runtime_error(fromLocal8Bit("无法打开文件: %1 - %2")
+                    throw std::runtime_error(LocalQTCompat::fromLocal8Bit("无法打开文件: %1 - %2")
                         .arg(fullPath)
                         .arg(m_fileWriter->getLastError()).toStdString());
                 }
@@ -527,12 +527,12 @@ void FileSaveManager::saveThreadFunction() {
                     m_statistics.fileCount++;
                 }
 
-                LOG_INFO(fromLocal8Bit("已创建新文件: %1").arg(fullPath));
+                LOG_INFO(LocalQTCompat::fromLocal8Bit("已创建新文件: %1").arg(fullPath));
             }
 
             // 写入数据
             if (!m_fileWriter->write(formattedData)) {
-                throw std::runtime_error(fromLocal8Bit("写入文件失败: %1")
+                throw std::runtime_error(LocalQTCompat::fromLocal8Bit("写入文件失败: %1")
                     .arg(m_fileWriter->getLastError()).toStdString());
             }
 
@@ -541,17 +541,17 @@ void FileSaveManager::saveThreadFunction() {
 
         }
         catch (const std::exception& e) {
-            LOG_ERROR(fromLocal8Bit("保存数据异常: %1").arg(e.what()));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("保存数据异常: %1").arg(e.what()));
 
             // 更新状态为错误
             {
                 std::lock_guard<std::mutex> lock(m_statsMutex);
                 m_statistics.status = SaveStatus::FS_ERROR;
-                m_statistics.lastError = fromLocal8Bit("保存数据异常: %1").arg(e.what());
+                m_statistics.lastError = LocalQTCompat::fromLocal8Bit("保存数据异常: %1").arg(e.what());
             }
 
             // 发送错误信号
-            emit saveError(fromLocal8Bit("保存数据异常: %1").arg(e.what()));
+            emit saveError(LocalQTCompat::fromLocal8Bit("保存数据异常: %1").arg(e.what()));
 
             // 关闭文件并重置
             m_fileWriter->close();
@@ -567,5 +567,5 @@ void FileSaveManager::saveThreadFunction() {
     // 保存元数据
     saveMetadata();
 
-    LOG_INFO(fromLocal8Bit("保存线程已退出"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("保存线程已退出"));
 }

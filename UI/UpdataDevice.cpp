@@ -12,18 +12,18 @@ UpdataDevice::UpdataDevice(QWidget* parent)
     initializeUI();
     connectSignals();
 
-    LOG_INFO(fromLocal8Bit("设备升级窗口已创建"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备升级窗口已创建"));
 }
 
 UpdataDevice::~UpdataDevice()
 {
-    LOG_INFO(fromLocal8Bit("设备升级窗口被销毁"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备升级窗口被销毁"));
 }
 
 void UpdataDevice::initializeUI()
 {
     // 设置窗口标题
-    setWindowTitle(fromLocal8Bit("设备升级"));
+    setWindowTitle(LocalQTCompat::fromLocal8Bit("设备升级"));
 
     // 设置窗口固定大小
     setFixedSize(572, 351);
@@ -80,8 +80,8 @@ bool UpdataDevice::validateFile(const QString& filePath, const QString& fileType
     QFileInfo fileInfo(filePath);
     if (!fileInfo.exists()) {
         QMessageBox::warning(this,
-            fromLocal8Bit("文件错误"),
-            fromLocal8Bit("文件不存在: %1").arg(filePath));
+            LocalQTCompat::fromLocal8Bit("文件错误"),
+            LocalQTCompat::fromLocal8Bit("文件不存在: %1").arg(filePath));
         return false;
     }
 
@@ -89,8 +89,8 @@ bool UpdataDevice::validateFile(const QString& filePath, const QString& fileType
     qint64 fileSize = fileInfo.size();
     if (fileSize <= 0) {
         QMessageBox::warning(this,
-            fromLocal8Bit("文件错误"),
-            fromLocal8Bit("文件大小为0: %1").arg(filePath));
+            LocalQTCompat::fromLocal8Bit("文件错误"),
+            LocalQTCompat::fromLocal8Bit("文件大小为0: %1").arg(filePath));
         return false;
     }
 
@@ -98,14 +98,14 @@ bool UpdataDevice::validateFile(const QString& filePath, const QString& fileType
     QString suffix = fileInfo.suffix().toLower();
     if (fileType == "SOC" && suffix != "soc") {
         QMessageBox::warning(this,
-            fromLocal8Bit("文件类型错误"),
-            fromLocal8Bit("请选择.soc格式的文件"));
+            LocalQTCompat::fromLocal8Bit("文件类型错误"),
+            LocalQTCompat::fromLocal8Bit("请选择.soc格式的文件"));
         return false;
     }
     else if (fileType == "ISO" && suffix != "iso") {
         QMessageBox::warning(this,
-            fromLocal8Bit("文件类型错误"),
-            fromLocal8Bit("请选择.iso格式的文件"));
+            LocalQTCompat::fromLocal8Bit("文件类型错误"),
+            LocalQTCompat::fromLocal8Bit("请选择.iso格式的文件"));
         return false;
     }
 
@@ -114,13 +114,13 @@ bool UpdataDevice::validateFile(const QString& filePath, const QString& fileType
 
 void UpdataDevice::onSOCFileOpenButtonClicked()
 {
-    LOG_INFO(fromLocal8Bit("选择SOC文件"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("选择SOC文件"));
 
     // 弹出文件选择对话框
     QString filePath = QFileDialog::getOpenFileName(this,
-        fromLocal8Bit("选择SOC文件"),
+        LocalQTCompat::fromLocal8Bit("选择SOC文件"),
         QDir::homePath(),
-        fromLocal8Bit("SOC文件 (*.soc)"));
+        LocalQTCompat::fromLocal8Bit("SOC文件 (*.soc)"));
 
     // 如果没有选择文件则返回
     if (filePath.isEmpty()) {
@@ -139,18 +139,18 @@ void UpdataDevice::onSOCFileOpenButtonClicked()
     // 更新UI状态
     updateUIState();
 
-    LOG_INFO(fromLocal8Bit("已选择SOC文件: %1").arg(filePath));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("已选择SOC文件: %1").arg(filePath));
 }
 
 void UpdataDevice::onISOFileOpenButtonClicked()
 {
-    LOG_INFO(fromLocal8Bit("选择ISO文件"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("选择ISO文件"));
 
     // 弹出文件选择对话框
     QString filePath = QFileDialog::getOpenFileName(this,
-        fromLocal8Bit("选择ISO文件"),
+        LocalQTCompat::fromLocal8Bit("选择ISO文件"),
         QDir::homePath(),
-        fromLocal8Bit("ISO文件 (*.iso)"));
+        LocalQTCompat::fromLocal8Bit("ISO文件 (*.iso)"));
 
     // 如果没有选择文件则返回
     if (filePath.isEmpty()) {
@@ -169,12 +169,12 @@ void UpdataDevice::onISOFileOpenButtonClicked()
     // 更新UI状态
     updateUIState();
 
-    LOG_INFO(fromLocal8Bit("已选择ISO文件: %1").arg(filePath));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("已选择ISO文件: %1").arg(filePath));
 }
 
 void UpdataDevice::onSOCUpdateButtonClicked()
 {
-    LOG_INFO(fromLocal8Bit("开始SOC升级"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始SOC升级"));
 
     // 再次验证文件
     if (!validateFile(m_socFilePath, "SOC")) {
@@ -183,12 +183,12 @@ void UpdataDevice::onSOCUpdateButtonClicked()
 
     // 确认升级
     QMessageBox::StandardButton reply = QMessageBox::question(this,
-        fromLocal8Bit("确认升级"),
-        fromLocal8Bit("确定要开始SOC固件升级吗？\n升级过程中请勿断开设备电源！"),
+        LocalQTCompat::fromLocal8Bit("确认升级"),
+        LocalQTCompat::fromLocal8Bit("确定要开始SOC固件升级吗？\n升级过程中请勿断开设备电源！"),
         QMessageBox::Yes | QMessageBox::No);
 
     if (reply != QMessageBox::Yes) {
-        LOG_INFO(fromLocal8Bit("用户取消SOC升级"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("用户取消SOC升级"));
         return;
     }
 
@@ -197,10 +197,10 @@ void UpdataDevice::onSOCUpdateButtonClicked()
     updateUIState();
 
     // 设置按钮文本
-    ui.updata_ok->setText(fromLocal8Bit("升级中"));
+    ui.updata_ok->setText(LocalQTCompat::fromLocal8Bit("升级中"));
 
     // 设置提示信息
-    ui.tishi->setText(fromLocal8Bit("SOC升级中，请勿断开电源..."));
+    ui.tishi->setText(LocalQTCompat::fromLocal8Bit("SOC升级中，请勿断开电源..."));
 
     // 模拟升级进度（实际实现需连接到设备管理器）
     ui.progressBar->setValue(0);
@@ -222,33 +222,33 @@ void UpdataDevice::onSOCUpdateButtonClicked()
 
             // 恢复状态
             m_isUpdating = false;
-            ui.updata_ok->setText(fromLocal8Bit("发送"));
-            ui.tishi->setText(fromLocal8Bit("SOC升级完成"));
+            ui.updata_ok->setText(LocalQTCompat::fromLocal8Bit("发送"));
+            ui.tishi->setText(LocalQTCompat::fromLocal8Bit("SOC升级完成"));
 
             // 更新UI状态
             updateUIState();
 
             // 通知升级完成
-            emit updateCompleted(true, fromLocal8Bit("SOC升级成功"));
+            emit updateCompleted(true, LocalQTCompat::fromLocal8Bit("SOC升级成功"));
 
             // 提示用户
             QMessageBox::information(this,
-                fromLocal8Bit("升级完成"),
-                fromLocal8Bit("SOC固件升级成功！"));
+                LocalQTCompat::fromLocal8Bit("升级完成"),
+                LocalQTCompat::fromLocal8Bit("SOC固件升级成功！"));
 
-            LOG_INFO(fromLocal8Bit("SOC升级完成"));
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("SOC升级完成"));
         }
         });
 
     // 启动计时器，每100毫秒更新一次
     timer->start(100);
 
-    LOG_INFO(fromLocal8Bit("SOC升级任务已启动"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("SOC升级任务已启动"));
 }
 
 void UpdataDevice::onPHYUpdateButtonClicked()
 {
-    LOG_INFO(fromLocal8Bit("开始PHY升级"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始PHY升级"));
 
     // 再次验证文件
     if (!validateFile(m_isoFilePath, "ISO")) {
@@ -257,12 +257,12 @@ void UpdataDevice::onPHYUpdateButtonClicked()
 
     // 确认升级
     QMessageBox::StandardButton reply = QMessageBox::question(this,
-        fromLocal8Bit("确认升级"),
-        fromLocal8Bit("确定要开始PHY固件升级吗？\n升级过程中请勿断开设备电源！"),
+        LocalQTCompat::fromLocal8Bit("确认升级"),
+        LocalQTCompat::fromLocal8Bit("确定要开始PHY固件升级吗？\n升级过程中请勿断开设备电源！"),
         QMessageBox::Yes | QMessageBox::No);
 
     if (reply != QMessageBox::Yes) {
-        LOG_INFO(fromLocal8Bit("用户取消PHY升级"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("用户取消PHY升级"));
         return;
     }
 
@@ -271,10 +271,10 @@ void UpdataDevice::onPHYUpdateButtonClicked()
     updateUIState();
 
     // 设置按钮文本
-    ui.pushButton_2->setText(fromLocal8Bit("升级中"));
+    ui.pushButton_2->setText(LocalQTCompat::fromLocal8Bit("升级中"));
 
     // 设置提示信息
-    ui.tishi->setText(fromLocal8Bit("PHY升级中，请勿断开电源..."));
+    ui.tishi->setText(LocalQTCompat::fromLocal8Bit("PHY升级中，请勿断开电源..."));
 
     // 模拟升级进度（实际实现需连接到设备管理器）
     ui.progressBar_2->setValue(0);
@@ -296,54 +296,54 @@ void UpdataDevice::onPHYUpdateButtonClicked()
 
             // 恢复状态
             m_isUpdating = false;
-            ui.pushButton_2->setText(fromLocal8Bit("开始"));
-            ui.tishi->setText(fromLocal8Bit("PHY升级完成"));
+            ui.pushButton_2->setText(LocalQTCompat::fromLocal8Bit("开始"));
+            ui.tishi->setText(LocalQTCompat::fromLocal8Bit("PHY升级完成"));
 
             // 更新UI状态
             updateUIState();
 
             // 通知升级完成
-            emit updateCompleted(true, fromLocal8Bit("PHY升级成功"));
+            emit updateCompleted(true, LocalQTCompat::fromLocal8Bit("PHY升级成功"));
 
             // 提示用户
             QMessageBox::information(this,
-                fromLocal8Bit("升级完成"),
-                fromLocal8Bit("PHY固件升级成功！"));
+                LocalQTCompat::fromLocal8Bit("升级完成"),
+                LocalQTCompat::fromLocal8Bit("PHY固件升级成功！"));
 
-            LOG_INFO(fromLocal8Bit("PHY升级完成"));
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("PHY升级完成"));
         }
         });
 
     // 启动计时器，每200毫秒更新一次（PHY升级通常慢一些）
     timer->start(200);
 
-    LOG_INFO(fromLocal8Bit("PHY升级任务已启动"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("PHY升级任务已启动"));
 }
 
 void UpdataDevice::onUpdateProgressChanged(int progress)
 {
     // 更新当前的进度条
-    if (ui.updata_ok->text() == fromLocal8Bit("升级中")) {
+    if (ui.updata_ok->text() == LocalQTCompat::fromLocal8Bit("升级中")) {
         ui.progressBar->setValue(progress);
     }
-    else if (ui.pushButton_2->text() == fromLocal8Bit("升级中")) {
+    else if (ui.pushButton_2->text() == LocalQTCompat::fromLocal8Bit("升级中")) {
         ui.progressBar_2->setValue(progress);
     }
 }
 
 void UpdataDevice::onUpdateStatusChanged(bool success, const QString& message)
 {
-    LOG_INFO(fromLocal8Bit("升级状态变更: %1, %2").arg(success ? "成功" : "失败").arg(message));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("升级状态变更: %1, %2").arg(success ? "成功" : "失败").arg(message));
 
     // 设置提示信息
     ui.tishi->setText(message);
 
     // 如果升级完成，恢复状态
-    if (ui.updata_ok->text() == fromLocal8Bit("升级中")) {
-        ui.updata_ok->setText(fromLocal8Bit("发送"));
+    if (ui.updata_ok->text() == LocalQTCompat::fromLocal8Bit("升级中")) {
+        ui.updata_ok->setText(LocalQTCompat::fromLocal8Bit("发送"));
     }
-    else if (ui.pushButton_2->text() == fromLocal8Bit("升级中")) {
-        ui.pushButton_2->setText(fromLocal8Bit("开始"));
+    else if (ui.pushButton_2->text() == LocalQTCompat::fromLocal8Bit("升级中")) {
+        ui.pushButton_2->setText(LocalQTCompat::fromLocal8Bit("开始"));
     }
 
     // 重置升级状态
@@ -353,12 +353,12 @@ void UpdataDevice::onUpdateStatusChanged(bool success, const QString& message)
     // 显示升级结果
     if (success) {
         QMessageBox::information(this,
-            fromLocal8Bit("升级成功"),
+            LocalQTCompat::fromLocal8Bit("升级成功"),
             message);
     }
     else {
         QMessageBox::critical(this,
-            fromLocal8Bit("升级失败"),
+            LocalQTCompat::fromLocal8Bit("升级失败"),
             message);
     }
 

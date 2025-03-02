@@ -86,8 +86,17 @@ private slots:
     // 视频显示窗口相关槽函数
     void slot_onShowVideoDisplayTriggered();
 
+    void slot_onShowWaveformAnalysisTriggered();
+    void slot_onVideoDisplayStatusChanged(bool isRunning);
+
     // 关于对话框
     void slot_showAboutDialog();
+
+    // 菜单处理槽
+    void slot_onClearLogTriggered();
+    void slot_onExportDataTriggered();
+    void slot_onSettingsTriggered();
+    void slot_onHelpContentTriggered();
 
 private:
     // 初始化函数
@@ -97,9 +106,29 @@ private:
     void stopAndReleaseResources();
     bool initializeFileSaveComponents();
     void setupMenuBar();
+    void updateMenuBarState(AppState state);
+    void checkForUpdates();
+
+    // 初始化主界面
+    void initializeMainUI();
+
+    // 更新状态面板
+    void updateStatusPanel();
+
+    // 创建工具栏
+    void createMainToolBar();
+
+    // 创建并返回主页标签内容
+    QWidget* createHomeTabContent();
 
     // 传输参数验证
     bool validateImageParameters(uint16_t& width, uint16_t& height, uint8_t& capType);
+
+    // 模块管理方法
+    void addModuleToMainTab(QWidget* widget, const QString& tabName, int& tabIndex, const QIcon& icon = QIcon());
+    void showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName);
+    void showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName, const QIcon& icon = QIcon());
+    void removeModuleTab(int& tabIndex);
 
     // UI成员
     Ui::FX3ToolMainWinClass ui;
@@ -122,4 +151,18 @@ private:
     std::atomic<bool> m_isClosing{ false };
     bool m_loggerInitialized{ false };
     static std::atomic<bool> s_resourcesReleased;
+
+    // 主界面组件
+    QTabWidget* m_mainTabWidget;          // 主标签页控件
+    QSplitter* m_mainSplitter;            // 主分割器
+    QSplitter* m_leftSplitter;            // 左侧分割器
+    QToolBar* m_mainToolBar;              // 主工具栏
+    QWidget* m_statusPanel;               // 状态面板
+
+    // 模块标签页索引
+    int m_homeTabIndex;                   // 主页标签索引
+    int m_channelTabIndex;                // 通道配置标签索引
+    int m_dataAnalysisTabIndex;           // 数据分析标签索引
+    int m_videoDisplayTabIndex;           // 视频显示标签索引
+    int m_waveformTabIndex;               // 波形分析标签索引(预留)
 };

@@ -132,6 +132,7 @@
     <ClCompile Include="UI\SaveFileBox.cpp" />
     <ClCompile Include="UI\UpdataDevice.cpp" />
     <ClCompile Include="UI\VideoDisplay.cpp" />
+    <ClCompile Include="UI\WaveformAnalysis.cpp" />
     <ClCompile Include="Utils\Logger.cpp" />
     <ClCompile Include="Utils\LogWriter.cpp" />
     <ClCompile Include="Utils\UIUpdater.cpp" />
@@ -141,6 +142,7 @@
     <QtMoc Include="Utils\Logger.h" />
   </ItemGroup>
   <ItemGroup>
+    <QtMoc Include="UI\WaveformAnalysis.h" />
     <ClInclude Include="Utils\QtCompat.h" />
     <QtMoc Include="Core\AppStateMachine.h" />
     <QtMoc Include="Core\CommandManager.h" />

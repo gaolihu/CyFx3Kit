@@ -11,24 +11,24 @@ FileSaveSettingsDialog::FileSaveSettingsDialog(QWidget* parent)
 }
 
 void FileSaveSettingsDialog::setupUI() {
-    setWindowTitle(fromLocal8Bit("文件保存设置"));
+    setWindowTitle(LocalQTCompat::fromLocal8Bit("文件保存设置"));
     setMinimumWidth(450);
 
     // 主布局
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
 
     // 基本设置组
-    QGroupBox* basicGroup = new QGroupBox(fromLocal8Bit("基本设置"), this);
+    QGroupBox* basicGroup = new QGroupBox(LocalQTCompat::fromLocal8Bit("基本设置"), this);
     QFormLayout* basicLayout = new QFormLayout(basicGroup);
 
     // 保存路径设置
     QHBoxLayout* pathLayout = new QHBoxLayout();
     m_pathEdit = new QLineEdit(this);
-    QPushButton* browseButton = new QPushButton(fromLocal8Bit("浏览..."), this);
+    QPushButton* browseButton = new QPushButton(LocalQTCompat::fromLocal8Bit("浏览..."), this);
     connect(browseButton, &QPushButton::clicked, this, &FileSaveSettingsDialog::onBrowseClicked);
     pathLayout->addWidget(m_pathEdit);
     pathLayout->addWidget(browseButton);
-    basicLayout->addRow(fromLocal8Bit("保存路径:"), pathLayout);
+    basicLayout->addRow(LocalQTCompat::fromLocal8Bit("保存路径:"), pathLayout);
 
     // 文件格式选择
     m_formatCombo = new QComboBox(this);
@@ -39,47 +39,47 @@ void FileSaveSettingsDialog::setupUI() {
     m_formatCombo->addItem("CSV (元数据)", static_cast<int>(FileFormat::CSV));
     connect(m_formatCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
         this, &FileSaveSettingsDialog::onFormatChanged);
-    basicLayout->addRow(fromLocal8Bit("文件格式:"), m_formatCombo);
+    basicLayout->addRow(LocalQTCompat::fromLocal8Bit("文件格式:"), m_formatCombo);
 
     // 文件前缀
     m_prefixEdit = new QLineEdit(this);
-    basicLayout->addRow(fromLocal8Bit("文件前缀:"), m_prefixEdit);
+    basicLayout->addRow(LocalQTCompat::fromLocal8Bit("文件前缀:"), m_prefixEdit);
 
     // 添加基本设置组到主布局
     mainLayout->addWidget(basicGroup);
 
     // 高级设置组
-    QGroupBox* advancedGroup = new QGroupBox(fromLocal8Bit("高级设置"), this);
+    QGroupBox* advancedGroup = new QGroupBox(LocalQTCompat::fromLocal8Bit("高级设置"), this);
     QFormLayout* advancedLayout = new QFormLayout(advancedGroup);
 
     // 自动命名选项
-    m_autoNamingCheck = new QCheckBox(fromLocal8Bit("自动命名文件"), this);
+    m_autoNamingCheck = new QCheckBox(LocalQTCompat::fromLocal8Bit("自动命名文件"), this);
     advancedLayout->addRow("", m_autoNamingCheck);
 
     // 创建子文件夹选项
-    m_createSubfolderCheck = new QCheckBox(fromLocal8Bit("创建日期子文件夹"), this);
+    m_createSubfolderCheck = new QCheckBox(LocalQTCompat::fromLocal8Bit("创建日期子文件夹"), this);
     advancedLayout->addRow("", m_createSubfolderCheck);
 
     // 附加时间戳选项
-    m_appendTimestampCheck = new QCheckBox(fromLocal8Bit("文件名附加时间戳"), this);
+    m_appendTimestampCheck = new QCheckBox(LocalQTCompat::fromLocal8Bit("文件名附加时间戳"), this);
     advancedLayout->addRow("", m_appendTimestampCheck);
 
     // 保存元数据选项
-    m_saveMetadataCheck = new QCheckBox(fromLocal8Bit("保存元数据文件"), this);
+    m_saveMetadataCheck = new QCheckBox(LocalQTCompat::fromLocal8Bit("保存元数据文件"), this);
     advancedLayout->addRow("", m_saveMetadataCheck);
 
     // 使用异步写入选项
-    m_useAsyncWriterCheck = new QCheckBox(fromLocal8Bit("使用异步文件写入"), this);
-    m_useAsyncWriterCheck->setToolTip(fromLocal8Bit("启用后使用单独线程写入文件，可能提高性能"));
+    m_useAsyncWriterCheck = new QCheckBox(LocalQTCompat::fromLocal8Bit("使用异步文件写入"), this);
+    m_useAsyncWriterCheck->setToolTip(LocalQTCompat::fromLocal8Bit("启用后使用单独线程写入文件，可能提高性能"));
     advancedLayout->addRow("", m_useAsyncWriterCheck);
 
     // 压缩级别设置
     m_compressionSpin = new QSpinBox(this);
     m_compressionSpin->setRange(0, 9);
     m_compressionSpin->setSingleStep(1);
-    m_compressionSpin->setPrefix(fromLocal8Bit("级别: "));
-    m_compressionSpin->setToolTip(fromLocal8Bit("0: 不压缩, 9: 最大压缩"));
-    m_compressionLabel = new QLabel(fromLocal8Bit("压缩级别:"), this);
+    m_compressionSpin->setPrefix(LocalQTCompat::fromLocal8Bit("级别: "));
+    m_compressionSpin->setToolTip(LocalQTCompat::fromLocal8Bit("0: 不压缩, 9: 最大压缩"));
+    m_compressionLabel = new QLabel(LocalQTCompat::fromLocal8Bit("压缩级别:"), this);
     advancedLayout->addRow(m_compressionLabel, m_compressionSpin);
 
     // 添加高级设置组到主布局
@@ -87,8 +87,8 @@ void FileSaveSettingsDialog::setupUI() {
 
     // 按钮区域
     QHBoxLayout* buttonLayout = new QHBoxLayout();
-    QPushButton* okButton = new QPushButton(fromLocal8Bit("确定"), this);
-    QPushButton* cancelButton = new QPushButton(fromLocal8Bit("取消"), this);
+    QPushButton* okButton = new QPushButton(LocalQTCompat::fromLocal8Bit("确定"), this);
+    QPushButton* cancelButton = new QPushButton(LocalQTCompat::fromLocal8Bit("取消"), this);
     connect(okButton, &QPushButton::clicked, this, &FileSaveSettingsDialog::onAccepted);
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
     buttonLayout->addStretch();
@@ -150,7 +150,7 @@ void FileSaveSettingsDialog::onAccepted() {
 void FileSaveSettingsDialog::onBrowseClicked() {
     QString dir = QFileDialog::getExistingDirectory(
         this,
-        fromLocal8Bit("选择保存目录"),
+        LocalQTCompat::fromLocal8Bit("选择保存目录"),
         m_pathEdit->text(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
@@ -190,13 +190,13 @@ void FileSavePanel::setupUI() {
 
     // 标题和设置按钮
     QHBoxLayout* titleLayout = new QHBoxLayout();
-    QLabel* titleLabel = new QLabel(fromLocal8Bit("文件保存控制"), this);
+    QLabel* titleLabel = new QLabel(LocalQTCompat::fromLocal8Bit("文件保存控制"), this);
     QFont titleFont = titleLabel->font();
     titleFont.setBold(true);
     titleLabel->setFont(titleFont);
 
-    QPushButton* settingsButton = new QPushButton(fromLocal8Bit("设置"), this);
-    settingsButton->setToolTip(fromLocal8Bit("文件保存设置"));
+    QPushButton* settingsButton = new QPushButton(LocalQTCompat::fromLocal8Bit("设置"), this);
+    settingsButton->setToolTip(LocalQTCompat::fromLocal8Bit("文件保存设置"));
     connect(settingsButton, &QPushButton::clicked, this, &FileSavePanel::onSettingsClicked);
 
     titleLayout->addWidget(titleLabel);
@@ -206,8 +206,8 @@ void FileSavePanel::setupUI() {
 
     // 状态和进度
     QHBoxLayout* statusLayout = new QHBoxLayout();
-    QLabel* statusTextLabel = new QLabel(fromLocal8Bit("状态:"), this);
-    m_statusLabel = new QLabel(fromLocal8Bit("空闲"), this);
+    QLabel* statusTextLabel = new QLabel(LocalQTCompat::fromLocal8Bit("状态:"), this);
+    m_statusLabel = new QLabel(LocalQTCompat::fromLocal8Bit("空闲"), this);
     statusLayout->addWidget(statusTextLabel);
     statusLayout->addWidget(m_statusLabel);
     statusLayout->addStretch();
@@ -222,9 +222,9 @@ void FileSavePanel::setupUI() {
 
     // 信息标签组
     QHBoxLayout* infoLayout = new QHBoxLayout();
-    m_speedLabel = new QLabel(fromLocal8Bit("速度: 0 MB/s"), this);
-    m_fileCountLabel = new QLabel(fromLocal8Bit("文件数: 0"), this);
-    m_totalSizeLabel = new QLabel(fromLocal8Bit("已保存: 0 KB"), this);
+    m_speedLabel = new QLabel(LocalQTCompat::fromLocal8Bit("速度: 0 MB/s"), this);
+    m_fileCountLabel = new QLabel(LocalQTCompat::fromLocal8Bit("文件数: 0"), this);
+    m_totalSizeLabel = new QLabel(LocalQTCompat::fromLocal8Bit("已保存: 0 KB"), this);
 
     infoLayout->addWidget(m_speedLabel);
     infoLayout->addStretch();
@@ -235,7 +235,7 @@ void FileSavePanel::setupUI() {
 
     // 开始/停止按钮
     QHBoxLayout* buttonLayout = new QHBoxLayout();
-    m_startSaveButton = new QPushButton(fromLocal8Bit("开始保存"), this);
+    m_startSaveButton = new QPushButton(LocalQTCompat::fromLocal8Bit("开始保存"), this);
     m_startSaveButton->setMinimumWidth(100);
     buttonLayout->addStretch();
     buttonLayout->addWidget(m_startSaveButton);
@@ -263,11 +263,11 @@ void FileSavePanel::connectSignals() {
 
 void FileSavePanel::updateUIForSaving(bool saving) {
     if (saving) {
-        m_startSaveButton->setText(fromLocal8Bit("停止保存"));
+        m_startSaveButton->setText(LocalQTCompat::fromLocal8Bit("停止保存"));
         m_progressBar->setRange(0, 0); // 设置为动画模式
     }
     else {
-        m_startSaveButton->setText(fromLocal8Bit("开始保存"));
+        m_startSaveButton->setText(LocalQTCompat::fromLocal8Bit("开始保存"));
         m_progressBar->setRange(0, 100);
         m_progressBar->setValue(0);
     }
@@ -294,8 +294,8 @@ void FileSavePanel::onStartSaveClicked() {
         }
         else {
             QMessageBox::warning(this,
-                fromLocal8Bit("保存错误"),
-                fromLocal8Bit("无法开始文件保存，请检查设置。"));
+                LocalQTCompat::fromLocal8Bit("保存错误"),
+                LocalQTCompat::fromLocal8Bit("无法开始文件保存，请检查设置。"));
         }
     }
     else {
@@ -306,8 +306,8 @@ void FileSavePanel::onStartSaveClicked() {
         }
         else {
             QMessageBox::warning(this,
-                fromLocal8Bit("保存错误"),
-                fromLocal8Bit("无法停止文件保存，请重试。"));
+                LocalQTCompat::fromLocal8Bit("保存错误"),
+                LocalQTCompat::fromLocal8Bit("无法停止文件保存，请重试。"));
         }
     }
 }
@@ -316,8 +316,8 @@ void FileSavePanel::onSettingsClicked() {
     // 保存过程中不允许更改设置
     if (m_saving) {
         QMessageBox::information(this,
-            fromLocal8Bit("设置"),
-            fromLocal8Bit("请先停止保存后再更改设置。"));
+            LocalQTCompat::fromLocal8Bit("设置"),
+            LocalQTCompat::fromLocal8Bit("请先停止保存后再更改设置。"));
         return;
     }
 
@@ -328,26 +328,26 @@ void FileSavePanel::onSettingsClicked() {
 void FileSavePanel::onSaveStatusChanged(SaveStatus status) {
     switch (status) {
     case SaveStatus::FS_IDLE:
-        m_statusLabel->setText(fromLocal8Bit("空闲"));
+        m_statusLabel->setText(LocalQTCompat::fromLocal8Bit("空闲"));
         m_progressBar->setValue(0);
         updateUIForSaving(false);
         m_saving = false;
         break;
     case SaveStatus::FS_SAVING:
-        m_statusLabel->setText(fromLocal8Bit("保存中"));
+        m_statusLabel->setText(LocalQTCompat::fromLocal8Bit("保存中"));
         updateUIForSaving(true);
         m_saving = true;
         break;
     case SaveStatus::FS_PAUSED:
-        m_statusLabel->setText(fromLocal8Bit("已暂停"));
+        m_statusLabel->setText(LocalQTCompat::fromLocal8Bit("已暂停"));
         break;
     case SaveStatus::FS_COMPLETED:
-        m_statusLabel->setText(fromLocal8Bit("已完成"));
+        m_statusLabel->setText(LocalQTCompat::fromLocal8Bit("已完成"));
         updateUIForSaving(false);
         m_saving = false;
         break;
     case SaveStatus::FS_ERROR:
-        m_statusLabel->setText(fromLocal8Bit("错误"));
+        m_statusLabel->setText(LocalQTCompat::fromLocal8Bit("错误"));
         updateUIForSaving(false);
         m_saving = false;
         break;
@@ -359,46 +359,46 @@ void FileSavePanel::onSaveProgressUpdated(const SaveStatistics& stats) {
     m_progressBar->setRange(0, 0);
 
     // 更新保存速率标签
-    m_speedLabel->setText(fromLocal8Bit("速度: %1 MB/s").arg(stats.saveRate, 0, 'f', 2));
+    m_speedLabel->setText(LocalQTCompat::fromLocal8Bit("速度: %1 MB/s").arg(stats.saveRate, 0, 'f', 2));
 
     // 更新文件计数标签
-    m_fileCountLabel->setText(fromLocal8Bit("文件数: %1").arg(stats.fileCount));
+    m_fileCountLabel->setText(LocalQTCompat::fromLocal8Bit("文件数: %1").arg(stats.fileCount));
 
     // 更新总字节数标签
     QString sizeText;
     if (stats.totalBytes < 1024 * 1024) {
-        sizeText = fromLocal8Bit("已保存: %1 KB").arg(stats.totalBytes / 1024.0, 0, 'f', 2);
+        sizeText = LocalQTCompat::fromLocal8Bit("已保存: %1 KB").arg(stats.totalBytes / 1024.0, 0, 'f', 2);
     }
     else if (stats.totalBytes < 1024 * 1024 * 1024) {
-        sizeText = fromLocal8Bit("已保存: %1 MB").arg(stats.totalBytes / (1024.0 * 1024.0), 0, 'f', 2);
+        sizeText = LocalQTCompat::fromLocal8Bit("已保存: %1 MB").arg(stats.totalBytes / (1024.0 * 1024.0), 0, 'f', 2);
     }
     else {
-        sizeText = fromLocal8Bit("已保存: %1 GB").arg(stats.totalBytes / (1024.0 * 1024.0 * 1024.0), 0, 'f', 2);
+        sizeText = LocalQTCompat::fromLocal8Bit("已保存: %1 GB").arg(stats.totalBytes / (1024.0 * 1024.0 * 1024.0), 0, 'f', 2);
     }
     m_totalSizeLabel->setText(sizeText);
 }
 
 void FileSavePanel::onSaveCompleted(const QString& path, uint64_t totalBytes) {
-    QString message = fromLocal8Bit("文件保存完成\n路径: %1\n总大小: %2 MB")
+    QString message = LocalQTCompat::fromLocal8Bit("文件保存完成\n路径: %1\n总大小: %2 MB")
         .arg(path)
         .arg(totalBytes / (1024.0 * 1024.0), 0, 'f', 2);
 
-    m_statusLabel->setText(fromLocal8Bit("完成"));
+    m_statusLabel->setText(LocalQTCompat::fromLocal8Bit("完成"));
     m_progressBar->setRange(0, 100);
     m_progressBar->setValue(100);
 
     // 显示完成通知
     QMessageBox::information(this,
-        fromLocal8Bit("保存完成"),
+        LocalQTCompat::fromLocal8Bit("保存完成"),
         message);
 }
 
 void FileSavePanel::onSaveError(const QString& error) {
-    m_statusLabel->setText(fromLocal8Bit("错误"));
+    m_statusLabel->setText(LocalQTCompat::fromLocal8Bit("错误"));
     updateUIForSaving(false);
     m_saving = false;
 
     QMessageBox::critical(this,
-        fromLocal8Bit("保存错误"),
+        LocalQTCompat::fromLocal8Bit("保存错误"),
         error);
 }

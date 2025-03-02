@@ -5,10 +5,10 @@
 
 namespace LocalQTCompat {
 
-    inline QString fromLocal8Bit(const char* str)
+    inline QString LocalQTCompat::fromLocal8Bit(const char* str)
     {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        return QString::fromLocal8Bit(str);
+        return QString::LocalQTCompat::fromLocal8Bit(str);
 #else
         return QString::fromUtf8(str);
 #endif
@@ -22,4 +22,4 @@ namespace LocalQTCompat {
 #endif
     }
 
-} // namespace
+    namespace // LocalQTCompat

@@ -322,7 +322,7 @@ void DataAcquisitionManager::signalStop(StopReason reason) {
         m_running = false; // 立即设置停止标志
     }
 
-    LOG_INFO(fromLocal8Bit("正在停止采集，原因: %1").arg(static_cast<int>(reason)));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("正在停止采集，原因: %1").arg(static_cast<int>(reason)));
 
     // 通知等待线程
     m_dataReady.notify_all();
@@ -337,7 +337,7 @@ void DataAcquisitionManager::signalStop(StopReason reason) {
 
         // 检查应用程序是否正在关闭
         if (QApplication::closingDown() || self->isShuttingDown()) {
-            LOG_INFO(fromLocal8Bit("应用程序正在关闭，跳过错误处理和UI更新"));
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("应用程序正在关闭，跳过错误处理和UI更新"));
             return;
         }
 
@@ -346,19 +346,19 @@ void DataAcquisitionManager::signalStop(StopReason reason) {
         case StopReason::READ_ERROR:
             LOG_ERROR("Stopping acquisition due to read errors");
             self->m_errorOccurred = true;
-            emit self->errorOccurred(fromLocal8Bit("数据读取错误，采集已停止"));
+            emit self->errorOccurred(LocalQTCompat::fromLocal8Bit("数据读取错误，采集已停止"));
             break;
 
         case StopReason::DEVICE_ERROR:
             LOG_ERROR("Stopping acquisition due to device error");
             self->m_errorOccurred = true;
-            emit self->errorOccurred(fromLocal8Bit("设备错误，采集已停止"));
+            emit self->errorOccurred(LocalQTCompat::fromLocal8Bit("设备错误，采集已停止"));
             break;
 
         case StopReason::BUFFER_OVERFLOW:
             LOG_ERROR("Stopping acquisition due to buffer overflow");
             self->m_errorOccurred = true;
-            emit self->errorOccurred(fromLocal8Bit("缓冲区溢出，采集已停止"));
+            emit self->errorOccurred(LocalQTCompat::fromLocal8Bit("缓冲区溢出，采集已停止"));
             break;
 
         case StopReason::USER_REQUEST:
@@ -373,7 +373,7 @@ void DataAcquisitionManager::signalStop(StopReason reason) {
         }
 
         // 通知UI更新状态
-        emit self->acquisitionStateChanged(fromLocal8Bit("已停止"));
+        emit self->acquisitionStateChanged(LocalQTCompat::fromLocal8Bit("已停止"));
         emit self->statsUpdated(self->m_totalBytes.load(), self->m_dataRate.load(),
             std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::steady_clock::now() - self->m_startTime).count());
@@ -654,19 +654,19 @@ void DataAcquisitionManager::updateAcquisitionState(AcquisitionState newState)
     QString stateStr;
     switch (newState) {
     case AcquisitionState::AC_IDLE:
-        stateStr = fromLocal8Bit("空闲");
+        stateStr = LocalQTCompat::fromLocal8Bit("空闲");
         break;
     case AcquisitionState::AC_CONFIGURING:
-        stateStr = fromLocal8Bit("配置中");
+        stateStr = LocalQTCompat::fromLocal8Bit("配置中");
         break;
     case AcquisitionState::AC_RUNNING:
-        stateStr = fromLocal8Bit("采集中");
+        stateStr = LocalQTCompat::fromLocal8Bit("采集中");
         break;
     case AcquisitionState::AC_STOPPING:
-        stateStr = fromLocal8Bit("正在停止");
+        stateStr = LocalQTCompat::fromLocal8Bit("正在停止");
         break;
     case AcquisitionState::AC_ERROR:
-        stateStr = fromLocal8Bit("错误");
+        stateStr = LocalQTCompat::fromLocal8Bit("错误");
         break;
     }
 
