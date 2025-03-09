@@ -1,3 +1,4 @@
+// Source/MVC/Models/FileSaveManager.h
 #pragma once
 
 #include <QObject>
@@ -31,7 +32,8 @@ enum class FileFormat {
     TIFF,       // TIFF图像格式
     PNG,        // PNG图像格式
     CSV,        // CSV文本格式（用于元数据）
-    CUSTOM      // 自定义格式
+    CUSTOM,     // 自定义格式
+    TEXT        // 文本格式
 };
 
 // 保存参数接口
@@ -58,8 +60,13 @@ enum class SaveStatus {
 
 struct SaveStatistics {
     uint64_t totalBytes;           // 已保存总字节数
+    uint64_t estimatedTotalBytes;  // 预估总字节数
+    uint64_t packetCount;          // 包计数
     uint64_t fileCount;            // 已保存文件数
     double saveRate;               // 保存速率 (MB/s)
+    double progress;               // 保存进度 (%)
+    QDateTime startTime;           // 开始时间
+    QDateTime lastUpdateTime;      // 上次更新stamp时间
     QString currentFileName;       // 当前文件名
     QString savePath;              // 保存路径
     SaveStatus status;             // 保存状态

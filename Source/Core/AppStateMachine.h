@@ -1,3 +1,4 @@
+// Source/Core/AppStateMachine.h
 #pragma once
 
 #include <QObject>
@@ -30,11 +31,13 @@ enum class StateEvent {
     COMMANDS_UNLOADED,  // 命令文件卸载
     START_REQUESTED,    // 请求开始传输
     START_SUCCEEDED,    // 开始传输成功
+    TRANSFER_STARTED,   // 传输已开始
     START_FAILED,       // 开始传输失败
     STOP_REQUESTED,     // 请求停止传输
     STOP_SUCCEEDED,     // 停止传输成功
     STOP_FAILED,        // 停止传输失败
-    APP_SHUTDOWN        // 应用程序关闭
+    APP_SHUTDOWN,       // 应用程序关闭
+    APP_NONE            // 未知状态
 };
 
 // 状态转换结果，包含新状态和可选的附加信息

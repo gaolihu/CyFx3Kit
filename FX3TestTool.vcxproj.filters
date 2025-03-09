@@ -12,9 +12,6 @@
     <Filter Include="Source Files\Core">
       <UniqueIdentifier>{46256e18-644d-4b16-bdea-f952111ba3cc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\UI">
-      <UniqueIdentifier>{c4be8d11-6fbd-4bee-8613-a3bda0dc2e8a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Utils">
       <UniqueIdentifier>{65c7d646-8f9f-46ed-a3b1-bbbe1f6f9803}</UniqueIdentifier>
     </Filter>
@@ -50,9 +47,6 @@
     <ClCompile Include="Source\Core\FX3DeviceManager.cpp">
       <Filter>Source Files\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\UIStateHandler.cpp">
-      <Filter>Source Files\Core</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Core\USBDevice.cpp">
       <Filter>Source Files\Core</Filter>
     </ClCompile>
@@ -60,9 +54,6 @@
       <Filter>Source Files\File</Filter>
     </ClCompile>
     <ClCompile Include="Source\File\FileCacheManager.cpp">
-      <Filter>Source Files\File</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\File\FileSaveController.cpp">
       <Filter>Source Files\File</Filter>
     </ClCompile>
     <ClCompile Include="Source\File\FileSaveManager.cpp">
@@ -74,42 +65,6 @@
     <ClCompile Include="Source\Main\main.cpp">
       <Filter>Source Files\Main</Filter>
     </ClCompile>
-    <ClCompile Include="Source\UI\ChannelSelect.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\DataAnalysis.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\FileSavePanel.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\FX3DeviceController.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\FX3MenuController.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\FX3ModuleManager.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\FX3ToolMainWin.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\FX3UILayoutManager.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\SaveFileBox.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\UpdataDevice.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\VideoDisplay.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\UI\WaveformAnalysis.cpp">
-      <Filter>Source Files\UI</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Utils\Logger.cpp">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
@@ -118,6 +73,96 @@
     </ClCompile>
     <ClCompile Include="Source\Utils\UIUpdater.cpp">
       <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Controllers\ChannelSelectController.cpp">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Controllers\VideoDisplayController.cpp">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Controllers\WaveformAnalysisController.cpp">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Controllers\DataAnalysisController.cpp">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Controllers\FileSaveController.cpp">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Models\ChannelSelectModel.cpp">
+      <Filter>Source Files\MVC\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Models\DataAnalysisModel.cpp">
+      <Filter>Source Files\MVC\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Models\FileSaveModel.cpp">
+      <Filter>Source Files\MVC\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Models\FX3MainModel.cpp">
+      <Filter>Source Files\MVC\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Models\UpdateDeviceModel.cpp">
+      <Filter>Source Files\MVC\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Models\VideoDisplayModel.cpp">
+      <Filter>Source Files\MVC\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Models\WaveformConfigModel.cpp">
+      <Filter>Source Files\MVC\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Controllers\UpdateDeviceController.cpp">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Controllers\FX3MainController.cpp">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Models\DeviceModel.cpp">
+      <Filter>Source Files\MVC\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Controllers\DeviceController.cpp">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Views\ChannelSelectView.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Views\DataAnalysisView.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Views\DeviceView.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Views\FX3MainView.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Views\UpdateDeviceView.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Views\VideoDisplayView.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Views\WaveformAnalysisView.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Models\MenuModel.cpp">
+      <Filter>Source Files\MVC\Models</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Views\MenuView.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Controllers\MenuController.cpp">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\ModuleManager.cpp">
+      <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Views\FileSaveView.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\File\FileSaveWorker.cpp">
+      <Filter>Source Files\File</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\MainUiStateManager.cpp">
+      <Filter>Source Files\Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -133,53 +178,11 @@
     <QtMoc Include="Source\Core\FX3DeviceManager.h">
       <Filter>Source Files\Core</Filter>
     </QtMoc>
-    <QtMoc Include="Source\Core\UIStateHandler.h">
-      <Filter>Source Files\Core</Filter>
-    </QtMoc>
     <QtMoc Include="Source\Core\USBDevice.h">
       <Filter>Source Files\Core</Filter>
     </QtMoc>
-    <QtMoc Include="Source\File\FileSaveController.h">
-      <Filter>Source Files\File</Filter>
-    </QtMoc>
     <QtMoc Include="Source\File\FileSaveManager.h">
       <Filter>Source Files\File</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\ChannelSelect.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\DataAnalysis.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\FileSavePanel.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\FX3DeviceController.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\FX3MenuController.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\FX3ModuleManager.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\FX3ToolMainWin.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\FX3UILayoutManager.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\SaveFileBox.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\UpdataDevice.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\VideoDisplay.h">
-      <Filter>Source Files\UI</Filter>
-    </QtMoc>
-    <QtMoc Include="Source\UI\WaveformAnalysis.h">
-      <Filter>Source Files\UI</Filter>
     </QtMoc>
     <QtMoc Include="Source\Utils\Logger.h">
       <Filter>Source Files\Utils</Filter>
@@ -189,6 +192,96 @@
     </QtMoc>
     <QtMoc Include="Source\Utils\UIUpdater.h">
       <Filter>Source Files\Utils</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Controllers\ChannelSelectController.h">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Controllers\FX3MainController.h">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Controllers\VideoDisplayController.h">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Controllers\WaveformAnalysisController.h">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Controllers\DataAnalysisController.h">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Controllers\FileSaveController.h">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Models\ChannelSelectModel.h">
+      <Filter>Source Files\MVC\Models</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Models\DataAnalysisModel.h">
+      <Filter>Source Files\MVC\Models</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Models\FileSaveModel.h">
+      <Filter>Source Files\MVC\Models</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Models\FX3MainModel.h">
+      <Filter>Source Files\MVC\Models</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Models\UpdateDeviceModel.h">
+      <Filter>Source Files\MVC\Models</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Models\VideoDisplayModel.h">
+      <Filter>Source Files\MVC\Models</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Models\WaveformConfigModel.h">
+      <Filter>Source Files\MVC\Models</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Controllers\UpdateDeviceController.h">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Models\DeviceModel.h">
+      <Filter>Source Files\MVC\Models</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Controllers\DeviceController.h">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\ChannelSelectView.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\DataAnalysisView.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\DeviceView.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\FX3MainView.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\UpdateDeviceView.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\VideoDisplayView.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\WaveformAnalysisView.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Models\MenuModel.h">
+      <Filter>Source Files\MVC\Models</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\MenuView.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Controllers\MenuController.h">
+      <Filter>Source Files\MVC\Controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\Core\ModuleManager.h">
+      <Filter>Source Files\Core</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\FileSaveView.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\File\FileSaveWorker.h">
+      <Filter>Source Files\File</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\Core\MainUiStateManager.h">
+      <Filter>Source Files\Core</Filter>
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
@@ -206,6 +299,15 @@
     </ClInclude>
     <ClInclude Include="Source\Utils\ThreadHelper.h">
       <Filter>Source Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\DataPacket.h">
+      <Filter>Source Files\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\MVC\Views\IDeviceView.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Core\DeviceTransferStats.h">
+      <Filter>Source Files\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -226,16 +328,14 @@
     <QtUic Include="resource\SaveFileBox.ui">
       <Filter>Resource Files</Filter>
     </QtUic>
-    <QtUic Include="resource\UpdataDevice.ui">
-      <Filter>Resource Files</Filter>
-    </QtUic>
     <QtUic Include="resource\VideoDisplay.ui">
       <Filter>Resource Files</Filter>
     </QtUic>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="FX3TestTool.rc">
+    <QtUic Include="resource\WaveformAnalysis.ui">
       <Filter>Resource Files</Filter>
-    </ResourceCompile>
+    </QtUic>
+    <QtUic Include="resource\UpdateDevice.ui">
+      <Filter>Resource Files</Filter>
+    </QtUic>
   </ItemGroup>
 </Project>

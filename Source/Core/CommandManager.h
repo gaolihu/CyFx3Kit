@@ -1,3 +1,4 @@
+// Source/Core/CommandManager.h
 #pragma once
 
 #include <QObject>

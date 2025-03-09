@@ -19,9 +19,11 @@ Logger::Logger()
 
 Logger::~Logger()
 {
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
     if (m_logFile.isOpen()) {
         m_logFile.close();
     }
+    qDebug() << "Logger销毁";
 }
 
 Logger& Logger::instance()
@@ -92,6 +94,9 @@ void Logger::setLogWidget(QTextEdit* logWidget)
 
 void Logger::log(const QString& message, LogLevel level, const QString& file, int line)
 {
+#if 1
+    qDebug() << "Logging: " << message;
+#endif
     if (!m_initialized || !shouldLog(level)) return;
 
     LogEntry entry{

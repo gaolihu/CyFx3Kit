@@ -1,3 +1,5 @@
+// Source/Core/DataAcquisitionManager.cpp
+
 #include <QDateTime>
 #include <QCoreApplication>
 #include <QApplication>

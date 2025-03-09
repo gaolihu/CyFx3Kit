@@ -1,3 +1,5 @@
+// Source/Core/USBDevice.cpp
+
 #include <QDebug>
 #include <QThread>
 #include "USBDevice.h"

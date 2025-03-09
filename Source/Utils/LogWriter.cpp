@@ -1,4 +1,4 @@
-#include "LogWriter.h"
+﻿#include "LogWriter.h"
 #include "Logger.h"
 #include <QTextStream>
 
@@ -11,6 +11,8 @@ LogWriter::LogWriter(Logger* logger)
 
 LogWriter::~LogWriter()
 {
+    qDebug() << "LogWriter销毁";
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
     stop();
     wait();
 }
@@ -54,4 +56,5 @@ void LogWriter::run()
             stream.flush();
         }
     }
+    qDebug() << "LogWriter线程退出";
 }

@@ -1,3 +1,4 @@
+// Source/Core/DataAcquisitionManager.h
 #pragma once
 
 #include <QObject>
@@ -8,17 +9,10 @@
 #include <optional>
 #include <condition_variable>
 #include <queue>
-#include <vector>
 #include "USBDevice.h"
+#include "DataPacket.h"
 
 class USBDevice;
-
-// 数据包结构
-struct DataPacket {
-    std::vector<uint8_t> data;
-    size_t size;
-    uint64_t timestamp;
-};
 
 // 数据处理器接口
 class IDataProcessor {

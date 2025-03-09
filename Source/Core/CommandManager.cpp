@@ -1,3 +1,5 @@
+// Source/Core/CommandManager.cpp
+
 #include "CommandManager.h"
 #include "Logger.h"
 #include <QFile>

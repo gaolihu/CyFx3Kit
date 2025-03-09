@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>FX3ToolMainWinClass</class>
- <widget class="QMainWindow" name="FX3ToolMainWinClass">
+ <class>FX3ToolMainWin</class>
+ <widget class="QMainWindow" name="FX3ToolMainWin">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -18,62 +18,39 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
       <item>
-       <layout class="QVBoxLayout" name="controlTransferLayout">
-        <property name="sizeConstraint">
-         <enum>QLayout::SetFixedSize</enum>
-        </property>
-        <item>
-         <widget class="QPushButton" name="startButton">
-          <property name="text">
-           <string>开始传输</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="stopButton">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>停止传输</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="resetButton">
-          <property name="text">
-           <string>重置设备</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="saveButton">
-          <property name="text">
-           <string>保存文件</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="verticalSpacer">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </item>
-      <item>
        <layout class="QVBoxLayout" name="mainContentLayout">
         <item>
          <layout class="QHBoxLayout" name="topControlsLayout">
           <item>
            <layout class="QHBoxLayout" name="commandChooseLayout">
+            <item>
+             <widget class="QLabel" name="shortOperation">
+              <property name="text">
+               <string>快捷操作</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionStartTransfer">
+              <property name="text">
+               <string>开始传输</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionStopTransfer">
+              <property name="text">
+               <string>停止传输</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="actionResetDevice">
+              <property name="text">
+               <string>重置设备</string>
+              </property>
+             </widget>
+            </item>
             <item>
              <widget class="QPushButton" name="cmdDirButton">
               <property name="text">
@@ -188,13 +165,155 @@
          </layout>
         </item>
         <item>
-         <widget class="QTextEdit" name="logTextEdit">
-          <property name="styleSheet">
-           <string notr="true">background-image: url(:/background/res/Picture/1.png);</string>
+         <widget class="QTabWidget" name="mainTabWidget">
+          <property name="currentIndex">
+           <number>1</number>
           </property>
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
+          <widget class="QWidget" name="logTab">
+           <attribute name="title">
+            <string>日志</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="logTabLayout">
+            <item>
+             <widget class="QTextEdit" name="logTextEdit">
+              <property name="styleSheet">
+               <string notr="true"/>
+              </property>
+              <property name="readOnly">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="statusTab">
+           <attribute name="title">
+            <string>状态</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="statusTabLayout">
+            <item>
+             <widget class="QWidget" name="statusWidget" native="true">
+              <layout class="QVBoxLayout" name="statusWidgetLayout">
+               <item>
+                <widget class="QGroupBox" name="deviceInfoGroup">
+                 <property name="title">
+                  <string>设备信息</string>
+                 </property>
+                 <layout class="QFormLayout" name="deviceInfoLayout">
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="deviceNameLabel">
+                    <property name="text">
+                     <string>设备名称：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLabel" name="deviceNameValue">
+                    <property name="text">
+                     <string>未连接</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="firmwareVersionLabel">
+                    <property name="text">
+                     <string>固件版本：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QLabel" name="firmwareVersionValue">
+                    <property name="text">
+                     <string>未知</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="serialNumberLabel">
+                    <property name="text">
+                     <string>序列号：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QLabel" name="serialNumberValue">
+                    <property name="text">
+                     <string>未知</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="transferStatsGroup">
+                 <property name="title">
+                  <string>传输统计</string>
+                 </property>
+                 <layout class="QFormLayout" name="transferStatsLayout">
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="bytesTransferredLabel">
+                    <property name="text">
+                     <string>已传输数据：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLabel" name="bytesTransferredValue">
+                    <property name="text">
+                     <string>0 字节</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="transferRateStatsLabel">
+                    <property name="text">
+                     <string>传输速率：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QLabel" name="transferRateStatsValue">
+                    <property name="text">
+                     <string>0 MB/s</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="errorCountLabel">
+                    <property name="text">
+                     <string>错误计数：</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QLabel" name="errorCountValue">
+                    <property name="text">
+                     <string>0</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <spacer name="statusVerticalSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </widget>
          </widget>
         </item>
        </layout>
@@ -202,65 +321,6 @@
      </layout>
     </item>
    </layout>
-  </widget>
-  <widget class="QMenuBar" name="menuBar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1463</width>
-     <height>26</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuFile">
-    <property name="title">
-     <string>文件</string>
-    </property>
-    <addaction name="actionSaveFile"/>
-    <addaction name="actionExportData"/>
-    <addaction name="separator"/>
-    <addaction name="actionExit"/>
-   </widget>
-   <widget class="QMenu" name="menuDevice">
-    <property name="title">
-     <string>设备</string>
-    </property>
-    <addaction name="actionStartTransfer"/>
-    <addaction name="actionStopTransfer"/>
-    <addaction name="actionResetDevice"/>
-    <addaction name="separator"/>
-    <addaction name="actionChannelConfig"/>
-    <addaction name="actionUpdateDevice"/>
-   </widget>
-   <widget class="QMenu" name="menuTools">
-    <property name="title">
-     <string>工具</string>
-    </property>
-    <addaction name="actionDataAnalysis"/>
-    <addaction name="actionVideoDisplay"/>
-    <addaction name="actionWaveformAnalysis"/>
-    <addaction name="separator"/>
-    <addaction name="actionSettings"/>
-   </widget>
-   <widget class="QMenu" name="menuView">
-    <property name="title">
-     <string>视图</string>
-    </property>
-    <addaction name="actionClearLog"/>
-   </widget>
-   <widget class="QMenu" name="menuHelp">
-    <property name="title">
-     <string>帮助</string>
-    </property>
-    <addaction name="actionHelpContent"/>
-    <addaction name="separator"/>
-    <addaction name="actionAbout"/>
-   </widget>
-   <addaction name="menuFile"/>
-   <addaction name="menuDevice"/>
-   <addaction name="menuTools"/>
-   <addaction name="menuView"/>
-   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
    <widget class="QLabel" name="usbSpeedLabel">
@@ -302,7 +362,7 @@
      <string>传输状态：</string>
     </property>
    </widget>
-   <widget class="QLabel" name="speedLabel">
+   <widget class="QLabel" name="transferRateLabel">
     <property name="geometry">
      <rect>
       <x>680</x>
@@ -342,436 +402,10 @@
     </property>
    </widget>
   </widget>
-  <action name="actionSaveFile">
-   <property name="text">
-    <string>保存文件...</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+S</string>
-   </property>
-  </action>
-  <action name="actionExportData">
-   <property name="text">
-    <string>导出数据...</string>
-   </property>
-  </action>
-  <action name="actionExit">
-   <property name="text">
-    <string>退出</string>
-   </property>
-   <property name="shortcut">
-    <string>Alt+F4</string>
-   </property>
-  </action>
-  <action name="actionStartTransfer">
-   <property name="text">
-    <string>开始传输</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+B</string>
-   </property>
-  </action>
-  <action name="actionStopTransfer">
-   <property name="text">
-    <string>停止传输</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+E</string>
-   </property>
-  </action>
-  <action name="actionResetDevice">
-   <property name="text">
-    <string>重置设备</string>
-   </property>
-  </action>
-  <action name="actionChannelConfig">
-   <property name="text">
-    <string>通道配置...</string>
-   </property>
-  </action>
-  <action name="actionUpdateDevice">
-   <property name="text">
-    <string>设备升级...</string>
-   </property>
-  </action>
-  <action name="actionDataAnalysis">
-   <property name="text">
-    <string>数据分析...</string>
-   </property>
-  </action>
-  <action name="actionVideoDisplay">
-   <property name="text">
-    <string>视频显示...</string>
-   </property>
-  </action>
-  <action name="actionWaveformAnalysis">
-   <property name="text">
-    <string>波形分析...</string>
-   </property>
-  </action>
-  <action name="actionSettings">
-   <property name="text">
-    <string>应用设置...</string>
-   </property>
-  </action>
-  <action name="actionClearLog">
-   <property name="text">
-    <string>清除日志</string>
-   </property>
-  </action>
-  <action name="actionHelpContent">
-   <property name="text">
-    <string>使用帮助</string>
-   </property>
-  </action>
-  <action name="actionAbout">
-   <property name="text">
-    <string>关于</string>
-   </property>
-  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
   <include location="Resource.qrc"/>
  </resources>
- <connections>
-  <connection>
-   <sender>actionExit</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionStartTransfer</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onStartButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionStopTransfer</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onStopButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionResetDevice</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onResetButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionChannelConfig</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onShowChannelSelectTriggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionUpdateDevice</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onShowUpdataDeviceTriggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionDataAnalysis</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onShowDataAnalysisTriggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionVideoDisplay</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onShowVideoDisplayTriggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionWaveformAnalysis</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onShowWaveformAnalysisTriggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionSaveFile</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onShowSaveFileBoxTriggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionClearLog</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onClearLogTriggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionAbout</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_showAboutDialog()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionHelpContent</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onHelpContentTriggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionExportData</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onExportDataTriggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionSettings</sender>
-   <signal>triggered()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onSettingsTriggered()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>startButton</sender>
-   <signal>clicked()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onStartButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>50</x>
-     <y>140</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>stopButton</sender>
-   <signal>clicked()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onStopButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>50</x>
-     <y>175</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>resetButton</sender>
-   <signal>clicked()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onResetButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>50</x>
-     <y>210</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>saveButton</sender>
-   <signal>clicked()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onSaveButtonClicked()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>50</x>
-     <y>245</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>cmdDirButton</sender>
-   <signal>clicked()</signal>
-   <receiver>FX3ToolMainWinClass</receiver>
-   <slot>slot_onSelectCommandDirectory()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>793</x>
-     <y>140</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>731</x>
-     <y>508</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
- <slots>
-  <slot>slot_onStartButtonClicked()</slot>
-  <slot>slot_onStopButtonClicked()</slot>
-  <slot>slot_onResetButtonClicked()</slot>
-  <slot>slot_onSaveButtonClicked()</slot>
-  <slot>slot_onSelectCommandDirectory()</slot>
-  <slot>slot_onShowChannelSelectTriggered()</slot>
-  <slot>slot_onShowDataAnalysisTriggered()</slot>
-  <slot>slot_onShowUpdataDeviceTriggered()</slot>
-  <slot>slot_onShowVideoDisplayTriggered()</slot>
-  <slot>slot_onShowWaveformAnalysisTriggered()</slot>
-  <slot>slot_onShowSaveFileBoxTriggered()</slot>
-  <slot>slot_showAboutDialog()</slot>
-  <slot>slot_onClearLogTriggered()</slot>
-  <slot>slot_onExportDataTriggered()</slot>
-  <slot>slot_onSettingsTriggered()</slot>
-  <slot>slot_onHelpContentTriggered()</slot>
- </slots>
+ <connections/>
 </ui>
