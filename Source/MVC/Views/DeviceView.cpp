@@ -4,16 +4,6 @@
 
 DeviceView::DeviceView(QObject* parent)
     : QObject(parent)
-    , m_widthEdit(nullptr)
-    , m_heightEdit(nullptr)
-    , m_typeCombo(nullptr)
-    , m_speedLabel(nullptr)
-    , m_bytesLabel(nullptr)
-    , m_stateLabel(nullptr)
-    , m_startButton(nullptr)
-    , m_stopButton(nullptr)
-    , m_resetButton(nullptr)
-    , m_parentWidget(nullptr)
 {
     LOG_INFO("设备视图已创建");
 }
@@ -27,16 +17,31 @@ void DeviceView::initUIComponents(
     QLineEdit* widthEdit,
     QLineEdit* heightEdit,
     QComboBox* typeCombo,
-    QLabel* speedLabel,
-    QLabel* bytesLabel,
-    QLabel* stateLabel)
+    QLabel* usbSpeedLabel,
+    QLabel* usbStatusLabel,
+    QLabel* transferStatusLabel,
+    QLabel* transferRateLabel,
+    QLabel* totalBytesLabel,
+    QLabel* totalTimeLabel,
+    QPushButton* startButton,
+    QPushButton* stopButton,
+    QPushButton* resetButton
+    )
 {
     m_widthEdit = widthEdit;
     m_heightEdit = heightEdit;
     m_typeCombo = typeCombo;
-    m_speedLabel = speedLabel;
-    m_bytesLabel = bytesLabel;
-    m_stateLabel = stateLabel;
+
+    m_usbSpeedLabel = usbSpeedLabel;
+    m_usbStatusLabel = usbStatusLabel;
+    m_transferStatusLabel = transferStatusLabel;
+    m_transferRateLabel = transferRateLabel;
+    m_totalBytesLabel = totalBytesLabel;
+    m_totalTimeLabel = totalTimeLabel;
+
+    m_startButton = startButton;
+    m_stopButton = stopButton;
+    m_resetButton = resetButton;
 
     // 设置父窗口，用于显示对话框
     if (widthEdit) {
@@ -51,6 +56,12 @@ void DeviceView::connectSignals()
 {
     // 检查UI组件是否已初始化
     if (!m_widthEdit || !m_heightEdit || !m_typeCombo ||
+        !m_usbSpeedLabel ||
+        !m_usbStatusLabel ||
+        !m_transferStatusLabel ||
+        !m_transferRateLabel ||
+        !m_totalBytesLabel ||
+        !m_totalTimeLabel ||
         !m_startButton || !m_stopButton || !m_resetButton) {
         LOG_ERROR("无法连接信号：UI组件未初始化");
         return;
@@ -146,14 +157,14 @@ void DeviceView::updateCaptureType(uint8_t captureType)
 
 void DeviceView::updateUsbSpeed(double speed)
 {
-    if (m_speedLabel) {
-        m_speedLabel->setText(QString("%1 MB/s").arg(speed, 0, 'f', 2));
+    if (m_usbSpeedLabel) {
+        m_usbSpeedLabel->setText(QString("%1 MB/s").arg(speed, 0, 'f', 2));
     }
 }
 
 void DeviceView::updateTransferredBytes(uint64_t bytes)
 {
-    if (!m_bytesLabel) {
+    if (!m_totalBytesLabel) {
         return;
     }
 
@@ -172,14 +183,14 @@ void DeviceView::updateTransferredBytes(uint64_t bytes)
         sizeText = QString("%1 GB").arg(bytes / (1024.0 * 1024.0 * 1024.0), 0, 'f', 2);
     }
 
-    m_bytesLabel->setText(sizeText);
+    m_totalBytesLabel->setText(sizeText);
 }
 
 void DeviceView::updateDeviceState(DeviceState state)
 {
     // 更新状态标签
-    if (m_stateLabel) {
-        m_stateLabel->setText(getStateText(state));
+    if (m_usbStatusLabel) {
+        m_usbStatusLabel->setText(getStateText(state));
     }
 
     // 更新按钮状态

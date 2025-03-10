@@ -9,8 +9,6 @@
 #include <mutex>
 #include "AppStateMachine.h"
 
-class ChannelSelectModel;
-
 /**
  * @brief FX3主模型类 - 应用程序的核心数据模型
  *
@@ -234,7 +232,6 @@ private:
     std::atomic<bool> m_closing;                  ///< 应用程序是否正在关闭
 
     // 通道和视频配置
-    ChannelSelectModel* m_channelConfigModel;     ///< 通道配置模型
     uint16_t m_videoWidth;                        ///< 视频宽度
     uint16_t m_videoHeight;                       ///< 视频高度
     uint8_t m_videoFormat;                        ///< 视频格式

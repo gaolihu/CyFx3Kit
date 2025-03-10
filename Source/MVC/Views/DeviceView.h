@@ -32,23 +32,20 @@ public:
 
     /**
      * @brief 初始化UI组件
-     * @param widthEdit 宽度输入框指针
-     * @param heightEdit 高度输入框指针
-     * @param typeCombo 捕获类型下拉框指针
-     * @param speedLabel USB速度标签指针
-     * @param bytesLabel 传输字节数标签指针
-     * @param stateLabel 设备状态标签指针
-     * @param startButton 开始传输按钮指针
-     * @param stopButton 停止传输按钮指针
-     * @param resetButton 重置设备按钮指针
      */
     void initUIComponents(
         QLineEdit* widthEdit,
         QLineEdit* heightEdit,
         QComboBox* typeCombo,
-        QLabel* speedLabel,
-        QLabel* bytesLabel,
-        QLabel* stateLabel
+        QLabel* usbSpeedLabel,
+        QLabel* usbStatusLabel,
+        QLabel* transferStatusLabel,
+        QLabel* transferRateLabel,
+        QLabel* totalBytesLabel,
+        QLabel* totalTimeLabel,
+        QPushButton* startButton,
+        QPushButton* stopButton,
+        QPushButton* resetButton
     );
 
     /**
@@ -126,9 +123,12 @@ private:
     QLineEdit* m_widthEdit;        ///< 图像宽度输入框
     QLineEdit* m_heightEdit;       ///< 图像高度输入框
     QComboBox* m_typeCombo;        ///< 捕获类型下拉框
-    QLabel* m_speedLabel;          ///< USB速度标签
-    QLabel* m_bytesLabel;          ///< 传输字节数标签
-    QLabel* m_stateLabel;          ///< 设备状态标签
+    QLabel* m_usbSpeedLabel;       ///< USB速度标签
+    QLabel* m_usbStatusLabel;      ///< USB状态标签
+    QLabel* m_transferStatusLabel; ///< USB传输状态标签
+    QLabel* m_transferRateLabel;   ///< USB传输速率标签
+    QLabel* m_totalBytesLabel;     ///< USB总共传输字节标签
+    QLabel* m_totalTimeLabel;      ///< USB传输时间标签
     QPushButton* m_startButton;    ///< 开始传输按钮
     QPushButton* m_stopButton;     ///< 停止传输按钮
     QPushButton* m_resetButton;    ///< 重置设备按钮

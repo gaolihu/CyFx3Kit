@@ -57,9 +57,15 @@ bool FX3MainController::initialize()
             m_mainView->getUi()->imageWIdth,
             m_mainView->getUi()->imageHeight,
             m_mainView->getUi()->imageType,
+            m_mainView->getUi()->usbSpeedLabel,
+            m_mainView->getUi()->usbStatusLabel,
+            m_mainView->getUi()->transferStatusLabel,
             m_mainView->getUi()->transferRateLabel,
             m_mainView->getUi()->totalBytesLabel,
-            m_mainView->getUi()->usbStatusLabel
+            m_mainView->getUi()->totalTimeLabel,
+            m_mainView->getUi()->actionStartTransfer,
+            m_mainView->getUi()->actionStopTransfer,
+            m_mainView->getUi()->actionResetDevice
         );
         m_deviceController = std::make_unique<DeviceController>(m_DeviceView.get(), this);
         if (!m_deviceController->initialize(m_mainView->getWindowHandle())) {

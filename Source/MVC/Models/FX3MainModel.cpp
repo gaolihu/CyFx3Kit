@@ -1,7 +1,6 @@
 ﻿// Source/MVC/Models/FX3MainModel.cpp
 
 #include "FX3MainModel.h"
-#include "ChannelSelectModel.h"
 #include "Logger.h"
 #include <QSettings>
 
@@ -23,10 +22,10 @@ FX3MainModel::FX3MainModel()
     , m_transferRate(0.0)
     , m_errorCount(0)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("FX3主模型构建入口"));
     // 初始化模型
     initialize();
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("FX3主模型已创建"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("FX3主模型构建完成"));
 }
 
 FX3MainModel::~FX3MainModel()
@@ -37,9 +36,6 @@ FX3MainModel::~FX3MainModel()
 void FX3MainModel::initialize()
 {
     try {
-        // 创建通道配置模型
-        m_channelConfigModel = ChannelSelectModel::getInstance();
-
         // 尝试从设置加载状态
         QSettings settings("FX3Tool", "MainSettings");
 
@@ -70,19 +66,7 @@ void FX3MainModel::initialize()
 
 void FX3MainModel::connectSignals()
 {
-    // 连接通道配置变更信号
-    if (m_channelConfigModel) {
-        connect(m_channelConfigModel, &ChannelSelectModel::configChanged,
-            this, [this](const ChannelConfig& config) {
-                // 更新视频配置
-                std::lock_guard<std::mutex> lock(m_videoConfigMutex);
-                m_videoWidth = config.videoWidth;
-                m_videoHeight = config.videoHeight;
-                // 保持当前视频格式
-                emit videoConfigChanged(m_videoWidth, m_videoHeight, m_videoFormat);
-            });
-    }
-
+    LOG_INFO("连接主模型信号");
     // 连接状态机信号
     connect(&AppStateMachine::instance(), &AppStateMachine::stateChanged,
         this, [this](AppState newState, AppState oldState, const QString& reason) {

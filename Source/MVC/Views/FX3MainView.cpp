@@ -264,7 +264,6 @@ bool FX3MainView::initializeUiStateManager() {
             return false;
         }
 
-        // 使用更简洁的信号连接方式
 #define CONNECT_SIGNAL(uiSignal, viewSignal) \
             connect(m_uiStateManager.get(), &MainUiStateManager::uiSignal, \
                     this, [this](){ emit signal_##viewSignal(); })
