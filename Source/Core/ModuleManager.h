@@ -210,6 +210,32 @@ private:
      */
     bool createUpdateDeviceModule();
 
+    /**
+     * @brief 更新标签索引与模块类型的映射
+     * @param index 标签索引
+     * @param type 模块类型
+     */
+    void updateTabIndexMapping(int index, ModuleType type);
+
+    /**
+     * @brief 从映射中移除标签索引
+     * @param index 标签索引
+     */
+    void removeTabIndexMapping(int index);
+
+    /**
+     * @brief 根据标签索引查找对应的模块类型
+     * @param index 标签索引
+     * @return 找到的模块类型，如果未找到返回指定的默认值
+     */
+    ModuleType findModuleTypeByTabIndex(int index) const;
+
+    /**
+     * @brief 更新关闭后TAB索引
+     * @param closedIndex 关闭的标签索引
+     */
+    void updateTabIndicesAfterClose(int closedIndex);
+
 private:
     FX3MainView* m_mainView;
     bool m_shuttingDown{ false };
@@ -233,6 +259,9 @@ private:
     // Module visibility and initialization state
     std::map<ModuleType, bool> m_moduleVisibility;
     std::map<ModuleType, bool> m_moduleInitialized;
+
+    // 标签索引与模块类型映射表
+    std::map<int, ModuleType> m_tabIndexToModule;
 
     // Tab indices
     int m_channelConfigTabIndex{ -1 };

@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QStatusBar>
 #include <QPushButton>
+#include <QTextEdit>
 
 MainUiStateManager::MainUiStateManager(Ui::FX3ToolMainWin& ui, QObject* parent)
     : QObject(parent)
@@ -18,6 +19,13 @@ MainUiStateManager::MainUiStateManager(Ui::FX3ToolMainWin& ui, QObject* parent)
     , m_bytesTransferred(0)
     , m_transferRate(0.0)
     , m_errorCount(0)
+    , m_mainTabWidget(nullptr)
+    , m_homeTabIndex(0)
+    , m_channelTabIndex(-1)
+    , m_dataAnalysisTabIndex(-1)
+    , m_videoDisplayTabIndex(-1)
+    , m_waveformTabIndex(-1)
+    , m_fileSaveTabIndex(-1)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态处理器已创建"));
 
@@ -41,6 +49,102 @@ MainUiStateManager::~MainUiStateManager()
     if (m_transferTimer.isActive()) {
         m_transferTimer.stop();
     }
+}
+
+bool MainUiStateManager::initializeTabManagement(QTabWidget* mainTabWidget)
+{
+    if (!mainTabWidget) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("初始化Tab管理失败: mainTabWidget为空"));
+        return false;
+    }
+
+    m_mainTabWidget = mainTabWidget;
+
+    // 设置默认标签页为日志
+    m_mainTabWidget->setCurrentIndex(0);
+
+    // 连接标签关闭信号
+    connect(m_mainTabWidget, &QTabWidget::tabCloseRequested,
+        this, &MainUiStateManager::slot_onTabCloseRequested);
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("Tab管理初始化成功"));
+    return true;
+}
+
+void MainUiStateManager::addModuleToMainTab(QWidget* widget, const QString& tabName, int& tabIndex, const QIcon& icon)
+{
+    if (!m_mainTabWidget || !widget) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("添加模块失败：标签控件或模块窗口为空"));
+        return;
+    }
+
+    // 检查是否已添加
+    if (tabIndex >= 0 && tabIndex < m_mainTabWidget->count()) {
+        m_mainTabWidget->setCurrentIndex(tabIndex);
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("模块标签页已存在，切换到标签页: %1").arg(tabName));
+        return;
+    }
+
+    // 添加新标签页
+    tabIndex = icon.isNull() ?
+        m_mainTabWidget->addTab(widget, tabName) :
+        m_mainTabWidget->addTab(widget, icon, tabName);
+
+    m_mainTabWidget->setCurrentIndex(tabIndex);
+
+    // 设置关闭按钮，除了主页标签
+    if (tabIndex != m_homeTabIndex) {
+        m_mainTabWidget->setTabsClosable(true);
+    }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("已添加模块标签页: %1，索引: %2").arg(tabName).arg(tabIndex));
+}
+
+void MainUiStateManager::showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName, const QIcon& icon)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("显示模块标签: %1, name: %2").arg(tabIndex).arg(tabName));
+    if (!m_mainTabWidget) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("标签控件为空，无法显示模块"));
+        return;
+    }
+
+    // 如果标签页已存在
+    if (tabIndex >= 0 && tabIndex < m_mainTabWidget->count()) {
+        m_mainTabWidget->setCurrentIndex(tabIndex);
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("切换到模块标签页: %1").arg(tabName));
+    }
+    // 否则添加新标签页
+    else {
+        addModuleToMainTab(widget, tabName, tabIndex, icon);
+    }
+}
+
+void MainUiStateManager::removeModuleTab(int& tabIndex)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("移除Tab: %1").arg(tabIndex));
+    if (!m_mainTabWidget || tabIndex < 0 || tabIndex >= m_mainTabWidget->count()) {
+        return;
+    }
+
+    // 保存要删除的标签名称
+    QString tabName = m_mainTabWidget->tabText(tabIndex);
+
+    // 移除标签页
+    m_mainTabWidget->removeTab(tabIndex);
+    tabIndex = -1;
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("已移除模块标签页: %1").arg(tabName));
+}
+
+void MainUiStateManager::slot_onTabCloseRequested(int index)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("关闭Tab请求信号槽: %1").arg(index));
+    if (index == m_homeTabIndex || index < 0 || index >= m_mainTabWidget->count()) {
+        return;
+    }
+
+    // 发送标签页关闭信号
+    emit signal_moduleTabClosed(index);
 }
 
 bool MainUiStateManager::initializeSignalConnections(QWidget* parentWidget)
@@ -110,6 +214,8 @@ void MainUiStateManager::updateTransferStats(uint64_t bytesTransferred, double t
     m_transferRate = transferRate;
     m_errorCount = errorCount;
 
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新传输状态"));
+
     if (!validUI()) return;
 
     // 更新状态栏
@@ -150,6 +256,7 @@ void MainUiStateManager::updateTransferStats(uint64_t bytesTransferred, double t
 
 void MainUiStateManager::updateUsbSpeedDisplay(const QString& speedDesc, bool isUSB3)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新USB速度显示"));
     if (!validUI()) return;
 
     if (m_ui.usbStatusLabel) {
@@ -160,13 +267,14 @@ void MainUiStateManager::updateUsbSpeedDisplay(const QString& speedDesc, bool is
             m_ui.usbStatusLabel->setStyleSheet("color: blue;");
         }
         else {
-            m_ui.usbStatusLabel->setStyleSheet("");
+            m_ui.usbStatusLabel->setStyleSheet("color: green;");
         }
     }
 }
 
-void MainUiStateManager::updateTransferTime()
+void MainUiStateManager::updateTransferTimeDisplay()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新USB传输时间"));
     if (!validUI() || !m_isTransferring) return;
 
     // 获取当前计时器时间
@@ -180,6 +288,7 @@ void MainUiStateManager::updateTransferTime()
 
 void MainUiStateManager::startTransferTimer()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始传输计时"));
     if (!m_isTransferring) {
         m_isTransferring = true;
 
@@ -198,6 +307,7 @@ void MainUiStateManager::startTransferTimer()
 
 void MainUiStateManager::stopTransferTimer()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("停止传输计时"));
     if (m_isTransferring) {
         m_isTransferring = false;
 
@@ -206,7 +316,7 @@ void MainUiStateManager::stopTransferTimer()
         m_totalElapsedTime += m_elapsedTimer.elapsed();
 
         // 更新最终时间显示
-        updateTransferTime();
+        updateTransferTimeDisplay();
 
         LOG_INFO(LocalQTCompat::fromLocal8Bit("传输计时停止，总时间: %1 毫秒").arg(m_totalElapsedTime));
     }
@@ -214,6 +324,7 @@ void MainUiStateManager::stopTransferTimer()
 
 void MainUiStateManager::resetTransferStatsDisplay()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("重置传输状态显示"));
     m_bytesTransferred = 0;
     m_transferRate = 0.0;
     m_errorCount = 0;
@@ -254,14 +365,6 @@ void MainUiStateManager::resetTransferStatsDisplay()
     LOG_INFO(LocalQTCompat::fromLocal8Bit("传输统计已重置"));
 }
 
-void MainUiStateManager::updateStatusBarMessage(const QString& message, int timeout)
-{
-    QStatusBar* statusBar = qobject_cast<QMainWindow*>(parent())->statusBar();
-    if (statusBar) {
-        statusBar->showMessage(message, timeout);
-    }
-}
-
 //--- 按钮状态管理 ---//
 
 void MainUiStateManager::updateButtonStates(AppState state)
@@ -270,6 +373,8 @@ void MainUiStateManager::updateButtonStates(AppState state)
     bool enableStopButton = false;
     bool enableResetButton = false;
     bool enableConfigButtons = false;
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("根据APP状态: %1, 更新按钮状态").arg(static_cast<int>(state)));
 
     // 设置各种状态下的按钮启用/禁用
     switch (state) {
@@ -346,18 +451,8 @@ void MainUiStateManager::updateButtonStates(AppState state)
 
 void MainUiStateManager::updateQuickButtonsForTransfer(bool isTransferring)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新快捷传输按钮"));
     m_isTransferring = isTransferring;
-
-    // 更新按钮状态
-    if (validUI()) {
-        if (m_ui.actionStartTransfer) {
-            m_ui.actionStartTransfer->setEnabled(!isTransferring);
-        }
-
-        if (m_ui.actionStopTransfer) {
-            m_ui.actionStopTransfer->setEnabled(isTransferring);
-        }
-    }
 
     // 更新传输时间计时器
     if (isTransferring) {
@@ -445,6 +540,15 @@ void MainUiStateManager::showErrorMessage(const QString& title, const QString& m
         }, Qt::QueuedConnection);
 }
 
+void MainUiStateManager::showWarnMessage(const QString& title, const QString& message)
+{
+    LOG_INFO(QString("%1: %2").arg(title).arg(message));
+
+    QMetaObject::invokeMethod(QApplication::activeWindow(), [title, message]() {
+        QMessageBox::warning(QApplication::activeWindow(), title, message);
+        }, Qt::QueuedConnection);
+}
+
 void MainUiStateManager::showInfoMessage(const QString& title, const QString& message)
 {
     LOG_INFO(QString("%1: %2").arg(title).arg(message));
@@ -454,12 +558,31 @@ void MainUiStateManager::showInfoMessage(const QString& title, const QString& me
         }, Qt::QueuedConnection);
 }
 
+void MainUiStateManager::showAboutMessage(const QString& title, const QString& message)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("显示关于对话框"));
+
+    QMetaObject::invokeMethod(QApplication::activeWindow(), [title, message]() {
+        QMessageBox::about(QApplication::activeWindow(),
+            title, message);
+        }, Qt::QueuedConnection);
+}
+
+void MainUiStateManager::clearLogbox()
+{
+    QTextEdit* logTextEdit = qobject_cast<QWidget*>(parent())->findChild<QTextEdit*>("logTextEdit");
+    if (logTextEdit) {
+        logTextEdit->clear();
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("日志已清除"));
+    }
+}
+
 //--- 状态处理槽 ---//
 
 void MainUiStateManager::onStateChanged(AppState newState, AppState oldState, const QString& reason)
 {
     // 记录状态变化
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态处理器：状态变更 %1 -> %2, 原因: %3")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态处理器状态变更 %1 -> %2, 原因: %3")
         .arg(AppStateMachine::stateToString(oldState))
         .arg(AppStateMachine::stateToString(newState))
         .arg(reason));
@@ -467,23 +590,11 @@ void MainUiStateManager::onStateChanged(AppState newState, AppState oldState, co
     // 根据新状态更新UI
     updateButtonStates(newState);
     updateStatusLabels(newState);
-
-    // 更新状态栏消息
-    updateStatusBarMessage(
-        LocalQTCompat::fromLocal8Bit("应用状态: ") + AppStateMachine::stateToString(newState),
-        3000
-    );
 }
 
 void MainUiStateManager::onDeviceConnectionChanged(bool connected)
 {
     m_isDeviceConnected = connected;
-
-    // 更新状态栏
-    updateStatusBarMessage(
-        connected ? LocalQTCompat::fromLocal8Bit("设备已连接") : LocalQTCompat::fromLocal8Bit("设备已断开"),
-        3000
-    );
 
     // 如果断开连接并且正在传输，停止传输计时
     if (!connected && m_isTransferring) {
@@ -495,12 +606,6 @@ void MainUiStateManager::onTransferStateChanged(bool transferring)
 {
     updateQuickButtonsForTransfer(transferring);
 
-    // 更新状态栏
-    updateStatusBarMessage(
-        transferring ? LocalQTCompat::fromLocal8Bit("数据传输中...") : LocalQTCompat::fromLocal8Bit("传输已停止"),
-        3000
-    );
-
     // 如果是开始传输，可能需要重置统计信息
     if (transferring && m_bytesTransferred == 0) {
         resetTransferStatsDisplay();
@@ -511,7 +616,7 @@ void MainUiStateManager::onTransferStateChanged(bool transferring)
 
 void MainUiStateManager::slot_updateTransferTime()
 {
-    updateTransferTime();
+    updateTransferTimeDisplay();
 }
 
 //--- 私有工具方法 ---//
@@ -520,6 +625,8 @@ void MainUiStateManager::updateStatusLabels(AppState state)
 {
     QString statusText;
     QString transferStatusText;
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("由APP状态更新状态标签: %1").arg(static_cast<int>(state)));
 
     // 设置各种状态下的文本
     switch (state) {
@@ -594,6 +701,8 @@ void MainUiStateManager::updateStatusLabels(AppState state)
 
 void MainUiStateManager::updateStatusLabels(const QString& statusText, const QString& transferStatusText)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新标签- 状态: %1, 传输状态: %2")
+        .arg(statusText).arg(transferStatusText));
     if (!validUI()) return;
 
     // 防御性检查所有使用的UI元素
@@ -606,11 +715,15 @@ void MainUiStateManager::updateStatusLabels(const QString& statusText, const QSt
 
 void MainUiStateManager::updateButtons(bool enableStart, bool enableStop, bool enableReset)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新所有按钮状态, 开始: %1, 停止: %2, 重置: %3")
+        .arg(enableStart).arg(enableStop).arg(enableReset));
     if (!validUI()) return;
 
     // 防御性检查所有使用的UI元素
-    if (m_ui.actionStartTransfer)
+    if (m_ui.actionStartTransfer) {
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("开始按钮: %1").arg(enableStart));
         m_ui.actionStartTransfer->setEnabled(enableStart);
+    }
 
     if (m_ui.actionStopTransfer)
         m_ui.actionStopTransfer->setEnabled(enableStop);
@@ -633,6 +746,9 @@ void MainUiStateManager::prepareForClose()
 
 bool MainUiStateManager::validUI() const
 {
+    if (!m_validUI) {
+        LOG_DEBUG(LocalQTCompat::fromLocal8Bit("UI状态不正确"));
+    }
     // 检查指向UI的指针是否有效
     return m_validUI;
 }

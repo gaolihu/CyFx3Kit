@@ -25,12 +25,6 @@ FX3MainView::FX3MainView(QWidget* parent)
     , m_leftSplitter(nullptr)
     , m_statusPanel(nullptr)
     , m_mainToolBar(nullptr)
-    , m_homeTabIndex(-1)
-    , m_channelTabIndex(-1)
-    , m_dataAnalysisTabIndex(-1)
-    , m_videoDisplayTabIndex(-1)
-    , m_waveformTabIndex(-1)
-    , m_fileSaveTabIndex(-1)
     , m_loggerInitialized(false)
 {
     // 设置UI
@@ -71,12 +65,10 @@ FX3MainView::FX3MainView(QWidget* parent)
         // 初始化UI组件引用 - 直接使用 ui.mainTabWidget
         m_mainTabWidget = ui.mainTabWidget;
         if (m_mainTabWidget) {
-            // 设置默认标签页为日志
-            m_mainTabWidget->setCurrentIndex(0);
-
-            // 连接标签关闭信号 - 对于主标签页我们不设置关闭按钮
-            connect(m_mainTabWidget, &QTabWidget::tabCloseRequested,
-                this, &FX3MainView::slot_onTabCloseRequested);
+            // 初始化Tab管理
+            if (m_uiStateManager && !m_uiStateManager->initializeTabManagement(m_mainTabWidget)) {
+                LOG_ERROR(LocalQTCompat::fromLocal8Bit("Tab管理初始化失败"));
+            }
         }
 
         // 状态、工具条
@@ -84,13 +76,9 @@ FX3MainView::FX3MainView(QWidget* parent)
         m_mainToolBar = findChild<QToolBar*>("mainToolBar");
 
         // 不再需要初始化信号连接，由UI状态管理器处理
-        //initializeSignalConnections();
+        initializeSignalConnections();
 
-        // 由UI状态管理器更新状态页信息
-        if (m_uiStateManager) {
-            m_uiStateManager->updateDeviceInfoDisplay("未连接", "未知", "未知");
-            m_uiStateManager->resetTransferStatsDisplay();
-        }
+        updateDeviceInfoDisplay("FX cypress高速USB传输设备", "2.1", "SN-");
 
         LOG_DEBUG(LocalQTCompat::fromLocal8Bit("FX3主视图构造函数完成..."));
     }
@@ -175,17 +163,9 @@ void FX3MainView::closeEvent(QCloseEvent* event)
 
 void FX3MainView::resizeEvent(QResizeEvent* event)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("resize事件"));
+
     QMainWindow::resizeEvent(event);
-    slot_adjustStatusBar();
-}
-
-void FX3MainView::slot_adjustStatusBar()
-{
-    QStatusBar* statusBar = this->statusBar();
-    if (!statusBar) return;
-
-    statusBar->setMinimumWidth(40);
-    statusBar->setMinimumHeight(30);
 }
 
 bool FX3MainView::initializeLogger()
@@ -215,44 +195,8 @@ bool FX3MainView::initializeLogger()
 
 void FX3MainView::initializeSignalConnections()
 {
-    // 连接按钮信号到视图槽
-    if (ui.cmdDirButton) {
-        connect(ui.cmdDirButton, &QPushButton::clicked, this, &FX3MainView::slot_onSelectCommandDirClicked);
-    }
-
-    // 连接快捷按钮动作到视图槽
-    if (ui.actionStartTransfer) {
-        connect(ui.actionStartTransfer, &QPushButton::clicked, this, &FX3MainView::slot_onStartButtonClicked);
-    }
-
-    if (ui.actionStopTransfer) {
-        connect(ui.actionStopTransfer, &QPushButton::clicked, this, &FX3MainView::slot_onStopButtonClicked);
-    }
-
-    if (ui.actionResetDevice) {
-        connect(ui.actionResetDevice, &QPushButton::clicked, this, &FX3MainView::slot_onResetButtonClicked);
-    }
-
     // 连接快捷按钮
-    QPushButton* quickChannelBtn = findChild<QPushButton*>("quickChannelBtn");
-    if (quickChannelBtn) {
-        connect(quickChannelBtn, &QPushButton::clicked, this, &FX3MainView::slot_onChannelConfigButtonClicked);
-    }
-
-    QPushButton* quickDataBtn = findChild<QPushButton*>("quickDataBtn");
-    if (quickDataBtn) {
-        connect(quickDataBtn, &QPushButton::clicked, this, &FX3MainView::slot_onDataAnalysisButtonClicked);
-    }
-
-    QPushButton* quickVideoBtn = findChild<QPushButton*>("quickVideoBtn");
-    if (quickVideoBtn) {
-        connect(quickVideoBtn, &QPushButton::clicked, this, &FX3MainView::slot_onVideoDisplayButtonClicked);
-    }
-
-    QPushButton* quickSaveBtn = findChild<QPushButton*>("quickSaveBtn");
-    if (quickSaveBtn) {
-        connect(quickSaveBtn, &QPushButton::clicked, this, &FX3MainView::slot_onSaveFileButtonClicked);
-    }
+    // 注意：大部分信号连接已移至UiStateManager
 }
 
 bool FX3MainView::initializeUiStateManager() {
@@ -266,7 +210,10 @@ bool FX3MainView::initializeUiStateManager() {
 
 #define CONNECT_SIGNAL(uiSignal, viewSignal) \
             connect(m_uiStateManager.get(), &MainUiStateManager::uiSignal, \
-                    this, [this](){ emit signal_##viewSignal(); })
+                    this, [this](){ \
+                        LOG_DEBUG(LocalQTCompat::fromLocal8Bit("主视图UI管理器发出信号: %1").arg(#uiSignal)); \
+                        emit signal_##viewSignal(); \
+                    })
 
         CONNECT_SIGNAL(startButtonClicked, startButtonClicked);
         CONNECT_SIGNAL(stopButtonClicked, stopButtonClicked);
@@ -284,6 +231,10 @@ bool FX3MainView::initializeUiStateManager() {
 
 #undef CONNECT_SIGNAL
 
+        // 连接模块Tab关闭信号
+        connect(m_uiStateManager.get(), &MainUiStateManager::signal_moduleTabClosed,
+            this, &FX3MainView::signal_moduleTabClosed);
+
         LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态管理器初始化成功"));
         return true;
     }
@@ -299,6 +250,8 @@ void FX3MainView::setupModuleButtonSignalMapping() {
         const char* buttonName;
         void (FX3MainView::* signalMethod)();
     };
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置模块按钮信号映射"));
 
     // 定义所有映射
     const ButtonSignalMapping mappings[] = {
@@ -326,49 +279,60 @@ void FX3MainView::setupModuleButtonSignalMapping() {
 
 void FX3MainView::showErrorMessage(const QString& title, const QString& message)
 {
-    QMessageBox::critical(this, title, message);
+    if (m_uiStateManager) {
+        m_uiStateManager->showErrorMessage(title, message);
+    }
     LOG_ERROR(QString("%1: %2").arg(title).arg(message));
 }
 
 void FX3MainView::showWarningMessage(const QString& title, const QString& message)
 {
-    QMessageBox::warning(this, title, message);
+    if (m_uiStateManager) {
+        m_uiStateManager->showInfoMessage(title, message);
+    }
     LOG_ERROR(QString("%1: %2").arg(title).arg(message));
 }
 
 void FX3MainView::showInfoMessage(const QString& title, const QString& message)
 {
-    QMessageBox::information(this, title, message);
+    if (m_uiStateManager) {
+        m_uiStateManager->showInfoMessage(title, message);
+    }
     LOG_INFO(QString("%1: %2").arg(title).arg(message));
 }
 
 void FX3MainView::showAboutDialog()
 {
-    QMessageBox::about(this,
-        LocalQTCompat::fromLocal8Bit("关于FX3传输测试工具"),
+    const auto title = LocalQTCompat::fromLocal8Bit("关于FX3传输测试工具");
+    const auto message =
         LocalQTCompat::fromLocal8Bit("FX3传输测试工具 v3.0\n\n\
 用于FX3设备的数据传输和测试\n\n\
   © 2025 公司名称\n\n\
-email: lihugao@gmail.com")
-    );
+email: lihugao@gmail.com");
+
+    if (m_uiStateManager) {
+        m_uiStateManager->showInfoMessage(title, message);
+    }
+    LOG_INFO(QString("About, title: %1, text: %2").arg(title).arg(message));
 }
 
-void FX3MainView::clearLog()
+void FX3MainView::clearLogbox()
 {
-    QTextEdit* logTextEdit = findChild<QTextEdit*>("logTextEdit");
-    if (logTextEdit) {
-        logTextEdit->clear();
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("日志已清除"));
+    if (m_uiStateManager) {
+        m_uiStateManager->clearLogbox();
     }
+    LOG_INFO("清除日志框");
 }
 
 void FX3MainView::updateStatusBar(const QString& message, int timeout)
 {
-    statusBar()->showMessage(message, timeout);
+    LOG_ERROR(LocalQTCompat::fromLocal8Bit("更新状态栏: %1, timeout: %2").arg(message).arg(timeout));
+    // 交给m_uiStateManager处理, TODO
 }
 
 void FX3MainView::updateWindowTitle(const QString& toolInfo)
 {
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("更新窗口标题: %1").arg(toolInfo));
     QString title = LocalQTCompat::fromLocal8Bit("FX3传输测试工具");
     if (!toolInfo.isEmpty()) {
         title += " - " + toolInfo;
@@ -378,336 +342,58 @@ void FX3MainView::updateWindowTitle(const QString& toolInfo)
 
 void FX3MainView::updateTransferStatsDisplay(uint64_t bytesTransferred, double transferRate, uint32_t errorCount)
 {
-    // 更新状态栏
-    if (ui.totalBytesLabel) {
-        // 格式化数据量显示 (MB或GB)
-        QString sizeStr;
-        if (bytesTransferred < 1024 * 1024 * 1024) {
-            // 显示为MB
-            double mbSize = bytesTransferred / (1024.0 * 1024.0);
-            sizeStr = QString::number(mbSize, 'f', 2) + " MB";
-        }
-        else {
-            // 显示为GB
-            double gbSize = bytesTransferred / (1024.0 * 1024.0 * 1024.0);
-            sizeStr = QString::number(gbSize, 'f', 2) + " GB";
-        }
-        ui.totalBytesLabel->setText(LocalQTCompat::fromLocal8Bit("总数据量：") + sizeStr);
-    }
-
-    if (ui.transferRateLabel) {
-        // 格式化传输速率显示 (MB/s)
-        double mbpsRate = transferRate / (1024.0 * 1024.0);
-        ui.transferRateLabel->setText(LocalQTCompat::fromLocal8Bit("速率：") + QString::number(mbpsRate, 'f', 2) + " MB/s");
-    }
-
-    // 如果有错误计数标签，也更新它
-    QLabel* errorCountLabel = findChild<QLabel*>("errorCountLabel");
-    if (errorCountLabel) {
-        errorCountLabel->setText(LocalQTCompat::fromLocal8Bit("错误：") + QString::number(errorCount));
-    }
-
-    // 更新状态标签页中的统计信息
-    QLabel* bytesTransferredValue = findChild<QLabel*>("bytesTransferredValue");
-    QLabel* transferRateStatsValue = findChild<QLabel*>("transferRateStatsValue");
-    QLabel* errorCountValue = findChild<QLabel*>("errorCountValue");
-
-    if (bytesTransferredValue) {
-        // 使用与状态栏相同的格式逻辑
-        QString sizeStr;
-        if (bytesTransferred < 1024 * 1024 * 1024) {
-            double mbSize = bytesTransferred / (1024.0 * 1024.0);
-            sizeStr = QString::number(mbSize, 'f', 2) + " MB";
-        }
-        else {
-            double gbSize = bytesTransferred / (1024.0 * 1024.0 * 1024.0);
-            sizeStr = QString::number(gbSize, 'f', 2) + " GB";
-        }
-        bytesTransferredValue->setText(sizeStr);
-    }
-
-    if (transferRateStatsValue) {
-        double mbpsRate = transferRate / (1024.0 * 1024.0);
-        transferRateStatsValue->setText(QString::number(mbpsRate, 'f', 2) + " MB/s");
-    }
-
-    if (errorCountValue) {
-        errorCountValue->setText(QString::number(errorCount));
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("更新传输状态显示"));
+    if (m_uiStateManager) {
+        m_uiStateManager->updateTransferStats(bytesTransferred, transferRate, errorCount);
     }
 }
 
 void FX3MainView::updateUsbSpeedDisplay(const QString& speed)
 {
-    if (ui.usbSpeedLabel) {
-        ui.usbSpeedLabel->setText(LocalQTCompat::fromLocal8Bit("USB速度：") + speed);
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("更新USB速度状态"));
+    if (m_uiStateManager) {
+        m_uiStateManager->updateUsbSpeedDisplay(speed, true);
     }
 }
 
 void FX3MainView::setCommandDirDisplay(const QString& dir)
 {
-    if (ui.cmdDirEdit) {
-        ui.cmdDirEdit->setText(dir);
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("设置命令目录: %1").arg(dir));
+    if (m_uiStateManager) {
+        m_uiStateManager->setCommandDirDisplay(dir);
     }
 }
 
-void FX3MainView::updateTransferTimeDisplay(const QString& timeMs)
+void FX3MainView::updateTransferTimeDisplay()
 {
-    // TODO: 将时间转成 HH:MM:SS.MS
-    if (ui.totalTimeLabel) {
-        ui.totalTimeLabel->setText(timeMs);
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("更新传输时间"));
+    if (m_uiStateManager) {
+        m_uiStateManager->updateTransferTimeDisplay();
     }
 }
 
 void FX3MainView::setVideoParamsDisplay(uint16_t width, uint16_t height, int format)
 {
-    if (ui.imageWIdth) {
-        ui.imageWIdth->setText(QString::number(width));
-    }
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("设置视频显示参数, w: %1, h: %2, format: %3").arg(width).arg(height).arg(format));
 
-    if (ui.imageHeight) {
-        ui.imageHeight->setText(QString::number(height));
-    }
-
-    if (ui.imageType && format >= 0 && format < ui.imageType->count()) {
-        ui.imageType->setCurrentIndex(format);
+    if (m_uiStateManager) {
+        m_uiStateManager->setVideoParamsDisplay(width, height, format);
     }
 }
 
 void FX3MainView::updateDeviceInfoDisplay(const QString& deviceName, const QString& firmwareVersion, const QString& serialNumber)
 {
-    QLabel* deviceNameValue = findChild<QLabel*>("deviceNameValue");
-    QLabel* firmwareVersionValue = findChild<QLabel*>("firmwareVersionValue");
-    QLabel* serialNumberValue = findChild<QLabel*>("serialNumberValue");
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("更新设备信息, name: %1, version: %2, SN: %3").arg(deviceName).arg(firmwareVersion).arg(serialNumber));
 
-    if (deviceNameValue) {
-        deviceNameValue->setText(deviceName);
-    }
-
-    if (firmwareVersionValue) {
-        firmwareVersionValue->setText(firmwareVersion);
-    }
-
-    if (serialNumberValue) {
-        serialNumberValue->setText(serialNumber);
+    if (m_uiStateManager) {
+        m_uiStateManager->updateDeviceInfoDisplay(deviceName, firmwareVersion, serialNumber);
     }
 }
 
 void FX3MainView::resetTransferStatsDisplay()
 {
-    QLabel* bytesTransferredValue = findChild<QLabel*>("bytesTransferredValue");
-    QLabel* transferRateStatsValue = findChild<QLabel*>("transferRateStatsValue");
-    QLabel* errorCountValue = findChild<QLabel*>("errorCountValue");
-
-    if (bytesTransferredValue) {
-        bytesTransferredValue->setText("0 字节");
-    }
-
-    if (transferRateStatsValue) {
-        transferRateStatsValue->setText("0 MB/s");
-    }
-
-    if (errorCountValue) {
-        errorCountValue->setText("0");
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("重置传输显示"));
+    if (m_uiStateManager) {
+        m_uiStateManager->resetTransferStatsDisplay();
     }
 }
-
-//--- 模块管理方法 ---//
-
-void FX3MainView::addModuleToMainTab(QWidget* widget, const QString& tabName, int& tabIndex, const QIcon& icon)
-{
-    if (!m_mainTabWidget || !widget) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("添加模块失败：标签控件或模块窗口为空"));
-        return;
-    }
-
-    // 检查是否已添加
-    if (tabIndex >= 0 && tabIndex < m_mainTabWidget->count()) {
-        m_mainTabWidget->setCurrentIndex(tabIndex);
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("模块标签页已存在，切换到标签页: %1").arg(tabName));
-        return;
-    }
-
-    // 添加新标签页
-    tabIndex = icon.isNull() ?
-        m_mainTabWidget->addTab(widget, tabName) :
-        m_mainTabWidget->addTab(widget, icon, tabName);
-
-    m_mainTabWidget->setCurrentIndex(tabIndex);
-
-    // 设置关闭按钮，除了主页标签
-    if (tabIndex != m_homeTabIndex) {
-        m_mainTabWidget->setTabsClosable(true);
-    }
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("已添加模块标签页: %1，索引: %2").arg(tabName).arg(tabIndex));
-}
-
-void FX3MainView::showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName, const QIcon& icon)
-{
-    if (!m_mainTabWidget) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("标签控件为空，无法显示模块"));
-        return;
-    }
-
-    // 如果标签页已存在
-    if (tabIndex >= 0 && tabIndex < m_mainTabWidget->count()) {
-        m_mainTabWidget->setCurrentIndex(tabIndex);
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("切换到模块标签页: %1").arg(tabName));
-    }
-    // 否则添加新标签页
-    else {
-        addModuleToMainTab(widget, tabName, tabIndex, icon);
-    }
-}
-
-void FX3MainView::removeModuleTab(int& tabIndex)
-{
-    if (!m_mainTabWidget || tabIndex < 0 || tabIndex >= m_mainTabWidget->count()) {
-        return;
-    }
-
-    // 保存要删除的标签名称
-    QString tabName = m_mainTabWidget->tabText(tabIndex);
-
-    // 移除标签页
-    m_mainTabWidget->removeTab(tabIndex);
-    tabIndex = -1;
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("已移除模块标签页: %1").arg(tabName));
-}
-
-//--- UI槽函数 ---//
-
-void FX3MainView::slot_onStartButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始传输按钮点击"));
-    emit signal_startButtonClicked();
-}
-
-void FX3MainView::slot_onStopButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("停止传输按钮点击"));
-    emit signal_stopButtonClicked();
-}
-
-void FX3MainView::slot_onResetButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("重置设备按钮点击"));
-    emit signal_resetButtonClicked();
-}
-
-void FX3MainView::slot_onSelectCommandDirClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("选择命令目录按钮点击"));
-    emit signal_selectCommandDirClicked();
-}
-
-void FX3MainView::slot_onChannelConfigButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("通道配置按钮点击"));
-    emit signal_channelConfigButtonClicked();
-}
-
-void FX3MainView::slot_onDataAnalysisButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("数据分析按钮点击"));
-    emit signal_dataAnalysisButtonClicked();
-}
-
-void FX3MainView::slot_onVideoDisplayButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("视频显示按钮点击"));
-    emit signal_videoDisplayButtonClicked();
-}
-
-void FX3MainView::slot_onWaveformAnalysisButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("波形分析按钮点击"));
-    emit signal_waveformAnalysisButtonClicked();
-}
-
-void FX3MainView::slot_onSaveFileButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("保存文件按钮点击"));
-    emit signal_saveFileButtonClicked();
-}
-
-void FX3MainView::slot_onExportDataButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("导出数据按钮点击"));
-    emit signal_exportDataButtonClicked();
-}
-
-void FX3MainView::slot_onFileOptionsButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件选项按钮点击"));
-    emit signal_FileOptionsButtonClicked();
-}
-
-void FX3MainView::slot_onSettingsTriggered()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置菜单触发"));
-    emit signal_settingsTriggered();
-}
-
-void FX3MainView::slot_onClearLogTriggered()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("清除日志触发"));
-    emit signal_clearLogTriggered();
-}
-
-void FX3MainView::slot_onHelpContentTriggered()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("帮助内容触发"));
-    emit signal_helpContentTriggered();
-}
-
-void FX3MainView::slot_onAboutDialogTriggered()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("关于对话框触发"));
-    emit signal_aboutDialogTriggered();
-}
-
-void FX3MainView::slot_onUpdateDeviceButtonClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备升级按钮点击"));
-    emit signal_updateDeviceButtonClicked();
-}
-
-void FX3MainView::slot_onTabCloseRequested(int index)
-{
-    if (index == m_homeTabIndex) {
-        // 主页标签不应关闭
-        return;
-    }
-
-    // 发送标签页关闭信号
-    emit signal_moduleTabClosed(index);
-}
-
-void FX3MainView::slot_onShowChannelSelectTriggered() { slot_onChannelConfigButtonClicked(); }
-void FX3MainView::slot_onShowUpdataDeviceTriggered() { slot_onUpdateDeviceButtonClicked(); }
-void FX3MainView::slot_onShowDataAnalysisTriggered() { slot_onDataAnalysisButtonClicked(); }
-void FX3MainView::slot_onShowVideoDisplayTriggered() { slot_onVideoDisplayButtonClicked(); }
-void FX3MainView::slot_onShowWaveformAnalysisTriggered() { slot_onWaveformAnalysisButtonClicked(); }
-void FX3MainView::slot_onShowSaveFileBoxTriggered() { slot_onSaveFileButtonClicked(); } 
-void FX3MainView::slot_onSaveButtonClicked() { slot_onSaveFileButtonClicked(); }
-void FX3MainView::slot_onSelectCommandDirectory() { slot_onSelectCommandDirClicked(); }
-void FX3MainView::slot_showAboutDialog() { slot_onAboutDialogTriggered(); }
-void FX3MainView::slot_onExportDataTriggered() { slot_onExportDataButtonClicked(); }
-void FX3MainView::slot_onFileOptionsTriggered() { slot_onFileOptionsButtonClicked(); }
-
-// 转发信号
-void FX3MainView::slot_forwardStartButtonSignal() { emit signal_startButtonClicked(); }
-void FX3MainView::slot_forwardStopButtonSignal() { emit signal_stopButtonClicked(); }
-void FX3MainView::slot_forwardResetButtonSignal() { emit signal_resetButtonClicked(); }
-void FX3MainView::slot_forwardChannelConfigButtonSignal() { emit signal_channelConfigButtonClicked(); }
-void FX3MainView::slot_forwardDataAnalysisButtonSignal() { emit signal_dataAnalysisButtonClicked(); }
-void FX3MainView::slot_forwardVideoDisplayButtonSignal() { emit signal_videoDisplayButtonClicked(); }
-void FX3MainView::slot_forwardWaveformAnalysisButtonSignal() { emit signal_waveformAnalysisButtonClicked(); }
-void FX3MainView::slot_forwardSaveFileButtonSignal() { emit signal_saveFileButtonClicked(); }
-void FX3MainView::slot_forwardExportDataButtonSignal() { emit signal_exportDataButtonClicked(); }
-void FX3MainView::slot_forwardFileOptionsButtonSignal() { emit signal_FileOptionsButtonClicked(); }
-void FX3MainView::slot_forwardSettingsTriggeredSignal() { emit signal_settingsTriggered(); }
-void FX3MainView::slot_forwardSelectCommandDirSignal() { emit signal_selectCommandDirClicked(); }
-void FX3MainView::slot_forwardUpdateDeviceButtonSignal() { emit signal_updateDeviceButtonClicked(); }

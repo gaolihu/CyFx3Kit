@@ -32,6 +32,7 @@ int main(int argc, char* argv[])
     // 创建并显示主窗口
     FX3MainView w;
     w.show();
+    w.updateWindowTitle("3.15");
 
     //return a.exec();
     int result = a.exec();

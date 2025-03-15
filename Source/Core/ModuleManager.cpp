@@ -22,6 +22,11 @@ ModuleManager::ModuleManager(FX3MainView* mainView)
     : m_mainView(mainView)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("模块管理器已创建"));
+
+    // 确保主视图和UI状态管理器都有效
+    if (m_mainView && !m_mainView->getUiStateManager()) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("UI状态管理器未初始化，模块管理可能无法正常工作"));
+    }
 }
 
 ModuleManager::~ModuleManager()
@@ -51,6 +56,17 @@ bool ModuleManager::initialize()
         m_moduleInitialized[ModuleType::WAVEFORM_ANALYSIS] = false;
         m_moduleInitialized[ModuleType::FILE_OPTIONS] = false;
         m_moduleInitialized[ModuleType::DEVICE_UPDATE] = false;
+
+        // 清空标签索引映射表
+        m_tabIndexToModule.clear();
+
+        // 设置标签索引为无效值
+        m_channelConfigTabIndex = -1;
+        m_dataAnalysisTabIndex = -1;
+        m_videoDisplayTabIndex = -1;
+        m_waveformAnalysisTabIndex = -1;
+        m_fileSaveTabIndex = -1;
+        m_UpdateDeviceTabIndex = -1;
 
         LOG_INFO(LocalQTCompat::fromLocal8Bit("模块管理器初始化完成"));
         return true;
@@ -127,6 +143,9 @@ bool ModuleManager::showModule(ModuleType type)
                         m_channelConfigTabIndex);
                 }
 
+                // 更新映射表（显示已有标签页）
+                updateTabIndexMapping(m_channelConfigTabIndex, type);
+
                 m_moduleVisibility[type] = true;
                 emit signal_moduleVisibilityChanged(type, true);
                 return true;
@@ -152,6 +171,9 @@ bool ModuleManager::showModule(ModuleType type)
                         LocalQTCompat::fromLocal8Bit("数据分析"),
                         m_dataAnalysisTabIndex);
                 }
+
+                // 更新映射表（显示已有标签页）
+                updateTabIndexMapping(m_dataAnalysisTabIndex, type);
 
                 m_moduleVisibility[type] = true;
                 emit signal_moduleVisibilityChanged(type, true);
@@ -179,6 +201,9 @@ bool ModuleManager::showModule(ModuleType type)
                         m_videoDisplayTabIndex);
                 }
 
+                // 更新映射表（显示已有标签页）
+                updateTabIndexMapping(m_videoDisplayTabIndex, type);
+
                 m_moduleVisibility[type] = true;
                 emit signal_moduleVisibilityChanged(type, true);
                 return true;
@@ -204,6 +229,9 @@ bool ModuleManager::showModule(ModuleType type)
                         LocalQTCompat::fromLocal8Bit("波形分析"),
                         m_waveformAnalysisTabIndex);
                 }
+
+                // 更新映射表（显示已有标签页）
+                updateTabIndexMapping(m_waveformAnalysisTabIndex, type);
 
                 m_moduleVisibility[type] = true;
                 emit signal_moduleVisibilityChanged(type, true);
@@ -231,6 +259,9 @@ bool ModuleManager::showModule(ModuleType type)
                         m_fileSaveTabIndex);
                 }
 
+                // 更新映射表（显示已有标签页）
+                updateTabIndexMapping(m_fileSaveTabIndex, type);
+
                 m_moduleVisibility[type] = true;
                 emit signal_moduleVisibilityChanged(type, true);
                 return true;
@@ -256,6 +287,9 @@ bool ModuleManager::showModule(ModuleType type)
                         LocalQTCompat::fromLocal8Bit("设备更新"),
                         m_UpdateDeviceTabIndex);
                 }
+
+                // 更新映射表（显示已有标签页）
+                updateTabIndexMapping(m_UpdateDeviceTabIndex, type);
 
                 m_moduleVisibility[type] = true;
                 emit signal_moduleVisibilityChanged(type, true);
@@ -290,7 +324,16 @@ void ModuleManager::closeModule(ModuleType type)
         switch (type) {
         case ModuleType::CHANNEL_CONFIG:
             if (m_mainView && m_channelConfigTabIndex >= 0) {
+                // 先保存索引值，以便后续移除映射
+                int oldIndex = m_channelConfigTabIndex;
+
+                // 移除标签页
                 m_mainView->removeModuleTab(m_channelConfigTabIndex);
+
+                // 移除映射表中的记录
+                removeTabIndexMapping(oldIndex);
+
+                // 重置索引和可见性
                 m_channelConfigTabIndex = -1;
                 m_moduleVisibility[type] = false;
                 emit signal_moduleVisibilityChanged(type, false);
@@ -299,7 +342,9 @@ void ModuleManager::closeModule(ModuleType type)
 
         case ModuleType::DATA_ANALYSIS:
             if (m_mainView && m_dataAnalysisTabIndex >= 0) {
+                int oldIndex = m_dataAnalysisTabIndex;
                 m_mainView->removeModuleTab(m_dataAnalysisTabIndex);
+                removeTabIndexMapping(oldIndex);
                 m_dataAnalysisTabIndex = -1;
                 m_moduleVisibility[type] = false;
                 emit signal_moduleVisibilityChanged(type, false);
@@ -308,7 +353,9 @@ void ModuleManager::closeModule(ModuleType type)
 
         case ModuleType::VIDEO_DISPLAY:
             if (m_mainView && m_videoDisplayTabIndex >= 0) {
+                int oldIndex = m_channelConfigTabIndex;
                 m_mainView->removeModuleTab(m_videoDisplayTabIndex);
+                removeTabIndexMapping(oldIndex);
                 m_videoDisplayTabIndex = -1;
                 m_moduleVisibility[type] = false;
                 emit signal_moduleVisibilityChanged(type, false);
@@ -317,7 +364,9 @@ void ModuleManager::closeModule(ModuleType type)
 
         case ModuleType::WAVEFORM_ANALYSIS:
             if (m_mainView && m_waveformAnalysisTabIndex >= 0) {
+                int oldIndex = m_channelConfigTabIndex;
                 m_mainView->removeModuleTab(m_waveformAnalysisTabIndex);
+                removeTabIndexMapping(oldIndex);
                 m_waveformAnalysisTabIndex = -1;
                 m_moduleVisibility[type] = false;
                 emit signal_moduleVisibilityChanged(type, false);
@@ -326,7 +375,9 @@ void ModuleManager::closeModule(ModuleType type)
 
         case ModuleType::FILE_OPTIONS:
             if (m_mainView && m_fileSaveTabIndex >= 0) {
+                int oldIndex = m_channelConfigTabIndex;
                 m_mainView->removeModuleTab(m_fileSaveTabIndex);
+                removeTabIndexMapping(oldIndex);
                 m_fileSaveTabIndex = -1;
                 m_moduleVisibility[type] = false;
                 emit signal_moduleVisibilityChanged(type, false);
@@ -335,7 +386,9 @@ void ModuleManager::closeModule(ModuleType type)
 
         case ModuleType::DEVICE_UPDATE:
             if (m_mainView && m_UpdateDeviceTabIndex >= 0) {
+                int oldIndex = m_channelConfigTabIndex;
                 m_mainView->removeModuleTab(m_UpdateDeviceTabIndex);
+                removeTabIndexMapping(oldIndex);
                 m_UpdateDeviceTabIndex = -1;
                 m_moduleVisibility[type] = false;
                 emit signal_moduleVisibilityChanged(type, false);
@@ -512,42 +565,84 @@ void ModuleManager::notifyTransferState(bool transferring)
 
 void ModuleManager::handleModuleTabClosed(int index)
 {
-    if (index == m_channelConfigTabIndex) {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("通道配置标签页已关闭"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("处理模块标签页关闭，索引: %1").arg(index));
+
+    // 使用映射表查找对应的模块类型
+    ModuleType moduleType = findModuleTypeByTabIndex(index);
+
+    if (moduleType == static_cast<ModuleType>(-1)) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("收到未知标签页关闭请求，索引: %1").arg(index));
+
+        // 尝试恢复逻辑：直接从UI中移除标签
+        if (m_mainView && m_mainView->getUi() &&
+            m_mainView->getUi()->mainTabWidget &&
+            index >= 0 && index < m_mainView->getUi()->mainTabWidget->count()) {
+
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("尝试直接关闭未知标签页: %1").arg(index));
+            m_mainView->getUi()->mainTabWidget->removeTab(index);
+
+            // 更新所有标签索引
+            updateTabIndicesAfterClose(index);
+        }
+        return;
+    }
+
+    // 记录关闭前的状态，用于更新其他标签索引
+    int closedIndex = index;
+
+    // 根据模块类型更新状态
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("关闭模块 %1 (索引: %2)").arg(getModuleTypeName(moduleType)).arg(index));
+
+    // 先移除映射，防止更新索引时重复处理
+    removeTabIndexMapping(index);
+
+    if (m_mainView) {
+        // 确保先从UI移除标签，再更新内部状态
+        m_mainView->getUi()->mainTabWidget->removeTab(index);
+    }
+
+    // 更新对应模块的状态
+    switch (moduleType) {
+    case ModuleType::CHANNEL_CONFIG:
         m_channelConfigTabIndex = -1;
-        m_moduleVisibility[ModuleType::CHANNEL_CONFIG] = false;
-        emit signal_moduleVisibilityChanged(ModuleType::CHANNEL_CONFIG, false);
-    }
-    else if (index == m_dataAnalysisTabIndex) {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("数据分析标签页已关闭"));
+        m_moduleVisibility[moduleType] = false;
+        break;
+
+    case ModuleType::DATA_ANALYSIS:
         m_dataAnalysisTabIndex = -1;
-        m_moduleVisibility[ModuleType::DATA_ANALYSIS] = false;
-        emit signal_moduleVisibilityChanged(ModuleType::DATA_ANALYSIS, false);
-    }
-    else if (index == m_videoDisplayTabIndex) {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("视频显示标签页已关闭"));
+        m_moduleVisibility[moduleType] = false;
+        break;
+
+    case ModuleType::VIDEO_DISPLAY:
         m_videoDisplayTabIndex = -1;
-        m_moduleVisibility[ModuleType::VIDEO_DISPLAY] = false;
-        emit signal_moduleVisibilityChanged(ModuleType::VIDEO_DISPLAY, false);
-    }
-    else if (index == m_waveformAnalysisTabIndex) {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("波形分析标签页已关闭"));
+        m_moduleVisibility[moduleType] = false;
+        break;
+
+    case ModuleType::WAVEFORM_ANALYSIS:
         m_waveformAnalysisTabIndex = -1;
-        m_moduleVisibility[ModuleType::WAVEFORM_ANALYSIS] = false;
-        emit signal_moduleVisibilityChanged(ModuleType::WAVEFORM_ANALYSIS, false);
-    }
-    else if (index == m_fileSaveTabIndex) {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存标签页已关闭"));
+        m_moduleVisibility[moduleType] = false;
+        break;
+
+    case ModuleType::FILE_OPTIONS:
         m_fileSaveTabIndex = -1;
-        m_moduleVisibility[ModuleType::FILE_OPTIONS] = false;
-        emit signal_moduleVisibilityChanged(ModuleType::FILE_OPTIONS, false);
-    }
-    else if (index == m_UpdateDeviceTabIndex) {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("设备更新标签页已关闭"));
+        m_moduleVisibility[moduleType] = false;
+        break;
+
+    case ModuleType::DEVICE_UPDATE:
         m_UpdateDeviceTabIndex = -1;
-        m_moduleVisibility[ModuleType::DEVICE_UPDATE] = false;
-        emit signal_moduleVisibilityChanged(ModuleType::DEVICE_UPDATE, false);
+        m_moduleVisibility[moduleType] = false;
+        break;
+
+    default:
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("未知的模块类型: %1").arg(static_cast<int>(moduleType)));
+        return;
     }
+
+    // 更新剩余标签的索引
+    updateTabIndicesAfterClose(closedIndex);
+
+    // 发送可见性变更信号
+    emit signal_moduleVisibilityChanged(moduleType, false);
 }
 
 void ModuleManager::processDataPacket(const DataPacket& packet)
@@ -806,4 +901,98 @@ bool ModuleManager::createUpdateDeviceModule()
 
         return false;
     }
+}
+
+void ModuleManager::updateTabIndexMapping(int index, ModuleType type)
+{
+    if (index < 0) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("尝试更新无效的标签索引映射: %1 -> %2")
+            .arg(index).arg(static_cast<int>(type)));
+        return;
+    }
+
+    // 检查是否存在索引冲突
+    for (const auto& pair : m_tabIndexToModule) {
+        if (pair.first == index && pair.second != type) {
+            LOG_WARN(LocalQTCompat::fromLocal8Bit("索引映射冲突: 索引 %1 已映射到 %2，正在被重新映射到 %3")
+                .arg(index).arg(static_cast<int>(pair.second)).arg(static_cast<int>(type)));
+        }
+    }
+
+    // 更新映射
+    m_tabIndexToModule[index] = type;
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新标签索引映射: %1 -> %2 (%3)")
+        .arg(index).arg(static_cast<int>(type)).arg(getModuleTypeName(type)));
+}
+
+void ModuleManager::removeTabIndexMapping(int index)
+{
+    auto it = m_tabIndexToModule.find(index);
+    if (it != m_tabIndexToModule.end()) {
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("移除标签索引映射: %1 -> %2 (%3)")
+            .arg(index).arg(static_cast<int>(it->second)).arg(getModuleTypeName(it->second)));
+        m_tabIndexToModule.erase(it);
+    }
+}
+
+ModuleManager::ModuleType ModuleManager::findModuleTypeByTabIndex(int index) const
+{
+    auto it = m_tabIndexToModule.find(index);
+    if (it != m_tabIndexToModule.end()) {
+        return it->second;
+    }
+
+    // 使用存储的索引变量进行额外检查（向后兼容）
+    if (index == m_channelConfigTabIndex) {
+        return ModuleType::CHANNEL_CONFIG;
+    }
+    else if (index == m_dataAnalysisTabIndex) {
+        return ModuleType::DATA_ANALYSIS;
+    }
+    else if (index == m_videoDisplayTabIndex) {
+        return ModuleType::VIDEO_DISPLAY;
+    }
+    else if (index == m_waveformAnalysisTabIndex) {
+        return ModuleType::WAVEFORM_ANALYSIS;
+    }
+    else if (index == m_fileSaveTabIndex) {
+        return ModuleType::FILE_OPTIONS;
+    }
+    else if (index == m_UpdateDeviceTabIndex) {
+        return ModuleType::DEVICE_UPDATE;
+    }
+
+    // 如果未找到映射，返回一个无效值（使用最大值表示无效）
+    return static_cast<ModuleType>(-1);
+}
+
+void ModuleManager::updateTabIndicesAfterClose(int closedIndex)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新标签索引，已关闭索引: %1").arg(closedIndex));
+
+    // 调整模块索引变量
+    if (m_channelConfigTabIndex > closedIndex) m_channelConfigTabIndex--;
+    if (m_dataAnalysisTabIndex > closedIndex) m_dataAnalysisTabIndex--;
+    if (m_videoDisplayTabIndex > closedIndex) m_videoDisplayTabIndex--;
+    if (m_waveformAnalysisTabIndex > closedIndex) m_waveformAnalysisTabIndex--;
+    if (m_fileSaveTabIndex > closedIndex) m_fileSaveTabIndex--;
+    if (m_UpdateDeviceTabIndex > closedIndex) m_UpdateDeviceTabIndex--;
+
+    // 更新映射表中的索引
+    std::map<int, ModuleType> updatedMap;
+    for (const auto& pair : m_tabIndexToModule) {
+        int idx = pair.first;
+        if (idx > closedIndex) {
+            updatedMap[idx - 1] = pair.second;
+            LOG_DEBUG(LocalQTCompat::fromLocal8Bit("标签索引映射调整: %1 -> %2，模块: %3")
+                .arg(idx).arg(idx - 1).arg(getModuleTypeName(pair.second)));
+        }
+        else if (idx < closedIndex) {
+            updatedMap[idx] = pair.second;
+        }
+        // 忽略closedIndex，它已经被移除
+    }
+    m_tabIndexToModule = std::move(updatedMap);
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("标签索引更新完成，映射表大小: %1").arg(m_tabIndexToModule.size()));
 }

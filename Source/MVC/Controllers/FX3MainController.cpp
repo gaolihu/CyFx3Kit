@@ -48,12 +48,15 @@ bool FX3MainController::initialize()
         return true;
     }
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("初始化FX3主控制器..."));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始初始化FX3主控制器..."));
 
     try {
         // 创建设备控制器
         m_DeviceView = std::make_unique<DeviceView>(this);
         m_DeviceView->initUIComponents(
+#if 0
+            nullptr, nullptr, nullptr, nullptr, nullptr, nullptr
+#else
             m_mainView->getUi()->imageWIdth,
             m_mainView->getUi()->imageHeight,
             m_mainView->getUi()->imageType,
@@ -66,6 +69,7 @@ bool FX3MainController::initialize()
             m_mainView->getUi()->actionStartTransfer,
             m_mainView->getUi()->actionStopTransfer,
             m_mainView->getUi()->actionResetDevice
+#endif
         );
         m_deviceController = std::make_unique<DeviceController>(m_DeviceView.get(), this);
         if (!m_deviceController->initialize(m_mainView->getWindowHandle())) {
@@ -623,7 +627,7 @@ void FX3MainController::handleClearLog()
     }
 
     if (m_mainView) {
-        m_mainView->clearLog();
+        m_mainView->clearLogbox();
         LOG_INFO(LocalQTCompat::fromLocal8Bit("日志已清除"));
     }
 }
@@ -708,6 +712,7 @@ void FX3MainController::handleModuleTabClosed(int index)
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理模块标签页关闭，索引: %1").arg(index));
 
     if (m_moduleManager) {
+        // 确保模块管理器知道索引并能正确处理
         m_moduleManager->handleModuleTabClosed(index);
     }
 }
@@ -836,7 +841,8 @@ void FX3MainController::onDeviceConnectionChanged(bool connected)
 
 void FX3MainController::onTransferStateChanged(bool transferring)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("传输状态变更: %1").arg(transferring ? "传输中" : "已停止"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("传输状态变更: %1").
+        arg(transferring ? "传输中" : "已停止"));
 
     // 在这里处理传输状态变更
     if (transferring) {

@@ -6,6 +6,8 @@
 #include <QTimer>
 #include <QTime>
 #include <QElapsedTimer>
+#include <QTabWidget>
+#include <QIcon>
 #include "ui_FX3ToolMainWin.h"
 #include "AppStateMachine.h"
 
@@ -32,6 +34,45 @@ public:
      */
     ~MainUiStateManager();
 
+    //--- Tab页管理相关方法 ---//
+
+    /**
+     * @brief 初始化Tab管理
+     * @param mainTabWidget 主Tab控件指针
+     * @return 初始化是否成功
+     */
+    bool initializeTabManagement(QTabWidget* mainTabWidget);
+
+    /**
+     * @brief 添加模块到主标签页
+     * @param widget 模块窗口指针
+     * @param tabName 标签名称
+     * @param tabIndex 输出参数，标签索引
+     * @param icon 标签图标（可选）
+     */
+    void addModuleToMainTab(QWidget* widget, const QString& tabName, int& tabIndex, const QIcon& icon = QIcon());
+
+    /**
+     * @brief 显示模块标签页
+     * @param tabIndex 标签索引
+     * @param widget 模块窗口指针
+     * @param tabName 标签名称
+     * @param icon 标签图标（可选）
+     */
+    void showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName, const QIcon& icon = QIcon());
+
+    /**
+     * @brief 移除模块标签页
+     * @param tabIndex 标签索引
+     */
+    void removeModuleTab(int& tabIndex);
+
+    /**
+     * @brief 获取主页标签索引
+     * @return 主页标签索引
+     */
+    int getHomeTabIndex() const { return m_homeTabIndex; }
+
     //--- 状态栏管理 ---//
 
     /**
@@ -52,14 +93,7 @@ public:
     /**
      * @brief 更新传输时间显示
      */
-    void updateTransferTime();
-
-    /**
-     * @brief 更新状态栏消息
-     * @param message 状态消息
-     * @param timeout 超时时间（毫秒）
-     */
-    void updateStatusBarMessage(const QString& message, int timeout = 0);
+    void updateTransferTimeDisplay();
 
     /**
      * @brief 重置传输统计显示
@@ -124,11 +158,30 @@ public:
     void showErrorMessage(const QString& title, const QString& message);
 
     /**
+     * @brief 显示警告消息
+     * @param title 标题
+     * @param message 信息消息
+     */
+    void showWarnMessage(const QString& title, const QString& message);
+
+    /**
      * @brief 显示信息消息
      * @param title 标题
      * @param message 信息消息
      */
     void showInfoMessage(const QString& title, const QString& message);
+
+    /**
+     * @brief 显示关于对话框
+     * @param title 标题
+     * @param message 信息消息
+     */
+    void showAboutMessage(const QString& title, const QString& message);
+
+    /**
+     * @brief 清除日志框
+     */
+    void clearLogbox();
 
     /**
      * @brief 准备关闭
@@ -164,6 +217,12 @@ public slots:
      * @param transferring 是否传输中
      */
     void onTransferStateChanged(bool transferring);
+
+    /**
+     * @brief 处理Tab关闭请求
+     * @param index 要关闭的Tab索引
+     */
+    void slot_onTabCloseRequested(int index);
 
 signals:
     /**
@@ -231,6 +290,12 @@ signals:
      */
     void updateDeviceButtonClicked();
 
+    /**
+     * @brief 模块选项卡关闭信号
+     * @param index 选项卡索引
+     */
+    void signal_moduleTabClosed(int index);
+
 private slots:
     /**
      * @brief 定时更新传输时间显示
@@ -292,4 +357,13 @@ private:
     uint64_t m_bytesTransferred;    ///< 已传输字节
     double m_transferRate;          ///< 传输速率
     uint32_t m_errorCount;          ///< 错误计数
+
+    // Tab管理相关
+    QTabWidget* m_mainTabWidget;    ///< 主Tab控件指针
+    int m_homeTabIndex;             ///< 主页标签索引
+    int m_channelTabIndex;          ///< 通道配置标签索引
+    int m_dataAnalysisTabIndex;     ///< 数据分析标签索引
+    int m_videoDisplayTabIndex;     ///< 视频显示标签索引
+    int m_waveformTabIndex;         ///< 波形分析标签索引
+    int m_fileSaveTabIndex;         ///< 文件保存标签索引
 };

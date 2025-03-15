@@ -85,7 +85,7 @@ public:
     /**
      * @brief 清除日志
      */
-    void clearLog();
+    void clearLogbox();
 
     /**
      * @brief 更新状态栏
@@ -122,9 +122,8 @@ public:
 
     /**
      * @brief 更新传输时间显示
-     * @param timeMs 时间ms
      */
-    void updateTransferTimeDisplay(const QString& timeMs);
+    void updateTransferTimeDisplay();
 
     /**
      * @brief 设置视频参数显示
@@ -156,7 +155,12 @@ public:
      * @param tabIndex 输出参数，标签索引
      * @param icon 标签图标（可选）
      */
-    void addModuleToMainTab(QWidget* widget, const QString& tabName, int& tabIndex, const QIcon& icon = QIcon());
+    void addModuleToMainTab(QWidget* widget, const QString& tabName, int& tabIndex, const QIcon& icon = QIcon())
+    {
+        if (m_uiStateManager) {
+            m_uiStateManager->addModuleToMainTab(widget, tabName, tabIndex, icon);
+        }
+    }
 
     /**
      * @brief 显示模块标签页
@@ -165,13 +169,23 @@ public:
      * @param tabName 标签名称
      * @param icon 标签图标（可选）
      */
-    void showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName, const QIcon& icon = QIcon());
+    void showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName, const QIcon& icon = QIcon())
+    {
+        if (m_uiStateManager) {
+            m_uiStateManager->showModuleTab(tabIndex, widget, tabName, icon);
+        }
+    }
 
     /**
      * @brief 移除模块标签页
      * @param tabIndex 标签索引
      */
-    void removeModuleTab(int& tabIndex);
+    void removeModuleTab(int& tabIndex)
+    {
+        if (m_uiStateManager) {
+            m_uiStateManager->removeModuleTab(tabIndex);
+        }
+    }
 
 protected:
     /**
@@ -284,52 +298,6 @@ signals:
      */
     void signal_moduleTabClosed(int index);
 
-private slots:
-    void slot_onStartButtonClicked();
-    void slot_onStopButtonClicked();
-    void slot_onResetButtonClicked();
-    void slot_onSelectCommandDirClicked();
-    void slot_onChannelConfigButtonClicked();
-    void slot_onDataAnalysisButtonClicked();
-    void slot_onVideoDisplayButtonClicked();
-    void slot_onWaveformAnalysisButtonClicked();
-    void slot_onSaveFileButtonClicked();
-    void slot_onExportDataButtonClicked();
-    void slot_onFileOptionsButtonClicked();
-    void slot_onSettingsTriggered();
-    void slot_onClearLogTriggered();
-    void slot_onHelpContentTriggered();
-    void slot_onAboutDialogTriggered();
-    void slot_onUpdateDeviceButtonClicked();
-    void slot_adjustStatusBar();
-    void slot_onTabCloseRequested(int index);
-    void slot_onShowChannelSelectTriggered();
-    void slot_onShowUpdataDeviceTriggered();
-    void slot_onShowDataAnalysisTriggered();
-    void slot_onShowVideoDisplayTriggered();
-    void slot_onShowWaveformAnalysisTriggered();
-    void slot_onShowSaveFileBoxTriggered();
-    void slot_onSaveButtonClicked();
-    void slot_onSelectCommandDirectory();
-    void slot_showAboutDialog();
-    void slot_onExportDataTriggered();
-    void slot_onFileOptionsTriggered();
-
-    // 连接 UI 状态管理器信号
-    void slot_forwardStartButtonSignal();
-    void slot_forwardStopButtonSignal();
-    void slot_forwardResetButtonSignal();
-    void slot_forwardChannelConfigButtonSignal();
-    void slot_forwardDataAnalysisButtonSignal();
-    void slot_forwardVideoDisplayButtonSignal();
-    void slot_forwardWaveformAnalysisButtonSignal();
-    void slot_forwardSaveFileButtonSignal();
-    void slot_forwardExportDataButtonSignal();
-    void slot_forwardFileOptionsButtonSignal();
-    void slot_forwardSettingsTriggeredSignal();
-    void slot_forwardSelectCommandDirSignal();
-    void slot_forwardUpdateDeviceButtonSignal();
-
 private:
     /**
      * @brief 初始化日志系统
@@ -364,14 +332,6 @@ private:
     QSplitter* m_leftSplitter;                    ///< 左侧分割器
     QWidget* m_statusPanel;                       ///< 状态面板
     QToolBar* m_mainToolBar;                      ///< 主工具栏
-
-    // 模块标签索引
-    int m_homeTabIndex;                           ///< 主页标签索引
-    int m_channelTabIndex;                        ///< 通道配置标签索引
-    int m_dataAnalysisTabIndex;                   ///< 数据分析标签索引
-    int m_videoDisplayTabIndex;                   ///< 视频显示标签索引
-    int m_waveformTabIndex;                       ///< 波形分析标签索引
-    int m_fileSaveTabIndex;                       ///< 文件保存标签索引
 
     // 状态标志
     bool m_loggerInitialized;                     ///< 日志系统是否已初始化
