@@ -72,12 +72,6 @@ void DeviceView::connectSignals()
     connect(m_stopButton, &QPushButton::clicked, this, &DeviceView::onStopButtonClicked);
     connect(m_resetButton, &QPushButton::clicked, this, &DeviceView::onResetButtonClicked);
 
-    // 连接参数变更信号
-    connect(m_widthEdit, &QLineEdit::textChanged, this, &DeviceView::onWidthTextChanged);
-    connect(m_heightEdit, &QLineEdit::textChanged, this, &DeviceView::onHeightTextChanged);
-    connect(m_typeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, &DeviceView::onCaptureTypeChanged);
-
     LOG_INFO("设备视图信号已连接");
 }
 
@@ -122,79 +116,6 @@ uint8_t DeviceView::getCaptureType() const
     case 2: return 0x3A; // RAW12
     default: return 0x39; // 默认RAW10
     }
-}
-
-void DeviceView::updateImageWidth(uint16_t width)
-{
-    if (m_widthEdit) {
-        m_widthEdit->setText(QString::number(width));
-    }
-}
-
-void DeviceView::updateImageHeight(uint16_t height)
-{
-    if (m_heightEdit) {
-        m_heightEdit->setText(QString::number(height));
-    }
-}
-
-void DeviceView::updateCaptureType(uint8_t captureType)
-{
-    if (!m_typeCombo) {
-        return;
-    }
-
-    int index;
-    switch (captureType) {
-    case 0x38: index = 0; break; // RAW8
-    case 0x39: index = 1; break; // RAW10
-    case 0x3A: index = 2; break; // RAW12
-    default: index = 1; // 默认RAW10
-    }
-
-    m_typeCombo->setCurrentIndex(index);
-}
-
-void DeviceView::updateUsbSpeed(double speed)
-{
-    if (m_usbSpeedLabel) {
-        m_usbSpeedLabel->setText(QString("%1 MB/s").arg(speed, 0, 'f', 2));
-    }
-}
-
-void DeviceView::updateTransferredBytes(uint64_t bytes)
-{
-    if (!m_totalBytesLabel) {
-        return;
-    }
-
-    // 格式化显示
-    QString sizeText;
-    if (bytes < 1024) {
-        sizeText = QString("%1 B").arg(bytes);
-    }
-    else if (bytes < 1024 * 1024) {
-        sizeText = QString("%1 KB").arg(bytes / 1024.0, 0, 'f', 2);
-    }
-    else if (bytes < 1024 * 1024 * 1024) {
-        sizeText = QString("%1 MB").arg(bytes / (1024.0 * 1024.0), 0, 'f', 2);
-    }
-    else {
-        sizeText = QString("%1 GB").arg(bytes / (1024.0 * 1024.0 * 1024.0), 0, 'f', 2);
-    }
-
-    m_totalBytesLabel->setText(sizeText);
-}
-
-void DeviceView::updateDeviceState(DeviceState state)
-{
-    // 更新状态标签
-    if (m_usbStatusLabel) {
-        m_usbStatusLabel->setText(getStateText(state));
-    }
-
-    // 更新按钮状态
-    updateButtonStates(state);
 }
 
 void DeviceView::showErrorMessage(const QString& message)

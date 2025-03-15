@@ -45,12 +45,14 @@ bool DeviceController::initialize(HWND windowHandle)
         initializeConnections();
 
         // 从模型加载初始参数到视图
+        /*
         if (m_deviceView) {
             m_deviceView->updateImageWidth(m_deviceModel->getImageWidth());
             m_deviceView->updateImageHeight(m_deviceModel->getImageHeight());
             m_deviceView->updateCaptureType(m_deviceModel->getCaptureType());
             m_deviceView->updateDeviceState(m_deviceModel->getDeviceState());
         }
+        */
 
         m_initialized = true;
         LOG_INFO("设备控制器初始化成功");
@@ -111,15 +113,6 @@ void DeviceController::initializeConnections()
         connect(m_deviceManager.get(), &FX3DeviceManager::deviceError,
             this, &DeviceController::deviceError);
     }
-
-    // 连接模型信号到控制器槽
-    connect(m_deviceModel, &DeviceModel::deviceStateChanged,
-        this, [this](DeviceState state) {
-            // 更新视图中的设备状态
-            if (m_deviceView) {
-                m_deviceView->updateDeviceState(state);
-            }
-        });
 
     LOG_INFO("设备控制器连接初始化完成");
 }
@@ -277,9 +270,9 @@ void DeviceController::setImageParameters(uint16_t width, uint16_t height, uint8
 
     // 更新视图
     if (m_deviceView) {
-        m_deviceView->updateImageWidth(width);
-        m_deviceView->updateImageHeight(height);
-        m_deviceView->updateCaptureType(captureType);
+        //m_deviceView->updateImageWidth(width);
+        //m_deviceView->updateImageHeight(height);
+        //m_deviceView->updateCaptureType(captureType);
     }
 
     LOG_INFO(QString("图像参数已设置 - 宽度: %1, 高度: %2, 类型: 0x%3")
@@ -336,10 +329,7 @@ void DeviceController::updateViewState()
     }
 
     // 获取当前设备状态
-    DeviceState currentState = m_deviceModel->getDeviceState();
-
-    // 更新视图状态显示
-    m_deviceView->updateDeviceState(currentState);
+    //DeviceState currentState = m_deviceModel->getDeviceState();
 }
 
 // Slot handlers
@@ -369,14 +359,17 @@ void DeviceController::handleImageParametersChanged()
 
 void DeviceController::handleDeviceConnectionChanged(bool connected)
 {
-    LOG_INFO(QString("处理设备连接状态变更: %1").arg(connected ? "已连接" : "已断开"));
+    LOG_INFO(QString("设备控制器处理设备连接状态变更: %1").arg(connected ? "已连接" : "已断开"));
 
     // 更新模型中的设备状态
     DeviceState newState = connected ? DeviceState::DEV_CONNECTED : DeviceState::DEV_DISCONNECTED;
     m_deviceModel->setDeviceState(newState);
 
-    // 更新视图状态
-    updateViewState();
+    // 触发应用状态变化
+    AppStateMachine::instance().processEvent(
+        connected ? StateEvent::DEVICE_CONNECTED : StateEvent::DEVICE_DISCONNECTED,
+        LocalQTCompat::fromLocal8Bit(connected ? "FX3已连接" : "FX3已断开")
+    );
 }
 
 void DeviceController::handleTransferStateChanged(bool transferring)
@@ -395,11 +388,6 @@ void DeviceController::handleTransferStateChanged(bool transferring)
 
 void DeviceController::handleTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t errorCount)
 {
-    // 更新视图中的传输统计信息
-    if (m_deviceView) {
-        m_deviceView->updateUsbSpeed(transferRate);
-        m_deviceView->updateTransferredBytes(bytesTransferred);
-    }
 }
 
 void DeviceController::handleUsbSpeedUpdated(const QString& speedDesc, bool isUSB3)
@@ -415,10 +403,4 @@ void DeviceController::handleDeviceError(const QString& title, const QString& me
     // 更新模型中的设备状态和错误信息
     m_deviceModel->setDeviceState(DeviceState::DEV_ERROR);
     m_deviceModel->setErrorMessage(message);
-
-    // 在视图中显示错误信息
-    if (m_deviceView) {
-        m_deviceView->showErrorMessage(message);
-        m_deviceView->updateDeviceState(DeviceState::DEV_ERROR);
-    }
 }

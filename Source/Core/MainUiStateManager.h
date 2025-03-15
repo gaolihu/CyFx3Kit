@@ -10,6 +10,7 @@
 #include <QIcon>
 #include "ui_FX3ToolMainWin.h"
 #include "AppStateMachine.h"
+#include "DeviceState.h"
 
 /**
  * @brief 增强的UI状态处理器类，负责集中管理UI状态
@@ -135,6 +136,35 @@ public:
     void updateDeviceInfoDisplay(const QString& deviceName, const QString& firmwareVersion, const QString& serialNumber);
 
     /**
+     * @brief 更新设备参数显示
+     * @param width 图像宽度
+     * @param height 图像高度
+     * @param captureType 捕获类型
+     */
+    void updateDeviceParameters(uint16_t width, uint16_t height, uint8_t captureType);
+
+    /**
+     * @brief 更新传输状态显示
+     * @param isTransferring 是否正在传输
+     * @param statusText 状态文本描述
+     */
+    void updateTransferStatus(bool isTransferring, const QString& statusText);
+
+    /**
+     * @brief 更新按钮状态
+     * @param enableStart 是否启用开始按钮
+     * @param enableStop 是否启用停止按钮
+     * @param enableReset 是否启用重置按钮
+     */
+    void updateButtonStates(bool enableStart, bool enableStop, bool enableReset);
+
+    /**
+     * @brief 更新设备状态显示
+     * @param state 设备状态
+     */
+    void updateDeviceState(DeviceState state);
+
+    /**
      * @brief 更新视频参数显示
      * @param width 视频宽度
      * @param height 视频高度
@@ -223,6 +253,24 @@ public slots:
      * @param index 要关闭的Tab索引
      */
     void slot_onTabCloseRequested(int index);
+
+    /**
+    * @brief 响应设备状态变化
+    * @param state 新的设备状态
+    */
+    void onDeviceStateChanged(DeviceState state);
+
+    /**
+     * @brief 初始化UI状态
+     * 设置所有UI元素的初始状态
+     */
+    void initializeUIState();
+
+    /**
+     * @brief 初始化视频参数
+     * 设置默认的视频参数(1920x1080)
+     */
+    void initializeVideoParameters();
 
 signals:
     /**
@@ -315,6 +363,13 @@ private:
      * @param transferStatusText 传输状态文本
      */
     void updateStatusLabels(const QString& statusText, const QString& transferStatusText);
+
+    /**
+     * @brief 获取设备状态对应的文本描述
+     * @param state 设备状态
+     * @return 设备状态文本
+     */
+    QString getDeviceStateText(DeviceState state) const;
 
     /**
      * @brief 更新UI控件启用/禁用状态

@@ -183,6 +183,7 @@
     <QtMoc Include="Source\MVC\Views\FX3MainView.h" />
     <QtMoc Include="Source\MVC\Models\MenuModel.h" />
     <QtMoc Include="Source\MVC\Controllers\MenuController.h" />
+    <ClInclude Include="Source\Core\DeviceState.h" />
     <ClInclude Include="Source\Core\DeviceTransferStats.h" />
     <QtMoc Include="Source\Core\ModuleManager.h" />
     <QtMoc Include="Source\MVC\Views\FileSaveView.h" />

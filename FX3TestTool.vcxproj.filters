@@ -309,6 +309,9 @@
     <ClInclude Include="Source\Core\DeviceTransferStats.h">
       <Filter>Source Files\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Core\DeviceState.h">
+      <Filter>Source Files\Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="resource\Resource.qrc">

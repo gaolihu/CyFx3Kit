@@ -223,7 +223,7 @@ bool FX3DeviceManager::checkAndOpenDevice()
         return false;
     }
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备检查和打开成功"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备: {%1}检查打开OK").arg(deviceInfo));
 
     // 发送设备连接事件
     AppStateMachine::instance().processEvent(

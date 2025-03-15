@@ -40,42 +40,6 @@ public:
     virtual uint8_t getCaptureType() const = 0;
 
     /**
-     * @brief 更新图像宽度显示
-     * @param width 宽度值
-     */
-    virtual void updateImageWidth(uint16_t width) = 0;
-
-    /**
-     * @brief 更新图像高度显示
-     * @param height 高度值
-     */
-    virtual void updateImageHeight(uint16_t height) = 0;
-
-    /**
-     * @brief 更新捕获类型显示
-     * @param captureType 捕获类型值
-     */
-    virtual void updateCaptureType(uint8_t captureType) = 0;
-
-    /**
-     * @brief 更新USB速度显示
-     * @param speed USB速度（MB/s）
-     */
-    virtual void updateUsbSpeed(double speed) = 0;
-
-    /**
-     * @brief 更新传输字节数显示
-     * @param bytes 已传输字节数
-     */
-    virtual void updateTransferredBytes(uint64_t bytes) = 0;
-
-    /**
-     * @brief 更新设备状态显示
-     * @param state 设备状态
-     */
-    virtual void updateDeviceState(DeviceState state) = 0;
-
-    /**
      * @brief 显示错误消息
      * @param message 错误消息内容
      */

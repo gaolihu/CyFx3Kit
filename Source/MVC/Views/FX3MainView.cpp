@@ -208,6 +208,10 @@ bool FX3MainView::initializeUiStateManager() {
             return false;
         }
 
+        // 初始化UI状态和视频参数
+        m_uiStateManager->initializeUIState();
+        m_uiStateManager->initializeVideoParameters();
+
 #define CONNECT_SIGNAL(uiSignal, viewSignal) \
             connect(m_uiStateManager.get(), &MainUiStateManager::uiSignal, \
                     this, [this](){ \

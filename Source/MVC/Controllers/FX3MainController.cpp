@@ -879,7 +879,7 @@ void FX3MainController::onDataPacketAvailable(const DataPacket& packet)
 
 void FX3MainController::handleDeviceConnectionChanged(bool connected)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("处理设备连接状态变更: %1").arg(connected ? "已连接" : "已断开"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("FX3主设备控制器处理设备连接状态变更: %1").arg(connected ? "已连接" : "已断开"));
 
     // 通知模型
     m_mainModel->setDeviceConnected(connected);
@@ -1049,6 +1049,10 @@ void FX3MainController::initializeConnections()
         bool connected = m_deviceController->isDeviceConnected();
         m_mainModel->setDeviceConnected(connected);
     }
+
+    // 连接DeviceModel状态变化到MainUiStateManager
+    connect(DeviceModel::getInstance(), &DeviceModel::deviceStateChanged,
+        m_mainView->getUiStateManager(), &MainUiStateManager::onDeviceStateChanged);
 
     // 更新UI状态
     updateUIFromModel();

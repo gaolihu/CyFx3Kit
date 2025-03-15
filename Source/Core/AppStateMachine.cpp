@@ -23,7 +23,7 @@ bool AppStateMachine::processEvent(StateEvent event, const QString& reason) {
     QString eventStr = eventToString(event);
     QString stateStr = stateToString(currentState);
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("处理状态事件: %1, 状态: %2, 原因: %3")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("事件: %1, 当前状态: %2, 原因: %3")
         .arg(eventStr)
         .arg(stateStr)
         .arg(reason));

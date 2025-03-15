@@ -256,12 +256,23 @@ void MainUiStateManager::updateTransferStats(uint64_t bytesTransferred, double t
 
 void MainUiStateManager::updateUsbSpeedDisplay(const QString& speedDesc, bool isUSB3)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新USB速度显示"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新USB速度显示, %1, %2").
+        arg(speedDesc).arg(isUSB3 ? "u3" : "no-u3"));
     if (!validUI()) return;
 
-    if (m_ui.usbStatusLabel) {
-        m_ui.usbStatusLabel->setText(LocalQTCompat::fromLocal8Bit("USB速度：") + speedDesc);
+    if (m_ui.usbSpeedLabel) {
+        m_ui.usbSpeedLabel->setText(LocalQTCompat::fromLocal8Bit("USB速度：") + speedDesc);
 
+        // 根据USB版本设置不同样式
+        if (isUSB3) {
+            m_ui.usbSpeedLabel->setStyleSheet("color: blue;");
+        }
+        else {
+            m_ui.usbSpeedLabel->setStyleSheet("color: green;");
+        }
+    }
+
+    if (m_ui.usbStatusLabel) {
         // 根据USB版本设置不同样式
         if (isUSB3) {
             m_ui.usbStatusLabel->setStyleSheet("color: blue;");
@@ -383,7 +394,7 @@ void MainUiStateManager::updateButtonStates(AppState state)
         break;
 
     case AppState::DEVICE_ABSENT:
-        // 设备未连接时仅设备相关操作禁用
+        // 设备未连接时所有设备操作按钮禁用
         enableConfigButtons = true;
         break;
 
@@ -394,14 +405,19 @@ void MainUiStateManager::updateButtonStates(AppState state)
         break;
 
     case AppState::IDLE:
-        // 空闲状态，可以开始和重置
-        enableStartButton = true;
+        // 空闲状态，只有重置可用（因为没有命令）
+        enableResetButton = true;
+        enableConfigButtons = true;
+        break;
+
+    case AppState::COMMANDS_MISSING:
+        // 命令未加载状态，只有重置可用
         enableResetButton = true;
         enableConfigButtons = true;
         break;
 
     case AppState::CONFIGURED:
-        // 已配置，可以开始和重置
+        // 已配置（设备已连接且命令已加载），可以开始和重置
         enableStartButton = true;
         enableResetButton = true;
         enableConfigButtons = true;
@@ -436,17 +452,6 @@ void MainUiStateManager::updateButtonStates(AppState state)
 
     // 更新按钮状态
     updateButtons(enableStartButton, enableStopButton, enableResetButton);
-
-    // 更新配置相关按钮状态
-    QPushButton* quickChannelBtn = qobject_cast<QWidget*>(parent())->findChild<QPushButton*>("quickChannelBtn");
-    QPushButton* quickDataBtn = qobject_cast<QWidget*>(parent())->findChild<QPushButton*>("quickDataBtn");
-    QPushButton* quickVideoBtn = qobject_cast<QWidget*>(parent())->findChild<QPushButton*>("quickVideoBtn");
-    QPushButton* quickSaveBtn = qobject_cast<QWidget*>(parent())->findChild<QPushButton*>("quickSaveBtn");
-
-    if (quickChannelBtn) quickChannelBtn->setEnabled(enableConfigButtons);
-    if (quickDataBtn) quickDataBtn->setEnabled(enableConfigButtons);
-    if (quickVideoBtn) quickVideoBtn->setEnabled(enableConfigButtons);
-    if (quickSaveBtn) quickSaveBtn->setEnabled(enableConfigButtons);
 }
 
 void MainUiStateManager::updateQuickButtonsForTransfer(bool isTransferring)
@@ -486,6 +491,253 @@ void MainUiStateManager::updateDeviceInfoDisplay(const QString& deviceName, cons
     }
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("设备信息已更新：%1, %2, %3").arg(deviceName).arg(firmwareVersion).arg(serialNumber));
+}
+
+// Source/Core/MainUiStateManager.cpp添加如下实现
+
+void MainUiStateManager::updateDeviceParameters(uint16_t width, uint16_t height, uint8_t captureType)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新设备参数显示 - 宽度: %1, 高度: %2, 类型: 0x%3")
+        .arg(width).arg(height).arg(captureType, 2, 16, QChar('0')));
+
+    if (!validUI()) return;
+
+    // 更新宽度显示
+    if (m_ui.imageWIdth) {
+        m_ui.imageWIdth->setText(QString::number(width));
+    }
+
+    // 更新高度显示
+    if (m_ui.imageHeight) {
+        m_ui.imageHeight->setText(QString::number(height));
+    }
+
+    // 更新类型下拉框
+    if (m_ui.imageType) {
+        int index = 1; // 默认RAW10
+        switch (captureType) {
+        case 0x38: index = 0; break; // RAW8
+        case 0x39: index = 1; break; // RAW10
+        case 0x3A: index = 2; break; // RAW12
+        }
+        m_ui.imageType->setCurrentIndex(index);
+    }
+}
+
+void MainUiStateManager::updateTransferStatus(bool isTransferring, const QString& statusText)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新传输状态显示 - 传输中: %1, 文本: %2")
+        .arg(isTransferring).arg(statusText));
+
+    if (!validUI()) return;
+
+    // 更新传输状态文本
+    if (m_ui.transferStatusLabel) {
+        m_ui.transferStatusLabel->setText(LocalQTCompat::fromLocal8Bit("传输状态：") + statusText);
+    }
+
+    // 更新传输计时器
+    if (isTransferring) {
+        startTransferTimer();
+    }
+    else {
+        stopTransferTimer();
+    }
+
+    // 更新是否正在传输的标志
+    m_isTransferring = isTransferring;
+}
+
+void MainUiStateManager::updateButtonStates(bool enableStart, bool enableStop, bool enableReset)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新按钮状态 - 开始: %1, 停止: %2, 重置: %3")
+        .arg(enableStart).arg(enableStop).arg(enableReset));
+
+    if (!validUI()) return;
+
+    // 更新开始按钮状态
+    if (m_ui.actionStartTransfer) {
+        m_ui.actionStartTransfer->setEnabled(enableStart);
+    }
+
+    // 更新停止按钮状态
+    if (m_ui.actionStopTransfer) {
+        m_ui.actionStopTransfer->setEnabled(enableStop);
+    }
+
+    // 更新重置按钮状态
+    if (m_ui.actionResetDevice) {
+        m_ui.actionResetDevice->setEnabled(enableReset);
+    }
+
+    // 可以在这里添加更新其他按钮状态的代码，如模块按钮等
+}
+
+void MainUiStateManager::updateDeviceState(DeviceState state)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新设备状态显示 - 状态: %1")
+        .arg(static_cast<int>(state)));
+
+    if (!validUI()) return;
+
+    // 获取设备状态文本
+    QString stateText = getDeviceStateText(state);
+
+    // 更新USB状态标签
+    if (m_ui.usbStatusLabel) {
+        m_ui.usbStatusLabel->setText(LocalQTCompat::fromLocal8Bit("设备状态：") + stateText);
+
+        // 根据状态设置不同样式
+        switch (state) {
+        case DeviceState::DEV_CONNECTED:
+        case DeviceState::DEV_TRANSFERRING:
+            m_ui.usbStatusLabel->setStyleSheet("color: green;");
+            break;
+        case DeviceState::DEV_ERROR:
+            m_ui.usbStatusLabel->setStyleSheet("color: red;");
+            break;
+        case DeviceState::DEV_DISCONNECTED:
+        default:
+            m_ui.usbStatusLabel->setStyleSheet("");
+            break;
+        }
+    }
+
+    // 根据设备状态决定按钮启用状态
+    bool enableStart = (state == DeviceState::DEV_CONNECTED);
+    bool enableStop = (state == DeviceState::DEV_TRANSFERRING);
+    bool enableReset = (state == DeviceState::DEV_CONNECTED ||
+        state == DeviceState::DEV_ERROR);
+
+    // 更新按钮状态
+    updateButtonStates(enableStart, enableStop, enableReset);
+
+    // 如果正在传输状态变化，更新传输状态
+    bool isTransferring = (state == DeviceState::DEV_TRANSFERRING);
+    if (m_isTransferring != isTransferring) {
+        QString transferText = isTransferring ?
+            LocalQTCompat::fromLocal8Bit("传输中") :
+            LocalQTCompat::fromLocal8Bit("已停止");
+        updateTransferStatus(isTransferring, transferText);
+    }
+}
+
+void MainUiStateManager::onDeviceStateChanged(DeviceState state)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备状态已变更为: %1")
+        .arg(static_cast<int>(state)));
+
+    // 更新UI显示
+    updateDeviceState(state);
+
+    // 根据设备状态转换为应用状态并更新
+    AppState appState;
+    switch (state) {
+    case DeviceState::DEV_DISCONNECTED:
+        appState = AppState::DEVICE_ABSENT;
+        break;
+    case DeviceState::DEV_CONNECTING:
+        appState = AppState::INITIALIZING;
+        break;
+    case DeviceState::DEV_CONNECTED:
+        appState = AppState::IDLE;
+        break;
+    case DeviceState::DEV_TRANSFERRING:
+        appState = AppState::TRANSFERRING;
+        break;
+    case DeviceState::DEV_ERROR:
+        appState = AppState::DEVICE_ERROR;
+        break;
+    default:
+        appState = AppState::IDLE;
+        break;
+    }
+
+    // 通知状态机更新应用状态
+    // 注意：这可能导致循环调用，取决于应用程序的信号连接方式
+    // 如果状态机已经连接到此类的onStateChanged方法，应该考虑避免循环调用
+    // AppStateMachine::instance().processEvent(StateEvent::STATE_CHANGED, getDeviceStateText(state));
+}
+
+// 2. 添加到MainUiStateManager.cpp中，用于初始化UI状态
+void MainUiStateManager::initializeUIState()
+{
+    // 初始化状态栏标签
+    if (m_ui.usbSpeedLabel)
+        m_ui.usbSpeedLabel->setText(LocalQTCompat::fromLocal8Bit("USB速度：未连接"));
+
+    if (m_ui.usbStatusLabel)
+        m_ui.usbStatusLabel->setText(LocalQTCompat::fromLocal8Bit("设备状态：未连接"));
+
+    if (m_ui.transferStatusLabel)
+        m_ui.transferStatusLabel->setText(LocalQTCompat::fromLocal8Bit("传输状态：未开始"));
+
+    if (m_ui.transferRateLabel)
+        m_ui.transferRateLabel->setText(LocalQTCompat::fromLocal8Bit("速率：0 MB/s"));
+
+    if (m_ui.totalBytesLabel)
+        m_ui.totalBytesLabel->setText(LocalQTCompat::fromLocal8Bit("总数据量：0 KB"));
+
+    if (m_ui.totalTimeLabel)
+        m_ui.totalTimeLabel->setText(LocalQTCompat::fromLocal8Bit("传输时间：00:00"));
+
+    // 初始化命令目录显示
+    if (m_ui.cmdDirEdit)
+        m_ui.cmdDirEdit->setText("");
+
+    if (m_ui.cmdStatusLabel)
+        m_ui.cmdStatusLabel->setText(LocalQTCompat::fromLocal8Bit("未加载CMD目录"));
+
+    // 初始化按钮状态 - 默认全部禁用
+    updateButtons(false, false, false);
+
+    // 初始化设备信息
+    QLabel* deviceNameValue = qobject_cast<QWidget*>(parent())->findChild<QLabel*>("deviceNameValue");
+    QLabel* firmwareVersionValue = qobject_cast<QWidget*>(parent())->findChild<QLabel*>("firmwareVersionValue");
+    QLabel* serialNumberValue = qobject_cast<QWidget*>(parent())->findChild<QLabel*>("serialNumberValue");
+
+    if (deviceNameValue) deviceNameValue->setText(LocalQTCompat::fromLocal8Bit("未连接"));
+    if (firmwareVersionValue) firmwareVersionValue->setText(LocalQTCompat::fromLocal8Bit("未知"));
+    if (serialNumberValue) serialNumberValue->setText(LocalQTCompat::fromLocal8Bit("未知"));
+}
+
+// 3. 修改MainUiStateManager.cpp中的初始化视频参数方法
+void MainUiStateManager::initializeVideoParameters()
+{
+    // 设置默认视频参数 (1080p)
+    if (m_ui.imageWIdth) {
+        m_ui.imageWIdth->setText("1920");
+        m_ui.imageWIdth->setReadOnly(false); // 允许用户输入
+    }
+
+    if (m_ui.imageHeight) {
+        m_ui.imageHeight->setText("1080");
+        m_ui.imageHeight->setReadOnly(false); // 允许用户输入
+    }
+
+    if (m_ui.imageType && m_ui.imageType->count() > 1) {
+        m_ui.imageType->setCurrentIndex(1); // RAW10 (索引1)
+    }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("视频参数已初始化为默认值 - 宽度: 1920, 高度: 1080, 格式: RAW10"));
+}
+
+QString MainUiStateManager::getDeviceStateText(DeviceState state) const
+{
+    switch (state) {
+    case DeviceState::DEV_DISCONNECTED:
+        return LocalQTCompat::fromLocal8Bit("未连接");
+    case DeviceState::DEV_CONNECTING:
+        return LocalQTCompat::fromLocal8Bit("连接中");
+    case DeviceState::DEV_CONNECTED:
+        return LocalQTCompat::fromLocal8Bit("已连接");
+    case DeviceState::DEV_TRANSFERRING:
+        return LocalQTCompat::fromLocal8Bit("传输中");
+    case DeviceState::DEV_ERROR:
+        return LocalQTCompat::fromLocal8Bit("错误");
+    default:
+        return LocalQTCompat::fromLocal8Bit("未知");
+    }
 }
 
 void MainUiStateManager::setVideoParamsDisplay(uint16_t width, uint16_t height, int format)
@@ -707,10 +959,10 @@ void MainUiStateManager::updateStatusLabels(const QString& statusText, const QSt
 
     // 防御性检查所有使用的UI元素
     if (m_ui.usbStatusLabel)
-        m_ui.usbStatusLabel->setText(statusText);
+        m_ui.usbStatusLabel->setText(LocalQTCompat::fromLocal8Bit("设备状态：") + statusText);
 
     if (m_ui.transferStatusLabel)
-        m_ui.transferStatusLabel->setText(transferStatusText);
+        m_ui.transferStatusLabel->setText(LocalQTCompat::fromLocal8Bit("传输状态：") + transferStatusText);
 }
 
 void MainUiStateManager::updateButtons(bool enableStart, bool enableStop, bool enableReset)

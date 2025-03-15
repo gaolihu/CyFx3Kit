@@ -57,12 +57,6 @@ public:
     uint16_t getImageWidth(bool* ok = nullptr) const override;
     uint16_t getImageHeight(bool* ok = nullptr) const override;
     uint8_t getCaptureType() const override;
-    void updateImageWidth(uint16_t width) override;
-    void updateImageHeight(uint16_t height) override;
-    void updateCaptureType(uint8_t captureType) override;
-    void updateUsbSpeed(double speed) override;
-    void updateTransferredBytes(uint64_t bytes) override;
-    void updateDeviceState(DeviceState state) override;
     void showErrorMessage(const QString& message) override;
     bool showConfirmDialog(const QString& title, const QString& message) override;
 
