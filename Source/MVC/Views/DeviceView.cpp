@@ -121,7 +121,7 @@ uint8_t DeviceView::getCaptureType() const
 void DeviceView::showErrorMessage(const QString& message)
 {
     if (!m_parentWidget) {
-        LOG_ERROR(QString("无法显示错误消息（缺少父窗口）: %1").arg(message));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法显示错误消息（缺少父窗口）: %1").arg(message));
         return;
     }
 
@@ -133,7 +133,7 @@ void DeviceView::showErrorMessage(const QString& message)
 bool DeviceView::showConfirmDialog(const QString& title, const QString& message)
 {
     if (!m_parentWidget) {
-        LOG_WARN(QString("无法显示确认对话框（缺少父窗口）: %1").arg(message));
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("无法显示确认对话框（缺少父窗口）: %1").arg(message));
         return false;
     }
 
@@ -146,35 +146,38 @@ bool DeviceView::showConfirmDialog(const QString& title, const QString& message)
 
 void DeviceView::onStartButtonClicked()
 {
-    LOG_INFO("开始传输按钮点击");
-    emit startTransferRequested();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备视图开始传输按钮点击"));
+    emit signal_Dev_V_startTransferRequested();
 }
 
 void DeviceView::onStopButtonClicked()
 {
-    LOG_INFO("停止传输按钮点击");
-    emit stopTransferRequested();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备视图停止传输按钮点击"));
+    emit signal_Dev_V_stopTransferRequested();
 }
 
 void DeviceView::onResetButtonClicked()
 {
-    LOG_INFO("重置设备按钮点击");
-    emit resetDeviceRequested();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备视图重置设备按钮点击"));
+    emit signal_Dev_V_resetDeviceRequested();
 }
 
 void DeviceView::onWidthTextChanged()
 {
-    emit imageParametersChanged();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备视图视频宽度变化"));
+    emit signal_Dev_V_imageParametersChanged();
 }
 
 void DeviceView::onHeightTextChanged()
 {
-    emit imageParametersChanged();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备视图视频高度变化"));
+    emit signal_Dev_V_imageParametersChanged();
 }
 
 void DeviceView::onCaptureTypeChanged()
 {
-    emit imageParametersChanged();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备视图视频格式变化"));
+    emit signal_Dev_V_imageParametersChanged();
 }
 
 void DeviceView::updateButtonStates(DeviceState deviceState)
@@ -186,6 +189,9 @@ void DeviceView::updateButtonStates(DeviceState deviceState)
     bool isConnected = (deviceState != DeviceState::DEV_DISCONNECTED);
     bool isTransferring = (deviceState == DeviceState::DEV_TRANSFERRING);
     bool isError = (deviceState == DeviceState::DEV_ERROR);
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备视图更新按钮状态, 连接: %1, 传输: %2, 错误: %3")
+        .arg(isConnected).arg(isTransferring).arg(isError));
 
     // 设置按钮启用状态
     m_startButton->setEnabled(isConnected && !isTransferring && !isError);

@@ -62,10 +62,10 @@ public:
 
 signals:
     // IDeviceView接口信号实现
-    void startTransferRequested() override;
-    void stopTransferRequested() override;
-    void resetDeviceRequested() override;
-    void imageParametersChanged() override;
+    void signal_Dev_V_startTransferRequested() override;
+    void signal_Dev_V_stopTransferRequested() override;
+    void signal_Dev_V_resetDeviceRequested() override;
+    void signal_Dev_V_imageParametersChanged() override;
 
 private slots:
     /**

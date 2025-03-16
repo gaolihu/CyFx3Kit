@@ -194,8 +194,10 @@ bool DataAcquisitionManager::startAcquisition(uint16_t width, uint16_t height, u
     }
 
     // 重置状态和统计信息
-    m_transferStats.reset();
     m_buffer->reset();
+    m_rateStats.reset();
+    m_totalBytes.store(0);
+    m_dataRate.store(0.0);
 
     // 设置运行标志
     {
@@ -228,8 +230,9 @@ bool DataAcquisitionManager::startAcquisition(uint16_t width, uint16_t height, u
         return false;
     }
 
+    // 只在状态变化时发送状态变更信号
     updateAcquisitionState(AcquisitionState::AC_RUNNING);
-    emit acquisitionStarted();
+    emit signal_AQ_acquisitionStarted();
     LOG_INFO("Acquisition started OK");
     return true;
 }
@@ -296,10 +299,10 @@ void DataAcquisitionManager::stopAcquisition() {
         if (shouldUpdateUI) {
             QMetaObject::invokeMethod(QCoreApplication::instance(), [this]() {
                 if (!m_isShuttingDown && !QApplication::closingDown()) {
-                    emit statsUpdated(0, 0.0, 0);
                     m_buffer->reset();
+                    // 只在状态变化时发送状态变更信号
                     updateAcquisitionState(AcquisitionState::AC_IDLE);
-                    emit acquisitionStopped();
+                    emit signal_AQ_acquisitionStopped();
                 }
                 }, Qt::QueuedConnection);
         }
@@ -348,19 +351,19 @@ void DataAcquisitionManager::signalStop(StopReason reason) {
         case StopReason::READ_ERROR:
             LOG_ERROR("Stopping acquisition due to read errors");
             self->m_errorOccurred = true;
-            emit self->errorOccurred(LocalQTCompat::fromLocal8Bit("数据读取错误，采集已停止"));
+            emit self->signal_AQ_errorOccurred(LocalQTCompat::fromLocal8Bit("数据读取错误，采集已停止"));
             break;
 
         case StopReason::DEVICE_ERROR:
             LOG_ERROR("Stopping acquisition due to device error");
             self->m_errorOccurred = true;
-            emit self->errorOccurred(LocalQTCompat::fromLocal8Bit("设备错误，采集已停止"));
+            emit self->signal_AQ_errorOccurred(LocalQTCompat::fromLocal8Bit("设备错误，采集已停止"));
             break;
 
         case StopReason::BUFFER_OVERFLOW:
             LOG_ERROR("Stopping acquisition due to buffer overflow");
             self->m_errorOccurred = true;
-            emit self->errorOccurred(LocalQTCompat::fromLocal8Bit("缓冲区溢出，采集已停止"));
+            emit self->signal_AQ_errorOccurred(LocalQTCompat::fromLocal8Bit("缓冲区溢出，采集已停止"));
             break;
 
         case StopReason::USER_REQUEST:
@@ -374,18 +377,18 @@ void DataAcquisitionManager::signalStop(StopReason reason) {
             device->stopTransfer();
         }
 
-        // 通知UI更新状态
-        emit self->acquisitionStateChanged(LocalQTCompat::fromLocal8Bit("已停止"));
-        emit self->statsUpdated(self->m_totalBytes.load(), self->m_dataRate.load(),
-            std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::steady_clock::now() - self->m_startTime).count());
+        // 发送状态变更和统计更新信号
+        // 只在状态变化时发送状态变更信号
+        emit self->signal_AQ_acquisitionStateChanged(LocalQTCompat::fromLocal8Bit("已停止"));
+        emit self->signal_AQ_statsUpdated(self->m_totalBytes.load(), self->m_dataRate.load(),
+            self->m_rateStats.getElapsedTimeMs());
 
         // 最后使用Qt的信号队列机制更新已停止状态
         QTimer::singleShot(0, [weakSelf]() {
             if (auto self = weakSelf.lock()) {
                 if (!self->isShuttingDown()) {
                     self->updateAcquisitionState(AcquisitionState::AC_IDLE);
-                    emit self->acquisitionStopped();
+                    emit self->signal_AQ_acquisitionStopped();
                 }
             }
             });
@@ -471,10 +474,17 @@ void DataAcquisitionManager::acquisitionThread()
                 consecutiveFailures = 0;
 
                 m_buffer->commitBuffer(actualLength);
-                m_totalBytes += actualLength;
+
+                // 更新统计数据
+                m_rateStats.addBytes(actualLength);
+
+                // 更新总字节数原子变量
+                m_totalBytes.fetch_add(actualLength);
+
+                // 通知处理线程有新数据
                 m_dataReady.notify_one();
 
-                // 降低统计更新频率
+                // 定期更新统计信息
                 static auto lastUpdate = std::chrono::steady_clock::now();
                 auto now = std::chrono::steady_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -528,7 +538,7 @@ void DataAcquisitionManager::acquisitionThread()
                     QString qErrorMsg = QString::fromStdString(errorMsg);
                     self->signalStop(StopReason::DEVICE_ERROR);
                     if (!self->isShuttingDown()) {
-                        emit self->errorOccurred(QString("采集线程异常: %1").arg(qErrorMsg));
+                        emit self->signal_AQ_errorOccurred(QString("采集线程异常: %1").arg(qErrorMsg));
                     }
                 }
             }
@@ -559,11 +569,11 @@ void DataAcquisitionManager::processingThread()
                 if (m_processor) {
                     try {
                         m_processor->processData(*packet);
-                        emit dataReceived(*packet);
+                        emit signal_AQ_dataReceived(*packet);
                     }
                     catch (const std::exception& e) {
                         LOG_ERROR(QString("Data processing error: %1").arg(e.what()));
-                        emit errorOccurred(QString("数据处理错误: %1").arg(e.what()));
+                        emit signal_AQ_errorOccurred(QString("数据处理错误: %1").arg(e.what()));
                     }
                 }
             }
@@ -579,7 +589,7 @@ void DataAcquisitionManager::processingThread()
                 if (self->isRunning() && !self->isShuttingDown()) {
                     self->signalStop(StopReason::DEVICE_ERROR);
                     if (!self->isShuttingDown()) {
-                        emit self->errorOccurred(QString("处理线程异常: %1").arg(QString::fromStdString(errorMsg)));
+                        emit self->signal_AQ_errorOccurred(QString("处理线程异常: %1").arg(QString::fromStdString(errorMsg)));
                     }
                 }
             }
@@ -593,31 +603,33 @@ void DataAcquisitionManager::updateStats()
 {
     if (!m_running) return;
 
-    std::lock_guard<std::mutex> lock(m_mutex);
+    // Get current statistics
+    uint64_t currentBytes = m_rateStats.getTotalBytes();
+    double currentRate = m_rateStats.getDataRate();  // Get the actual rate
+    uint64_t elapsedTime = m_rateStats.getElapsedTimeMs();
 
-    auto now = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - m_startTime).count();
+#if 0
+    // Log the data rate for debugging
+    LOG_DEBUG(QString("Current data rate: %1 MB/s, Total bytes: %2, Elapsed: %3 ms")
+        .arg(currentRate, 0, 'f', 2)
+        .arg(currentBytes)
+        .arg(elapsedTime));
+#endif
 
-    if (duration > 0) {
-        // Calculate data rate
-        m_dataRate = static_cast<double>(m_totalBytes.load()) / duration / (1024 * 1024);
+    // Update atomic variables for direct access
+    m_totalBytes.store(currentBytes);
+    m_dataRate.store(currentRate);
 
-        // Get values before sending signal
-        uint64_t currentBytes = m_totalBytes.load();
-        double currentRate = m_dataRate;
-        uint64_t elapsedTime = duration;
-
-        // Use weak reference for safe UI update
-        std::weak_ptr<DataAcquisitionManager> weakSelf = weak_from_this();
-        QMetaObject::invokeMethod(QApplication::instance(), [weakSelf, currentBytes, currentRate, elapsedTime]() {
-            if (auto self = weakSelf.lock()) {
-                if (!self->isShuttingDown()) {
-                    // Add elapsed time to the stats update signal
-                    emit self->statsUpdated(currentBytes, currentRate, elapsedTime);
-                }
+    // Use weak reference for safe UI update
+    std::weak_ptr<DataAcquisitionManager> weakSelf = weak_from_this();
+    QMetaObject::invokeMethod(QApplication::instance(), [weakSelf, currentBytes, currentRate, elapsedTime]() {
+        if (auto self = weakSelf.lock()) {
+            if (!self->isShuttingDown()) {
+                // Send statistics update signal only
+                emit self->signal_AQ_statsUpdated(currentBytes, currentRate, elapsedTime);
             }
-            }, Qt::QueuedConnection);
-    }
+        }
+        }, Qt::QueuedConnection);
 }
 
 bool DataAcquisitionManager::validateAcquisitionParams() const
@@ -651,7 +663,12 @@ bool DataAcquisitionManager::validateAcquisitionParams() const
 
 void DataAcquisitionManager::updateAcquisitionState(AcquisitionState newState)
 {
-    m_acquisitionState = newState;
+    AcquisitionState oldState = m_acquisitionState.exchange(newState);
+
+    // 只有当状态发生变化时才发送信号
+    if (oldState == newState) {
+        return;
+    }
 
     QString stateStr;
     switch (newState) {
@@ -677,7 +694,8 @@ void DataAcquisitionManager::updateAcquisitionState(AcquisitionState newState)
     QMetaObject::invokeMethod(QApplication::instance(), [weakSelf, stateStr]() {
         if (auto self = weakSelf.lock()) {
             if (!self->isShuttingDown()) {
-                emit self->acquisitionStateChanged(stateStr);
+                LOG_INFO(QString("Acquisition state changed to: %1").arg(stateStr));
+                emit self->signal_AQ_acquisitionStateChanged(stateStr);
             }
         }
         }, Qt::QueuedConnection);

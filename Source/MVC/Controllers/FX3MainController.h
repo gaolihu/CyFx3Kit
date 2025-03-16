@@ -72,88 +72,88 @@ public slots:
     /**
      * @brief 处理开始传输请求
      */
-    void handleStartTransfer();
+    void slot_FX3Main_C_handleStartTransfer();
 
     /**
      * @brief 处理停止传输请求
      */
-    void handleStopTransfer();
+    void slot_FX3Main_C_handleStopTransfer();
 
     /**
      * @brief 处理重置设备请求
      */
-    void handleResetDevice();
+    void slot_FX3Main_C_handleResetDevice();
 
     /**
      * @brief 处理通道配置请求
      */
-    void handleChannelConfig();
+    void slot_FX3Main_C_handleChannelConfig();
 
     /**
      * @brief 处理数据分析请求
      */
-    void handleDataAnalysis();
+    void slot_FX3Main_C_handleDataAnalysis();
 
     /**
      * @brief 处理视频显示请求
      */
-    void handleVideoDisplay();
+    void slot_FX3Main_C_handleVideoDisplay();
 
     /**
      * @brief 处理波形分析请求
      */
-    void handleWaveformAnalysis();
+    void slot_FX3Main_C_handleWaveformAnalysis();
 
     /**
      * @brief 处理文件保存请求
      */
-    void handleFileSave();
+    void slot_FX3Main_C_handleFileSave();
 
     /**
      * @brief 处理数据导出请求
      */
-    void handleDataExport();
+    void slot_FX3Main_C_handleDataExport();
 
     /**
      * @brief 处理文件相关设置
      */
-    void handleFileOption();
+    void slot_FX3Main_C_handleFileOption();
 
     /**
      * @brief 处理设置请求
      */
-    void handleSettings();
+    void slot_FX3Main_C_handleSettings();
 
     /**
      * @brief 处理清除日志请求
      */
-    void handleClearLog();
+    void slot_FX3Main_C_handleClearLog();
 
     /**
      * @brief 处理帮助内容请求
      */
-    void handleHelpContent();
+    void slot_FX3Main_C_handleHelpContent();
 
     /**
      * @brief 处理关于对话框请求
      */
-    void handleAboutDialog();
+    void slot_FX3Main_C_handleAboutDialog();
 
     /**
      * @brief 处理命令目录选择请求
      */
-    void handleSelectCommandDir();
+    void slot_FX3Main_C_handleSelectCommandDir();
 
     /**
      * @brief 处理设备升级请求
      */
-    void handleDeviceUpdate();
+    void slot_FX3Main_C_handleDeviceUpdate();
 
     /**
      * @brief 处理模块标签页关闭请求
      * @param index 标签页索引
      */
-    void handleModuleTabClosed(int index);
+    void slot_FX3Main_C_handleModuleTabClosed(int index);
 
 private slots:
     // 内部槽函数用于处理各种事件和信号
@@ -162,26 +162,26 @@ private slots:
      * @brief 处理通道配置变更
      * @param config 通道配置
      */
-    void onChannelConfigChanged(const ChannelConfig& config);
+    void slot_FX3Main_C_onChannelConfigChanged(const ChannelConfig& config);
 
     /**
      * @brief 处理视频显示状态变更
      * @param isRunning 是否运行中
      */
-    void onVideoDisplayStatusChanged(bool isRunning);
+    void slot_FX3Main_C_onVideoDisplayStatusChanged(bool isRunning);
 
     /**
      * @brief 处理文件保存完成
      * @param path 保存路径
      * @param totalBytes 总字节数
      */
-    void onSaveCompleted(const QString& path, uint64_t totalBytes);
+    void slot_FX3Main_C_onSaveCompleted(const QString& path, uint64_t totalBytes);
 
     /**
      * @brief 处理文件保存错误
      * @param error 错误信息
      */
-    void onSaveError(const QString& error);
+    void slot_FX3Main_C_onSaveError(const QString& error);
 
     /**
      * @brief 处理应用程序状态变更
@@ -189,47 +189,39 @@ private slots:
      * @param oldState 旧状态
      * @param reason 变更原因
      */
-    void onAppStateChanged(AppState state, AppState oldState, const QString& reason);
-
-    /**
-     * @brief 处理设备连接状态变更
-     * @param connected 是否连接
-     */
-    void onDeviceConnectionChanged(bool connected);
+    void slot_FX3Main_C_onAppStateChanged(AppState state, AppState oldState, const QString& reason);
 
     /**
      * @brief 处理传输状态变更
      * @param transferring 是否传输中
      */
-    void onTransferStateChanged(bool transferring);
+    void slot_FX3Main_C_onTransferStateChanged(bool transferring);
 
     /**
      * @brief 处理数据包可用
      * @param packet 数据包
      */
-    void onDataPacketAvailable(const DataPacket& packet);
+    void slot_FX3Main_C_onDataPacketAvailable(const DataPacket& packet);
 
     /**
      * @brief 处理传输统计更新
      * @param bytesTransferred 已传输字节数
      * @param transferRate 传输速率
-     * @param errorCount 错误计数
+     * @param errorCount 传输时间ms
      */
-    void onTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t errorCount);
+    void slot_FX3Main_C_onTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint64_t elapseMs);
 
     // UI事件处理槽函数
-    void handleStartButtonClicked();
-    void handleStopButtonClicked();
-    void handleResetButtonClicked();
-    // 其他槽函数...
+    void slot_FX3Main_C_handleStartButtonClicked();
+    void slot_FX3Main_C_handleStopButtonClicked();
+    void slot_FX3Main_C_handleResetButtonClicked();
 
     // 设备控制器事件处理槽函数
-    void handleDeviceConnectionChanged(bool connected);
-    void handleTransferStateChanged(bool transferring);
-    void handleTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t errorCount);
-    void handleUsbSpeedUpdated(const QString& speedDesc, bool isUSB3);
-    void handleDeviceError(const QString& title, const QString& message);
-    void handleDataPacketAvailable(const DataPacket& packet);
+    void slot_FX3Main_C_handleTransferStateChanged(bool transferring);
+    void slot_FX3Main_C_handleTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t elapseMs);
+    void slot_FX3Main_C_handleUsbSpeedUpdated(const QString& speedDesc, bool isUSB3, bool isConnected);
+    void slot_FX3Main_C_handleDeviceError(const QString& title, const QString& message);
+    void slot_FX3Main_C_handleDataPacketAvailable(const DataPacket& packet);
 
 private:
     /**

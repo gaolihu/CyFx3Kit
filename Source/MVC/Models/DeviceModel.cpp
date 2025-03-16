@@ -43,7 +43,7 @@ void DeviceModel::setImageWidth(uint16_t width)
         m_imageWidth = width;
     }
 
-    emit imageParametersChanged(m_imageWidth, m_imageHeight, m_captureType);
+    emit signal_Dev_M_imageParametersChanged(m_imageWidth, m_imageHeight, m_captureType);
     LOG_INFO(QString("图像宽度已更新为: %1").arg(width));
 }
 
@@ -63,7 +63,7 @@ void DeviceModel::setImageHeight(uint16_t height)
         m_imageHeight = height;
     }
 
-    emit imageParametersChanged(m_imageWidth, m_imageHeight, m_captureType);
+    emit signal_Dev_M_imageParametersChanged(m_imageWidth, m_imageHeight, m_captureType);
     LOG_INFO(QString("图像高度已更新为: %1").arg(height));
 }
 
@@ -83,7 +83,7 @@ void DeviceModel::setCaptureType(uint8_t captureType)
         m_captureType = captureType;
     }
 
-    emit imageParametersChanged(m_imageWidth, m_imageHeight, m_captureType);
+    emit signal_Dev_M_imageParametersChanged(m_imageWidth, m_imageHeight, m_captureType);
     LOG_INFO(QString("图像捕获类型已更新为: 0x%1").arg(captureType, 2, 16, QChar('0')));
 }
 
@@ -95,15 +95,17 @@ DeviceState DeviceModel::getDeviceState() const
 
 void DeviceModel::setDeviceState(DeviceState state)
 {
+    LOG_INFO(QString("尝试设置设备状态: %1").arg(static_cast<int>(state)));
     {
         QMutexLocker locker(&m_dataMutex);
         if (m_deviceState == state) {
+            // 设备状态未发生变化
             return;
         }
         m_deviceState = state;
     }
 
-    emit deviceStateChanged(state);
+    emit signal_Dev_M_deviceStateChanged(state);
     LOG_INFO(QString("设备状态已更改为: %1").arg(static_cast<int>(state)));
 }
 
@@ -120,7 +122,7 @@ void DeviceModel::setUsbSpeed(double speed)
         m_usbSpeed = speed;
     }
 
-    emit transferStatsUpdated(m_usbSpeed, m_transferredBytes);
+    emit signal_Dev_M_transferStatsUpdated(m_usbSpeed, m_transferredBytes);
 }
 
 uint64_t DeviceModel::getTransferredBytes() const
@@ -136,7 +138,7 @@ void DeviceModel::setTransferredBytes(uint64_t bytes)
         m_transferredBytes = bytes;
     }
 
-    emit transferStatsUpdated(m_usbSpeed, m_transferredBytes);
+    emit signal_Dev_M_transferStatsUpdated(m_usbSpeed, m_transferredBytes);
 }
 
 QString DeviceModel::getErrorMessage() const
@@ -153,7 +155,7 @@ void DeviceModel::setErrorMessage(const QString& message)
     }
 
     if (!message.isEmpty()) {
-        emit deviceError(message);
+        emit signal_Dev_M_deviceError(message);
         LOG_ERROR(QString("设备错误: %1").arg(message));
     }
 }
@@ -237,9 +239,9 @@ void DeviceModel::resetToDefault()
         m_errorMessage.clear();
     }
 
-    emit imageParametersChanged(m_imageWidth, m_imageHeight, m_captureType);
-    emit deviceStateChanged(m_deviceState);
-    emit transferStatsUpdated(m_usbSpeed, m_transferredBytes);
+    emit signal_Dev_M_imageParametersChanged(m_imageWidth, m_imageHeight, m_captureType);
+    emit signal_Dev_M_deviceStateChanged(m_deviceState);
+    emit signal_Dev_M_transferStatsUpdated(m_usbSpeed, m_transferredBytes);
 
     LOG_INFO("设备模型已重置为默认值");
 }

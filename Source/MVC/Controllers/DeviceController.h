@@ -110,16 +110,10 @@ public:
 
 signals:
     /**
-     * @brief 设备连接状态变更信号
-     * @param connected 是否已连接
-     */
-    void deviceConnectionChanged(bool connected);
-
-    /**
      * @brief 传输状态变更信号
      * @param transferring 是否正在传输
      */
-    void transferStateChanged(bool transferring);
+    void signal_Dev_C_transferStateChanged(bool transferring);
 
     /**
      * @brief 传输统计更新信号
@@ -127,82 +121,78 @@ signals:
      * @param transferRate 传输速率(MB/s)
      * @param errorCount 错误计数
      */
-    void transferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t errorCount);
+    void signal_Dev_C_transferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t errorCount);
 
     /**
      * @brief USB速度更新信号
      * @param speedDesc 速度描述
      * @param isUSB3 是否是USB3连接
+     * @param isConnected 是否已连接
      */
-    void usbSpeedUpdated(const QString& speedDesc, bool isUSB3);
+    void signal_Dev_C_usbSpeedUpdated(const QString& speedDesc, bool isUSB3, bool isConnected);
 
     /**
      * @brief 设备错误信号
      * @param title 错误标题
      * @param message 错误信息
      */
-    void deviceError(const QString& title, const QString& message);
+    void signal_Dev_C_deviceError(const QString& title, const QString& message);
 
     /**
      * @brief 数据包可用信号
      * @param packet 数据包
      */
-    void dataPacketAvailable(const DataPacket& packet);
+    void signal_Dev_C_dataPacketAvailable(const DataPacket& packet);
 
 private slots:
     /**
      * @brief 处理开始传输请求
      */
-    void handleStartTransferRequest();
+    void slot_Dev_C_handleStartTransferRequest();
 
     /**
      * @brief 处理停止传输请求
      */
-    void handleStopTransferRequest();
+    void slot_Dev_C_handleStopTransferRequest();
 
     /**
      * @brief 处理重置设备请求
      */
-    void handleResetDeviceRequest();
+    void slot_Dev_C_handleResetDeviceRequest();
 
     /**
      * @brief 处理图像参数变更
      */
-    void handleImageParametersChanged();
-
-    /**
-     * @brief 处理设备连接状态变更
-     * @param connected 是否已连接
-     */
-    void handleDeviceConnectionChanged(bool connected);
+    void slot_Dev_C_handleImageParametersChanged();
 
     /**
      * @brief 处理传输状态变更
      * @param transferring 是否正在传输
      */
-    void handleTransferStateChanged(bool transferring);
+    void slot_handleTransferStateChanged(bool transferring);
 
     /**
      * @brief 处理传输统计更新
      * @param bytesTransferred 已传输字节数
      * @param transferRate 传输速率(MB/s)
-     * @param errorCount 错误计数
+     * @param errorCount 传输时间ms
      */
-    void handleTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t errorCount);
+    void slot_Dev_C_handleTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t elapseMs);
 
     /**
      * @brief 处理USB速度更新
      * @param speedDesc 速度描述
      * @param isUSB3 是否是USB3连接
+     * @param isConnected 是否已连接
      */
-    void handleUsbSpeedUpdated(const QString& speedDesc, bool isUSB3);
+    void slot_Dev_C_handleUsbSpeedUpdated(const QString& speedDesc, bool isUSB3, bool isConnected);
 
     /**
      * @brief 处理设备错误
      * @param title 错误标题
      * @param message 错误信息
      */
-    void handleDeviceError(const QString& title, const QString& message);
+    void slot_Dev_C_handleDeviceError(const QString& title, const QString& message);
 
 private:
     /**

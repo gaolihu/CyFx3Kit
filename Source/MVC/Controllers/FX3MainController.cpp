@@ -54,9 +54,6 @@ bool FX3MainController::initialize()
         // 创建设备控制器
         m_DeviceView = std::make_unique<DeviceView>(this);
         m_DeviceView->initUIComponents(
-#if 0
-            nullptr, nullptr, nullptr, nullptr, nullptr, nullptr
-#else
             m_mainView->getUi()->imageWIdth,
             m_mainView->getUi()->imageHeight,
             m_mainView->getUi()->imageType,
@@ -69,7 +66,6 @@ bool FX3MainController::initialize()
             m_mainView->getUi()->actionStartTransfer,
             m_mainView->getUi()->actionStopTransfer,
             m_mainView->getUi()->actionResetDevice
-#endif
         );
         m_deviceController = std::make_unique<DeviceController>(m_DeviceView.get(), this);
         if (!m_deviceController->initialize(m_mainView->getWindowHandle())) {
@@ -257,55 +253,49 @@ void FX3MainController::connectSignals()
 {
     // 连接视图信号到控制器槽
     if (m_mainView) {
-        connect(m_mainView, &FX3MainView::signal_startButtonClicked, this, &FX3MainController::handleStartTransfer);
-        connect(m_mainView, &FX3MainView::signal_stopButtonClicked, this, &FX3MainController::handleStopTransfer);
-        connect(m_mainView, &FX3MainView::signal_resetButtonClicked, this, &FX3MainController::handleResetDevice);
-        connect(m_mainView, &FX3MainView::signal_channelConfigButtonClicked, this, &FX3MainController::handleChannelConfig);
-        connect(m_mainView, &FX3MainView::signal_dataAnalysisButtonClicked, this, &FX3MainController::handleDataAnalysis);
-        connect(m_mainView, &FX3MainView::signal_videoDisplayButtonClicked, this, &FX3MainController::handleVideoDisplay);
-        connect(m_mainView, &FX3MainView::signal_waveformAnalysisButtonClicked, this, &FX3MainController::handleWaveformAnalysis);
-        connect(m_mainView, &FX3MainView::signal_exportDataButtonClicked, this, &FX3MainController::handleDataExport);
-        connect(m_mainView, &FX3MainView::signal_FileOptionsButtonClicked, this, &FX3MainController::handleFileOption);
-        connect(m_mainView, &FX3MainView::signal_settingsTriggered, this, &FX3MainController::handleSettings);
-        connect(m_mainView, &FX3MainView::signal_clearLogTriggered, this, &FX3MainController::handleClearLog);
-        connect(m_mainView, &FX3MainView::signal_helpContentTriggered, this, &FX3MainController::handleHelpContent);
-        connect(m_mainView, &FX3MainView::signal_aboutDialogTriggered, this, &FX3MainController::handleAboutDialog);
-        connect(m_mainView, &FX3MainView::signal_selectCommandDirClicked, this, &FX3MainController::handleSelectCommandDir);
-        connect(m_mainView, &FX3MainView::signal_updateDeviceButtonClicked, this, &FX3MainController::handleDeviceUpdate);
-        connect(m_mainView, &FX3MainView::signal_moduleTabClosed, this, &FX3MainController::handleModuleTabClosed);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_startButtonClicked, this, &FX3MainController::slot_FX3Main_C_handleStartTransfer);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_stopButtonClicked, this, &FX3MainController::slot_FX3Main_C_handleStopTransfer);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_resetButtonClicked, this, &FX3MainController::slot_FX3Main_C_handleResetDevice);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_channelConfigButtonClicked, this, &FX3MainController::slot_FX3Main_C_handleChannelConfig);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_dataAnalysisButtonClicked, this, &FX3MainController::slot_FX3Main_C_handleDataAnalysis);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_videoDisplayButtonClicked, this, &FX3MainController::slot_FX3Main_C_handleVideoDisplay);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_waveformAnalysisButtonClicked, this, &FX3MainController::slot_FX3Main_C_handleWaveformAnalysis);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_exportDataButtonClicked, this, &FX3MainController::slot_FX3Main_C_handleDataExport);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_FileOptionsButtonClicked, this, &FX3MainController::slot_FX3Main_C_handleFileOption);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_settingsTriggered, this, &FX3MainController::slot_FX3Main_C_handleSettings);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_clearLogTriggered, this, &FX3MainController::slot_FX3Main_C_handleClearLog);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_helpContentTriggered, this, &FX3MainController::slot_FX3Main_C_handleHelpContent);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_aboutDialogTriggered, this, &FX3MainController::slot_FX3Main_C_handleAboutDialog);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_selectCommandDirClicked, this, &FX3MainController::slot_FX3Main_C_handleSelectCommandDir);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_updateDeviceButtonClicked, this, &FX3MainController::slot_FX3Main_C_handleDeviceUpdate);
+        connect(m_mainView, &FX3MainView::signal_FX3Main_V_moduleTabClosed, this, &FX3MainController::slot_FX3Main_C_handleModuleTabClosed);
     }
 
     // 连接模型信号到控制器槽
-    connect(m_mainModel, &FX3MainModel::deviceConnectionChanged, this, &FX3MainController::onDeviceConnectionChanged);
-    connect(m_mainModel, &FX3MainModel::transferStateChanged, this, &FX3MainController::onTransferStateChanged);
-    connect(m_mainModel, &FX3MainModel::transferStatsUpdated, this, &FX3MainController::onTransferStatsUpdated);
-    connect(m_mainModel, &FX3MainModel::appStateChanged, this, &FX3MainController::onAppStateChanged);
+    connect(m_mainModel, &FX3MainModel::signal_FX3Main_M_transferStateChanged, this, &FX3MainController::slot_FX3Main_C_onTransferStateChanged);
+    connect(m_mainModel, &FX3MainModel::signal_FX3Main_M_transferStatsUpdated, this, &FX3MainController::slot_FX3Main_C_onTransferStatsUpdated);
+    connect(m_mainModel, &FX3MainModel::signal_FX3Main_M_appStateChanged, this, &FX3MainController::slot_FX3Main_C_onAppStateChanged);
 
     // 连接设备控制器信号
     if (m_deviceController) {
-        connect(m_deviceController.get(), &DeviceController::deviceConnectionChanged,
-            this, &FX3MainController::handleDeviceConnectionChanged);
+        connect(m_deviceController.get(), &DeviceController::signal_Dev_C_transferStateChanged,
+            this, &FX3MainController::slot_FX3Main_C_handleTransferStateChanged);
 
-        connect(m_deviceController.get(), &DeviceController::transferStateChanged,
-            this, &FX3MainController::handleTransferStateChanged);
+        connect(m_deviceController.get(), &DeviceController::signal_Dev_C_transferStatsUpdated,
+            this, &FX3MainController::slot_FX3Main_C_handleTransferStatsUpdated);
 
-        connect(m_deviceController.get(), &DeviceController::transferStatsUpdated,
-            this, [this](uint64_t bytes, double rate, uint32_t errors) {
-                m_mainModel->updateTransferStats(bytes, rate, errors);
-            });
+        connect(m_deviceController.get(), &DeviceController::signal_Dev_C_dataPacketAvailable,
+            this, &FX3MainController::slot_FX3Main_C_handleDataPacketAvailable);
 
-        connect(m_deviceController.get(), &DeviceController::dataPacketAvailable,
-            this, &FX3MainController::handleDataPacketAvailable);
-
-        connect(m_deviceController.get(), &DeviceController::deviceError,
+        connect(m_deviceController.get(), &DeviceController::signal_Dev_C_deviceError,
             this, [this](const QString& title, const QString& message) {
                 if (m_mainView) {
                     m_mainView->showErrorMessage(title, message);
                 }
             });
 
-        connect(m_deviceController.get(), &DeviceController::usbSpeedUpdated,
-            this, &FX3MainController::handleUsbSpeedUpdated);
+        connect(m_deviceController.get(), &DeviceController::signal_Dev_C_usbSpeedUpdated,
+            this, &FX3MainController::slot_FX3Main_C_handleUsbSpeedUpdated);
     }
 
     // 连接菜单控制器信号
@@ -314,49 +304,49 @@ void FX3MainController::connectSignals()
             this, [this](const QString& action) {
                 // 处理菜单动作
                 if (action == "startAction") {
-                    handleStartTransfer();
+                    slot_FX3Main_C_handleStartTransfer();
                 }
                 else if (action == "stopAction") {
-                    handleStopTransfer();
+                    slot_FX3Main_C_handleStopTransfer();
                 }
                 else if (action == "resetAction") {
-                    handleResetDevice();
+                    slot_FX3Main_C_handleResetDevice();
                 }
                 else if (action == "channelAction") {
-                    handleChannelConfig();
+                    slot_FX3Main_C_handleChannelConfig();
                 }
                 else if (action == "dataAction") {
-                    handleDataAnalysis();
+                    slot_FX3Main_C_handleDataAnalysis();
                 }
                 else if (action == "videoAction") {
-                    handleVideoDisplay();
+                    slot_FX3Main_C_handleVideoDisplay();
                 }
                 else if (action == "waveformAction") {
-                    handleWaveformAnalysis();
+                    slot_FX3Main_C_handleWaveformAnalysis();
                 }
                 else if (action == "saveAction") {
-                    handleFileSave();
+                    slot_FX3Main_C_handleFileSave();
                 }
                 else if (action == "exportAction") {
-                    handleDataExport();
+                    slot_FX3Main_C_handleDataExport();
                 }
                 else if (action == "fileOptions") {
-                    handleFileOption();
+                    slot_FX3Main_C_handleFileOption();
                 }
                 else if (action == "settingsAction") {
-                    handleSettings();
+                    slot_FX3Main_C_handleSettings();
                 }
                 else if (action == "clearLogAction") {
-                    handleClearLog();
+                    slot_FX3Main_C_handleClearLog();
                 }
                 else if (action == "helpContentAction") {
-                    handleHelpContent();
+                    slot_FX3Main_C_handleHelpContent();
                 }
                 else if (action == "aboutAction") {
-                    handleAboutDialog();
+                    slot_FX3Main_C_handleAboutDialog();
                 }
                 else if (action == "updateAction") {
-                    handleDeviceUpdate();
+                    slot_FX3Main_C_handleDeviceUpdate();
                 }
             });
     }
@@ -365,14 +355,14 @@ void FX3MainController::connectSignals()
     MainUiStateManager* uiStateManager = m_mainView ? m_mainView->getUiStateManager() : nullptr;
     if (uiStateManager) {
         connect(&AppStateMachine::instance(), &AppStateMachine::stateChanged,
-            uiStateManager, &MainUiStateManager::onStateChanged);
+            uiStateManager, &MainUiStateManager::slot_MainUI_STM_onStateChanged);
     }
 
     // 连接状态机信号到模型
     connect(&AppStateMachine::instance(), &AppStateMachine::stateChanged,
         this, [this](AppState newState, AppState oldState, const QString& reason) {
             // 由FX3MainModel处理状态变更
-            m_mainModel->appStateChanged(newState, oldState, reason);
+            m_mainModel->signal_FX3Main_M_appStateChanged(newState, oldState, reason);
         });
 
     // 连接模块管理器信号
@@ -387,11 +377,11 @@ void FX3MainController::connectSignals()
 
         // 连接通道配置变更信号
         connect(m_moduleManager.get(), &ModuleManager::signal_channelConfigChanged,
-            this, &FX3MainController::onChannelConfigChanged);
+            this, &FX3MainController::slot_FX3Main_C_onChannelConfigChanged);
     }
 
     // 连接设备信息变更信号到视图更新
-    connect(m_mainModel, &FX3MainModel::deviceInfoChanged,
+    connect(m_mainModel, &FX3MainModel::signal_FX3Main_M_deviceInfoChanged,
         this, [this](const QString& deviceName, const QString& firmwareVersion, const QString& serialNumber) {
             if (m_mainView) {
                 m_mainView->updateDeviceInfoDisplay(deviceName, firmwareVersion, serialNumber);
@@ -482,7 +472,7 @@ bool FX3MainController::validateImageParameters(uint16_t& width, uint16_t& heigh
 
 //---------------------- 用户操作处理槽函数 ----------------------
 
-void FX3MainController::handleStartTransfer()
+void FX3MainController::slot_FX3Main_C_handleStartTransfer()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理开始传输请求"));
 
@@ -506,9 +496,9 @@ void FX3MainController::handleStartTransfer()
     }
 }
 
-void FX3MainController::handleStopTransfer()
+void FX3MainController::slot_FX3Main_C_handleStopTransfer()
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("处理停止传输请求"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("主控制器处理停止传输请求"));
 
     if (m_mainModel->isClosing()) {
         LOG_INFO(LocalQTCompat::fromLocal8Bit("应用程序正在关闭，忽略停止请求"));
@@ -520,7 +510,7 @@ void FX3MainController::handleStopTransfer()
     }
 }
 
-void FX3MainController::handleResetDevice()
+void FX3MainController::slot_FX3Main_C_handleResetDevice()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理重置设备请求"));
 
@@ -534,27 +524,27 @@ void FX3MainController::handleResetDevice()
     }
 }
 
-void FX3MainController::handleChannelConfig()
+void FX3MainController::slot_FX3Main_C_handleChannelConfig()
 {
     handleModuleDisplay(ModuleManager::ModuleType::CHANNEL_CONFIG);
 }
 
-void FX3MainController::handleDataAnalysis()
+void FX3MainController::slot_FX3Main_C_handleDataAnalysis()
 {
     handleModuleDisplay(ModuleManager::ModuleType::DATA_ANALYSIS);
 }
 
-void FX3MainController::handleVideoDisplay()
+void FX3MainController::slot_FX3Main_C_handleVideoDisplay()
 {
     handleModuleDisplay(ModuleManager::ModuleType::VIDEO_DISPLAY);
 }
 
-void FX3MainController::handleWaveformAnalysis()
+void FX3MainController::slot_FX3Main_C_handleWaveformAnalysis()
 {
     handleModuleDisplay(ModuleManager::ModuleType::WAVEFORM_ANALYSIS);
 }
 
-void FX3MainController::handleFileSave()
+void FX3MainController::slot_FX3Main_C_handleFileSave()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理保存文件请求"));
 
@@ -578,7 +568,7 @@ void FX3MainController::handleFileSave()
     }
 }
 
-void FX3MainController::handleDataExport()
+void FX3MainController::slot_FX3Main_C_handleDataExport()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理导出数据请求"));
 
@@ -595,12 +585,12 @@ void FX3MainController::handleDataExport()
     }
 }
 
-void FX3MainController::handleFileOption()
+void FX3MainController::slot_FX3Main_C_handleFileOption()
 {
     handleModuleDisplay(ModuleManager::ModuleType::FILE_OPTIONS);
 }
 
-void FX3MainController::handleSettings()
+void FX3MainController::slot_FX3Main_C_handleSettings()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理设置请求"));
 
@@ -617,7 +607,7 @@ void FX3MainController::handleSettings()
     }
 }
 
-void FX3MainController::handleClearLog()
+void FX3MainController::slot_FX3Main_C_handleClearLog()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理清除日志请求"));
 
@@ -632,7 +622,7 @@ void FX3MainController::handleClearLog()
     }
 }
 
-void FX3MainController::handleHelpContent()
+void FX3MainController::slot_FX3Main_C_handleHelpContent()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理帮助内容请求"));
 
@@ -649,7 +639,7 @@ void FX3MainController::handleHelpContent()
     }
 }
 
-void FX3MainController::handleAboutDialog()
+void FX3MainController::slot_FX3Main_C_handleAboutDialog()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理关于对话框请求"));
 
@@ -663,7 +653,7 @@ void FX3MainController::handleAboutDialog()
     }
 }
 
-void FX3MainController::handleSelectCommandDir()
+void FX3MainController::slot_FX3Main_C_handleSelectCommandDir()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理选择命令目录请求"));
 
@@ -702,12 +692,12 @@ void FX3MainController::handleSelectCommandDir()
     }
 }
 
-void FX3MainController::handleDeviceUpdate()
+void FX3MainController::slot_FX3Main_C_handleDeviceUpdate()
 {
     handleModuleDisplay(ModuleManager::ModuleType::DEVICE_UPDATE);
 }
 
-void FX3MainController::handleModuleTabClosed(int index)
+void FX3MainController::slot_FX3Main_C_handleModuleTabClosed(int index)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理模块标签页关闭，索引: %1").arg(index));
 
@@ -719,7 +709,7 @@ void FX3MainController::handleModuleTabClosed(int index)
 
 //---------------------- 状态和事件处理槽函数 ----------------------
 
-void FX3MainController::onChannelConfigChanged(const ChannelConfig& config) {
+void FX3MainController::slot_FX3Main_C_onChannelConfigChanged(const ChannelConfig& config) {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("通道配置已更新"));
 
     // 更新模型
@@ -741,7 +731,7 @@ void FX3MainController::onChannelConfigChanged(const ChannelConfig& config) {
     }
 }
 
-void FX3MainController::onVideoDisplayStatusChanged(bool isRunning)
+void FX3MainController::slot_FX3Main_C_onVideoDisplayStatusChanged(bool isRunning)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("视频显示状态变更: %1").arg(isRunning ? "运行中" : "已停止"));
 
@@ -755,7 +745,7 @@ void FX3MainController::onVideoDisplayStatusChanged(bool isRunning)
     }
 }
 
-void FX3MainController::onSaveCompleted(const QString& path, uint64_t totalBytes)
+void FX3MainController::slot_FX3Main_C_onSaveCompleted(const QString& path, uint64_t totalBytes)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存完成: 路径=%1, 总大小=%2 字节")
         .arg(path).arg(totalBytes));
@@ -770,7 +760,7 @@ void FX3MainController::onSaveCompleted(const QString& path, uint64_t totalBytes
     }
 }
 
-void FX3MainController::onSaveError(const QString& error)
+void FX3MainController::slot_FX3Main_C_onSaveError(const QString& error)
 {
     LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件保存错误: %1").arg(error));
 
@@ -783,7 +773,7 @@ void FX3MainController::onSaveError(const QString& error)
     }
 }
 
-void FX3MainController::onAppStateChanged(AppState state, AppState oldState, const QString& reason)
+void FX3MainController::slot_FX3Main_C_onAppStateChanged(AppState state, AppState oldState, const QString& reason)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("应用程序状态从 %1 变更为 %2，原因: %3")
         .arg(static_cast<int>(oldState))
@@ -821,25 +811,7 @@ void FX3MainController::onAppStateChanged(AppState state, AppState oldState, con
     }
 }
 
-void FX3MainController::onDeviceConnectionChanged(bool connected)
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("设备连接状态变更: %1").arg(connected ? "已连接" : "已断开"));
-
-    // 在这里处理设备连接状态变更
-    if (m_mainView) {
-        if (MainUiStateManager* uiStateManager = m_mainView->getUiStateManager()) {
-            uiStateManager->onDeviceConnectionChanged(connected);
-        }
-        else {
-            m_mainView->updateStatusBar(
-                connected ? LocalQTCompat::fromLocal8Bit("设备已连接") : LocalQTCompat::fromLocal8Bit("设备已断开"),
-                3000
-            );
-        }
-    }
-}
-
-void FX3MainController::onTransferStateChanged(bool transferring)
+void FX3MainController::slot_FX3Main_C_onTransferStateChanged(bool transferring)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("传输状态变更: %1").
         arg(transferring ? "传输中" : "已停止"));
@@ -857,7 +829,7 @@ void FX3MainController::onTransferStateChanged(bool transferring)
 
     if (m_mainView) {
         if (MainUiStateManager* uiStateManager = m_mainView->getUiStateManager()) {
-            uiStateManager->onTransferStateChanged(transferring);
+            uiStateManager->slot_MainUI_STM_onTransferStateChanged(transferring);
         }
         else {
             m_mainView->updateStatusBar(
@@ -868,7 +840,7 @@ void FX3MainController::onTransferStateChanged(bool transferring)
     }
 }
 
-void FX3MainController::onDataPacketAvailable(const DataPacket& packet)
+void FX3MainController::slot_FX3Main_C_onDataPacketAvailable(const DataPacket& packet)
 {
     // 数据包处理逻辑
     // 例如转发到文件保存控制器、视频显示模块等
@@ -877,7 +849,8 @@ void FX3MainController::onDataPacketAvailable(const DataPacket& packet)
     }
 }
 
-void FX3MainController::handleDeviceConnectionChanged(bool connected)
+#if 0
+void FX3MainController::slot_FX3Main_C_handleDeviceConnectionChanged(bool connected)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("FX3主设备控制器处理设备连接状态变更: %1").arg(connected ? "已连接" : "已断开"));
 
@@ -892,14 +865,20 @@ void FX3MainController::handleDeviceConnectionChanged(bool connected)
         m_moduleManager->notifyAllModules(event);
     }
 
+    // 更新UI
+    if (m_mainView && m_mainView->getUiStateManager()) {
+        m_mainView->getUiStateManager()->slot_MainUI_STM_onDeviceConnectionChanged(connected);
+    }
+
     // 更新应用状态机
     StateEvent stateEvent = connected ? StateEvent::DEVICE_CONNECTED : StateEvent::DEVICE_DISCONNECTED;
     QString reason = connected ? LocalQTCompat::fromLocal8Bit("设备已连接") : LocalQTCompat::fromLocal8Bit("设备已断开");
     AppStateMachine::instance().processEvent(stateEvent, reason);
 }
+#endif
 
-void FX3MainController::handleTransferStateChanged(bool transferring) {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("处理传输状态变更: %1").arg(transferring ? "传输中" : "已停止"));
+void FX3MainController::slot_FX3Main_C_handleTransferStateChanged(bool transferring) {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("主设备控制器处理传输状态变更: %1").arg(transferring ? "传输中" : "已停止"));
 
     // 通知模型
     m_mainModel->setTransferring(transferring);
@@ -914,7 +893,7 @@ void FX3MainController::handleTransferStateChanged(bool transferring) {
 
     // 更新UI和应用状态机
     if (m_mainView && m_mainView->getUiStateManager()) {
-        m_mainView->getUiStateManager()->onTransferStateChanged(transferring);
+        m_mainView->getUiStateManager()->slot_MainUI_STM_onTransferStateChanged(transferring);
     }
 
     StateEvent stateEvent = transferring ? StateEvent::TRANSFER_STARTED : StateEvent::STOP_SUCCEEDED;
@@ -922,28 +901,25 @@ void FX3MainController::handleTransferStateChanged(bool transferring) {
     AppStateMachine::instance().processEvent(stateEvent, reason);
 }
 
-void FX3MainController::handleTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t errorCount)
+void FX3MainController::slot_FX3Main_C_handleTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t elapseMs)
 {
     // 更新模型
-    m_mainModel->updateTransferStats(bytesTransferred, transferRate, errorCount);
-
-    // 更新UI
-    if (m_mainView) {
-        m_mainView->updateTransferStatsDisplay(bytesTransferred, transferRate, errorCount);
+    if (m_mainModel) {
+        m_mainModel->updateTransferStats(bytesTransferred, transferRate, elapseMs);
     }
 }
 
-void FX3MainController::handleUsbSpeedUpdated(const QString& speedDesc, bool isUSB3)
+void FX3MainController::slot_FX3Main_C_handleUsbSpeedUpdated(const QString& speedDesc, bool isUSB3, bool isConnected)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("USB速度更新: %1, 是否USB3: %2").arg(speedDesc).arg(isUSB3));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("主控制器中USB速度更新: %1, %2, %3").arg(speedDesc).arg(isUSB3 ? "u3" : "no-u3").arg(isConnected ? "已连接" : "未连接"));
 
     // 更新UI
     if (m_mainView) {
-        m_mainView->updateUsbSpeedDisplay(speedDesc);
+        m_mainView->updateUsbSpeedDisplay(speedDesc, isUSB3, isConnected);
     }
 }
 
-void FX3MainController::handleDeviceError(const QString& title, const QString& message)
+void FX3MainController::slot_FX3Main_C_handleDeviceError(const QString& title, const QString& message)
 {
     LOG_ERROR(QString("%1: %2").arg(title).arg(message));
 
@@ -953,14 +929,13 @@ void FX3MainController::handleDeviceError(const QString& title, const QString& m
     }
 }
 
-void FX3MainController::onTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t errorCount)
+void FX3MainController::slot_FX3Main_C_onTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint64_t elapseMs)
 {
     // 更新UI显示
     if (m_mainView) {
-        m_mainView->updateTransferStatsDisplay(bytesTransferred, transferRate, errorCount);
+        m_mainView->updateTransferStatsDisplay(bytesTransferred, transferRate, elapseMs);
     }
 
-    // 日志记录 (仅在特定间隔记录，避免日志过多)
     static uint64_t lastLoggedBytes = 0;
     static QTime lastLogTime = QTime::currentTime();
     QTime currentTime = QTime::currentTime();
@@ -970,17 +945,17 @@ void FX3MainController::onTransferStatsUpdated(uint64_t bytesTransferred, double
         bytesTransferred - lastLoggedBytes > 100 * 1024 * 1024 ||
         lastLogTime.msecsTo(currentTime) > 5000) {
 
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("传输统计 - 总字节: %1, 速率: %2 MB/s, 错误: %3")
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("传输统计 - 总数据: %1 Bytes, 速率: %2 MB/s, 时间: %3")
             .arg(bytesTransferred)
-            .arg(transferRate / (1024.0 * 1024.0), 0, 'f', 2)
-            .arg(errorCount));
+            .arg(transferRate, 0, 'f', 2)
+            .arg(elapseMs));
 
         lastLoggedBytes = bytesTransferred;
         lastLogTime = currentTime;
     }
 }
 
-void FX3MainController::handleStartButtonClicked()
+void FX3MainController::slot_FX3Main_C_handleStartButtonClicked()
 {
     LOG_INFO("处理开始按钮点击");
     if (m_deviceController) {
@@ -988,7 +963,7 @@ void FX3MainController::handleStartButtonClicked()
     }
 }
 
-void FX3MainController::handleStopButtonClicked()
+void FX3MainController::slot_FX3Main_C_handleStopButtonClicked()
 {
     LOG_INFO("处理停止按钮点击");
     if (m_deviceController) {
@@ -996,7 +971,7 @@ void FX3MainController::handleStopButtonClicked()
     }
 }
 
-void FX3MainController::handleResetButtonClicked()
+void FX3MainController::slot_FX3Main_C_handleResetButtonClicked()
 {
     LOG_INFO("处理重置按钮点击");
     if (m_deviceController) {
@@ -1004,7 +979,7 @@ void FX3MainController::handleResetButtonClicked()
     }
 }
 
-void FX3MainController::handleDataPacketAvailable(const DataPacket& packet)
+void FX3MainController::slot_FX3Main_C_handleDataPacketAvailable(const DataPacket& packet)
 {
     // 数据包处理逻辑
     // 例如转发到文件保存控制器、视频显示模块等
@@ -1044,15 +1019,11 @@ void FX3MainController::initializeConnections()
         if (m_mainView) {
             m_mainView->setVideoParamsDisplay(width, height, formatToIndex(captureType));
         }
-
-        // 设置设备连接状态
-        bool connected = m_deviceController->isDeviceConnected();
-        m_mainModel->setDeviceConnected(connected);
     }
 
     // 连接DeviceModel状态变化到MainUiStateManager
-    connect(DeviceModel::getInstance(), &DeviceModel::deviceStateChanged,
-        m_mainView->getUiStateManager(), &MainUiStateManager::onDeviceStateChanged);
+    connect(DeviceModel::getInstance(), &DeviceModel::signal_Dev_M_deviceStateChanged,
+        m_mainView->getUiStateManager(), &MainUiStateManager::slot_MainUI_STM_onDeviceStateChanged);
 
     // 更新UI状态
     updateUIFromModel();

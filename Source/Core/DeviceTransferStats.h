@@ -13,6 +13,7 @@ struct DeviceTransferStats {
     uint64_t bytesTransferred;   ///< 总传输字节数
     double transferRate;         ///< 传输速率(MB/s)
     uint32_t errorCount;         ///< 传输错误计数
+    uint64_t elapseMs;           ///< 传输时间ms
     std::chrono::steady_clock::time_point startTime;  ///< 传输开始时间点
 
     /**

@@ -53,12 +53,6 @@ public:
     bool isClosing() const;
 
     /**
-     * @brief 设置设备连接状态
-     * @param connected 设备是否已连接
-     */
-    void setDeviceConnected(bool connected);
-
-    /**
      * @brief 设置数据传输状态
      * @param transferring 是否正在传输数据
      */
@@ -112,9 +106,9 @@ public:
      * @brief 更新传输统计信息
      * @param bytesTransferred 已传输字节数
      * @param transferRate 传输速率 (bytes/sec)
-     * @param errorCount 错误计数
+     * @param errorCount 传输时间ms
      */
-    void updateTransferStats(uint64_t bytesTransferred, double transferRate, uint32_t errorCount);
+    void updateTransferStats(uint64_t bytesTransferred, double transferRate, uint32_t elapseMs);
 
     /**
      * @brief 获取传输统计信息
@@ -145,24 +139,18 @@ public:
 
 signals:
     /**
-     * @brief 设备连接状态变更信号
-     * @param connected 设备是否已连接
-     */
-    void deviceConnectionChanged(bool connected);
-
-    /**
      * @brief 数据传输状态变更信号
      * @param transferring 是否正在传输数据
      */
-    void transferStateChanged(bool transferring);
+    void signal_FX3Main_M_transferStateChanged(bool transferring);
 
     /**
      * @brief 传输统计信息更新信号
      * @param bytesTransferred 已传输字节数
      * @param transferRate 传输速率 (bytes/sec)
-     * @param errorCount 错误计数
+     * @param errorCount 传输时间
      */
-    void transferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t errorCount);
+    void signal_FX3Main_M_transferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t elapseMs);
 
     /**
      * @brief 视频配置变更信号
@@ -170,7 +158,7 @@ signals:
      * @param height 视频高度
      * @param format 视频格式
      */
-    void videoConfigChanged(uint16_t width, uint16_t height, uint8_t format);
+    void signal_FX3Main_M_videoConfigChanged(uint16_t width, uint16_t height, uint8_t format);
 
     /**
      * @brief 设备信息变更信号
@@ -178,7 +166,7 @@ signals:
      * @param firmwareVersion 固件版本
      * @param serialNumber 序列号
      */
-    void deviceInfoChanged(const QString& deviceName, const QString& firmwareVersion, const QString& serialNumber);
+    void signal_FX3Main_M_deviceInfoChanged(const QString& deviceName, const QString& firmwareVersion, const QString& serialNumber);
 
     /**
      * @brief 应用程序状态变更信号
@@ -186,19 +174,19 @@ signals:
      * @param oldState 旧状态
      * @param reason 变更原因
      */
-    void appStateChanged(AppState state, AppState oldState, const QString& reason);
+    void signal_FX3Main_M_appStateChanged(AppState state, AppState oldState, const QString& reason);
 
     /**
      * @brief 命令目录变更信号
      * @param dir 新命令目录
      */
-    void commandDirectoryChanged(const QString& dir);
+    void signal_FX3Main_M_commandDirectoryChanged(const QString& dir);
 
     /**
      * @brief 关闭状态变更信号
      * @param closing 是否正在关闭
      */
-    void closingStateChanged(bool closing);
+    void signal_FX3Main_M_closingStateChanged(bool closing);
 
 private:
     /**
@@ -247,6 +235,7 @@ private:
     uint64_t m_bytesTransferred;                  ///< 已传输字节数
     double m_transferRate;                        ///< 传输速率 (bytes/sec)
     uint32_t m_errorCount;                        ///< 错误计数
+    uint64_t m_elapseMs;                          ///< 传输时间ms
     mutable std::mutex m_statsMutex;              ///< 统计信息互斥锁
 
     // 配置

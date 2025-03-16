@@ -57,20 +57,20 @@ signals:
     /**
      * @brief 启动传输信号
      */
-    virtual void startTransferRequested() = 0;
+    virtual void signal_Dev_V_startTransferRequested() = 0;
 
     /**
      * @brief 停止传输信号
      */
-    virtual void stopTransferRequested() = 0;
+    virtual void signal_Dev_V_stopTransferRequested() = 0;
 
     /**
      * @brief 重置设备信号
      */
-    virtual void resetDeviceRequested() = 0;
+    virtual void signal_Dev_V_resetDeviceRequested() = 0;
 
     /**
      * @brief 图像参数变更信号
      */
-    virtual void imageParametersChanged() = 0;
+    virtual void signal_Dev_V_imageParametersChanged() = 0;
 };

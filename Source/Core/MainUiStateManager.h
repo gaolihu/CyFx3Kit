@@ -80,16 +80,17 @@ public:
      * @brief 更新传输统计信息
      * @param bytesTransferred 已传输字节数
      * @param transferRate 传输速率 (bytes/sec)
-     * @param errorCount 错误计数
+     * @param errorCount 传输时间
      */
-    void updateTransferStats(uint64_t bytesTransferred, double transferRate, uint32_t errorCount);
+    void updateTransferStats(uint64_t bytesTransferred, double transferRate, uint64_t elapseMs);
 
     /**
      * @brief 更新USB速度显示
      * @param speedDesc USB速度描述文本
      * @param isUSB3 是否是USB3.0
+     * @param isUSB3 是否已连接设备
      */
-    void updateUsbSpeedDisplay(const QString& speedDesc, bool isUSB3);
+    void updateUsbSpeedDisplay(const QString& speedDesc, bool isUSB3, bool isConnected);
 
     /**
      * @brief 更新传输时间显示
@@ -234,121 +235,115 @@ public slots:
      * @param oldState 旧状态
      * @param reason 变更原因
      */
-    void onStateChanged(AppState newState, AppState oldState, const QString& reason);
-
-    /**
-     * @brief 处理设备连接状态变更
-     * @param connected 是否连接
-     */
-    void onDeviceConnectionChanged(bool connected);
+    void slot_MainUI_STM_onStateChanged(AppState newState, AppState oldState, const QString& reason);
 
     /**
      * @brief 处理传输状态变更
      * @param transferring 是否传输中
      */
-    void onTransferStateChanged(bool transferring);
+    void slot_MainUI_STM_onTransferStateChanged(bool transferring);
 
     /**
      * @brief 处理Tab关闭请求
      * @param index 要关闭的Tab索引
      */
-    void slot_onTabCloseRequested(int index);
+    void slot_MainUI_STM_onTabCloseRequested(int index);
 
     /**
     * @brief 响应设备状态变化
     * @param state 新的设备状态
     */
-    void onDeviceStateChanged(DeviceState state);
+    void slot_MainUI_STM_onDeviceStateChanged(DeviceState state);
 
     /**
      * @brief 初始化UI状态
      * 设置所有UI元素的初始状态
      */
-    void initializeUIState();
+    void slot_MainUI_STM_initializeUIState();
 
     /**
      * @brief 初始化视频参数
      * 设置默认的视频参数(1920x1080)
      */
-    void initializeVideoParameters();
+    void slot_MainUI_STM_initializeVideoParameters();
 
 signals:
     /**
      * @brief 开始按钮点击信号
      */
-    void startButtonClicked();
+    void signal_MainUI_STM_startButtonClicked();
 
     /**
      * @brief 停止按钮点击信号
      */
-    void stopButtonClicked();
+    void signal_MainUI_STM_stopButtonClicked();
 
     /**
      * @brief 重置按钮点击信号
      */
-    void resetButtonClicked();
+    void signal_MainUI_STM_resetButtonClicked();
 
     /**
      * @brief 通道配置按钮点击信号
      */
-    void channelConfigButtonClicked();
+    void signal_MainUI_STM_channelConfigButtonClicked();
 
     /**
      * @brief 数据分析按钮点击信号
      */
-    void dataAnalysisButtonClicked();
+    void signal_MainUI_STM_dataAnalysisButtonClicked();
 
     /**
      * @brief 视频显示按钮点击信号
      */
-    void videoDisplayButtonClicked();
+    void signal_MainUI_STM_videoDisplayButtonClicked();
 
     /**
      * @brief 波形分析按钮点击信号
      */
-    void waveformAnalysisButtonClicked();
+    void signal_MainUI_STM_waveformAnalysisButtonClicked();
 
     /**
      * @brief 保存文件按钮点击信号
      */
-    void saveFileButtonClicked();
+    void signal_MainUI_STM_saveFileButtonClicked();
 
     /**
      * @brief 数据导出按钮点击信号
      */
-    void exportDataButtonClicked();
+    void signal_MainUI_STM_exportDataButtonClicked();
 
     /**
      * @brief 文件选项按钮点击信号
      */
-    void fileOptionsButtonClicked();
+    void signal_MainUI_STM_fileOptionsButtonClicked();
 
     /**
      * @brief 设置菜单触发信号
      */
-    void settingsTriggered();
+    void signal_MainUI_STM_settingsTriggered();
 
     /**
      * @brief 选择命令目录按钮点击信号
      */
-    void selectCommandDirClicked();
+    void signal_MainUI_STM_selectCommandDirClicked();
 
     /**
      * @brief 设备升级按钮点击信号
      */
-    void updateDeviceButtonClicked();
+    void signal_MainUI_STM_updateDeviceButtonClicked();
 
     /**
      * @brief 模块选项卡关闭信号
      * @param index 选项卡索引
      */
-    void signal_moduleTabClosed(int index);
+    void signal_MainUI_STM_moduleTabClosed(int index);
 
 private slots:
     /**
      * @brief 定时更新传输时间显示
      */
-    void slot_updateTransferTime();
+    void slot_MainUI_STM_updateTransferTime();
 
 private:
     /**
@@ -395,7 +390,7 @@ private:
     /**
      * @brief 格式化时间为可读格式
      * @param milliseconds 毫秒数
-     * @return 格式化后的字符串 (如 "01:23:45")
+     * @return 格式化后的字符串 (如 "01:23:45.032 ms")
      */
     QString formatTime(qint64 milliseconds) const;
 

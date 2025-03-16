@@ -138,26 +138,26 @@ signals:
      * @param height 新的高度
      * @param captureType 新的捕获类型
      */
-    void imageParametersChanged(uint16_t width, uint16_t height, uint8_t captureType);
+    void signal_Dev_M_imageParametersChanged(uint16_t width, uint16_t height, uint8_t captureType);
 
     /**
      * @brief 设备状态变更信号
      * @param state 新的设备状态
      */
-    void deviceStateChanged(DeviceState state);
+    void signal_Dev_M_deviceStateChanged(DeviceState state);
 
     /**
      * @brief 传输统计更新信号
      * @param speed USB速度（MB/s）
      * @param bytes 已传输字节数
      */
-    void transferStatsUpdated(double speed, uint64_t bytes);
+    void signal_Dev_M_transferStatsUpdated(double speed, uint64_t bytes);
 
     /**
      * @brief 设备错误信号
      * @param message 错误消息
      */
-    void deviceError(const QString& message);
+    void signal_Dev_M_deviceError(const QString& message);
 
 private:
     /**

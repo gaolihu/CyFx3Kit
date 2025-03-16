@@ -104,15 +104,17 @@ public:
      * @brief 更新传输统计显示
      * @param bytesTransferred 已传输字节数
      * @param transferRate 传输速率 (bytes/sec)
-     * @param errorCount 错误计数
+     * @param errorCount 传输时间
      */
-    void updateTransferStatsDisplay(uint64_t bytesTransferred, double transferRate, uint32_t errorCount);
+    void updateTransferStatsDisplay(uint64_t bytesTransferred, double transferRate, uint64_t elapseMs);
 
     /**
      * @brief 更新USB速度显示
      * @param speed USB速度
+     * @param isU3 是否是USB3设备
+     * @param isU3 是否已连接设备
      */
-    void updateUsbSpeedDisplay(const QString& speed);
+    void updateUsbSpeedDisplay(const QString& speed, const bool isU3, const bool isConnected);
 
     /**
      * @brief 设置命令文件目录显示
@@ -215,88 +217,88 @@ signals:
     /**
      * @brief 开始按钮点击信号
      */
-    void signal_startButtonClicked();
+    void signal_FX3Main_V_startButtonClicked();
 
     /**
      * @brief 停止按钮点击信号
      */
-    void signal_stopButtonClicked();
+    void signal_FX3Main_V_stopButtonClicked();
 
     /**
      * @brief 重置按钮点击信号
      */
-    void signal_resetButtonClicked();
+    void signal_FX3Main_V_resetButtonClicked();
 
     /**
      * @brief 通道配置按钮点击信号
      */
-    void signal_channelConfigButtonClicked();
+    void signal_FX3Main_V_channelConfigButtonClicked();
 
     /**
      * @brief 数据分析按钮点击信号
      */
-    void signal_dataAnalysisButtonClicked();
+    void signal_FX3Main_V_dataAnalysisButtonClicked();
 
     /**
      * @brief 视频显示按钮点击信号
      */
-    void signal_videoDisplayButtonClicked();
+    void signal_FX3Main_V_videoDisplayButtonClicked();
 
     /**
      * @brief 波形分析按钮点击信号
      */
-    void signal_waveformAnalysisButtonClicked();
+    void signal_FX3Main_V_waveformAnalysisButtonClicked();
 
     /**
      * @brief 保存文件按钮点击信号
      */
-    void signal_saveFileButtonClicked();
+    void signal_FX3Main_V_saveFileButtonClicked();
 
     /**
      * @brief 导出数据按钮点击信号
      */
-    void signal_exportDataButtonClicked();
+    void signal_FX3Main_V_exportDataButtonClicked();
 
     /**
      * @brief 设置文件选项按钮点击信号
      */
-    void signal_FileOptionsButtonClicked();
+    void signal_FX3Main_V_FileOptionsButtonClicked();
 
     /**
      * @brief 设置菜单触发信号
      */
-    void signal_settingsTriggered();
+    void signal_FX3Main_V_settingsTriggered();
 
     /**
      * @brief 清除日志按钮点击信号
      */
-    void signal_clearLogTriggered();
+    void signal_FX3Main_V_clearLogTriggered();
 
     /**
      * @brief 帮助内容菜单触发信号
      */
-    void signal_helpContentTriggered();
+    void signal_FX3Main_V_helpContentTriggered();
 
     /**
      * @brief 关于对话框菜单触发信号
      */
-    void signal_aboutDialogTriggered();
+    void signal_FX3Main_V_aboutDialogTriggered();
 
     /**
      * @brief 选择命令目录按钮点击信号
      */
-    void signal_selectCommandDirClicked();
+    void signal_FX3Main_V_selectCommandDirClicked();
 
     /**
      * @brief 设备升级按钮点击信号
      */
-    void signal_updateDeviceButtonClicked();
+    void signal_FX3Main_V_updateDeviceButtonClicked();
 
     /**
      * @brief 模块选项卡关闭信号
      * @param index 选项卡索引
      */
-    void signal_moduleTabClosed(int index);
+    void signal_FX3Main_V_moduleTabClosed(int index);
 
 private:
     /**

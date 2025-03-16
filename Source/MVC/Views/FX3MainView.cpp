@@ -78,7 +78,7 @@ FX3MainView::FX3MainView(QWidget* parent)
         // 不再需要初始化信号连接，由UI状态管理器处理
         initializeSignalConnections();
 
-        updateDeviceInfoDisplay("FX cypress高速USB传输设备", "2.1", "SN-");
+        updateDeviceInfoDisplay("FX cypress高速USB传输设备", "2.1", "SN-TODO");
 
         LOG_DEBUG(LocalQTCompat::fromLocal8Bit("FX3主视图构造函数完成..."));
     }
@@ -209,14 +209,14 @@ bool FX3MainView::initializeUiStateManager() {
         }
 
         // 初始化UI状态和视频参数
-        m_uiStateManager->initializeUIState();
-        m_uiStateManager->initializeVideoParameters();
+        m_uiStateManager->slot_MainUI_STM_initializeUIState();
+        m_uiStateManager->slot_MainUI_STM_initializeVideoParameters();
 
 #define CONNECT_SIGNAL(uiSignal, viewSignal) \
-            connect(m_uiStateManager.get(), &MainUiStateManager::uiSignal, \
+            connect(m_uiStateManager.get(), &MainUiStateManager::signal_MainUI_STM_##uiSignal, \
                     this, [this](){ \
                         LOG_DEBUG(LocalQTCompat::fromLocal8Bit("主视图UI管理器发出信号: %1").arg(#uiSignal)); \
-                        emit signal_##viewSignal(); \
+                        emit signal_FX3Main_V_##viewSignal(); \
                     })
 
         CONNECT_SIGNAL(startButtonClicked, startButtonClicked);
@@ -236,8 +236,8 @@ bool FX3MainView::initializeUiStateManager() {
 #undef CONNECT_SIGNAL
 
         // 连接模块Tab关闭信号
-        connect(m_uiStateManager.get(), &MainUiStateManager::signal_moduleTabClosed,
-            this, &FX3MainView::signal_moduleTabClosed);
+        connect(m_uiStateManager.get(), &MainUiStateManager::signal_MainUI_STM_moduleTabClosed,
+            this, &FX3MainView::signal_FX3Main_V_moduleTabClosed);
 
         LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态管理器初始化成功"));
         return true;
@@ -259,14 +259,14 @@ void FX3MainView::setupModuleButtonSignalMapping() {
 
     // 定义所有映射
     const ButtonSignalMapping mappings[] = {
-        { "quickChannelBtn", &FX3MainView::signal_channelConfigButtonClicked },
-        { "quickDataBtn", &FX3MainView::signal_dataAnalysisButtonClicked },
-        { "quickVideoBtn", &FX3MainView::signal_videoDisplayButtonClicked },
-        { "quickWaveformBtn", &FX3MainView::signal_waveformAnalysisButtonClicked },
-        { "quickSaveBtn", &FX3MainView::signal_saveFileButtonClicked },
-        { "quickExportBtn", &FX3MainView::signal_exportDataButtonClicked },
-        { "quickFileOptionsBtn", &FX3MainView::signal_FileOptionsButtonClicked },
-        { "quickUpdateBtn", &FX3MainView::signal_updateDeviceButtonClicked }
+        { "quickChannelBtn", &FX3MainView::signal_FX3Main_V_channelConfigButtonClicked },
+        { "quickDataBtn", &FX3MainView::signal_FX3Main_V_dataAnalysisButtonClicked },
+        { "quickVideoBtn", &FX3MainView::signal_FX3Main_V_videoDisplayButtonClicked },
+        { "quickWaveformBtn", &FX3MainView::signal_FX3Main_V_waveformAnalysisButtonClicked },
+        { "quickSaveBtn", &FX3MainView::signal_FX3Main_V_saveFileButtonClicked },
+        { "quickExportBtn", &FX3MainView::signal_FX3Main_V_exportDataButtonClicked },
+        { "quickFileOptionsBtn", &FX3MainView::signal_FX3Main_V_FileOptionsButtonClicked },
+        { "quickUpdateBtn", &FX3MainView::signal_FX3Main_V_updateDeviceButtonClicked }
     };
 
     // 连接每个按钮
@@ -344,19 +344,18 @@ void FX3MainView::updateWindowTitle(const QString& toolInfo)
     setWindowTitle(title);
 }
 
-void FX3MainView::updateTransferStatsDisplay(uint64_t bytesTransferred, double transferRate, uint32_t errorCount)
+void FX3MainView::updateTransferStatsDisplay(uint64_t bytesTransferred, double transferRate, uint64_t elapseMs)
 {
-    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("更新传输状态显示"));
     if (m_uiStateManager) {
-        m_uiStateManager->updateTransferStats(bytesTransferred, transferRate, errorCount);
+        m_uiStateManager->updateTransferStats(bytesTransferred, transferRate, elapseMs);
     }
 }
 
-void FX3MainView::updateUsbSpeedDisplay(const QString& speed)
+void FX3MainView::updateUsbSpeedDisplay(const QString& speed, const bool isU3, const bool isConnected)
 {
-    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("更新USB速度状态"));
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("主视图中更新USB速度显示: %1, %2, %3").arg(speed).arg(isU3 ? "u3" : "no-u3").arg(isConnected ? "已连接" : "未连接"));
     if (m_uiStateManager) {
-        m_uiStateManager->updateUsbSpeedDisplay(speed, true);
+        m_uiStateManager->updateUsbSpeedDisplay(speed, isU3, isConnected);
     }
 }
 

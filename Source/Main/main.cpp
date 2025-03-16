@@ -1,5 +1,7 @@
 #include "Logger.h"
 #include "FX3MainView.h"
+
+#include <QDateTime>
 #include <QtWidgets/QApplication>
 #if QT_VERSION <= QT_VERSION_CHECK(6, 0, 0)
 #include <QTextCodec>
@@ -32,7 +34,7 @@ int main(int argc, char* argv[])
     // 创建并显示主窗口
     FX3MainView w;
     w.show();
-    w.updateWindowTitle("3.15");
+    w.updateWindowTitle(QDate::currentDate().toString("yyyy/M/d"));
 
     //return a.exec();
     int result = a.exec();

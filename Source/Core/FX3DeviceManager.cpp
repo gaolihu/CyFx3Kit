@@ -112,20 +112,7 @@ bool FX3DeviceManager::initializeDeviceAndManager(HWND windowHandle)
         initConnections();
         m_deviceInitialized = true;
 
-        // 检查设备状态
-        if (checkAndOpenDevice()) {
-            LOG_INFO(LocalQTCompat::fromLocal8Bit("设备初始化成功并已连接"));
-            return true;
-        }
-        else {
-            // 设备未连接，但初始化成功
-            LOG_INFO(LocalQTCompat::fromLocal8Bit("设备初始化成功，但未连接设备"));
-            AppStateMachine::instance().processEvent(
-                StateEvent::APP_INIT,
-                LocalQTCompat::fromLocal8Bit("初始化完成但设备未连接")
-            );
-            return true;
-        }
+        return true;
     }
     catch (const std::exception& e) {
         handleCriticalError(
@@ -152,29 +139,29 @@ void FX3DeviceManager::initConnections()
     // USB设备信号连接
     if (m_usbDevice) {
         // 使用新的处理方法名称
-        connect(m_usbDevice.get(), &USBDevice::statusChanged,
-            this, &FX3DeviceManager::handleUsbStatusChanged, Qt::QueuedConnection);
-        connect(m_usbDevice.get(), &USBDevice::transferProgress,
-            this, &FX3DeviceManager::handleTransferProgress, Qt::QueuedConnection);
-        connect(m_usbDevice.get(), &USBDevice::deviceError,
-            this, &FX3DeviceManager::handleDeviceError, Qt::QueuedConnection);
+        connect(m_usbDevice.get(), &USBDevice::signal_USB_statusChanged,
+            this, &FX3DeviceManager::slot_FX3_DevM_handleUsbStatusChanged);
+        connect(m_usbDevice.get(), &USBDevice::signal_USB_transferProgress,
+            this, &FX3DeviceManager::slot_FX3_DevM_handleTransferProgress, Qt::QueuedConnection);
+        connect(m_usbDevice.get(), &USBDevice::signal_USB_deviceError,
+            this, &FX3DeviceManager::slot_FX3_DevM_handleDeviceError, Qt::QueuedConnection);
     }
 
     // 采集管理器信号连接
     if (m_acquisitionManager) {
         // 使用新的处理方法名称
-        connect(m_acquisitionManager.get(), &DataAcquisitionManager::dataReceived,
-            this, &FX3DeviceManager::handleDataReceived, Qt::QueuedConnection);
-        connect(m_acquisitionManager.get(), &DataAcquisitionManager::errorOccurred,
-            this, &FX3DeviceManager::handleAcquisitionError, Qt::QueuedConnection);
-        connect(m_acquisitionManager.get(), &DataAcquisitionManager::statsUpdated,
-            this, &FX3DeviceManager::handleStatsUpdated, Qt::QueuedConnection);
-        connect(m_acquisitionManager.get(), &DataAcquisitionManager::acquisitionStateChanged,
-            this, &FX3DeviceManager::handleAcquisitionStateChanged, Qt::QueuedConnection);
-        connect(m_acquisitionManager.get(), &DataAcquisitionManager::acquisitionStarted,
-            this, &FX3DeviceManager::handleAcquisitionStarted, Qt::QueuedConnection);
-        connect(m_acquisitionManager.get(), &DataAcquisitionManager::acquisitionStopped,
-            this, &FX3DeviceManager::handleAcquisitionStopped, Qt::QueuedConnection);
+        connect(m_acquisitionManager.get(), &DataAcquisitionManager::signal_AQ_dataReceived,
+            this, &FX3DeviceManager::slot_FX3_DevM_handleDataReceived, Qt::QueuedConnection);
+        connect(m_acquisitionManager.get(), &DataAcquisitionManager::signal_AQ_errorOccurred,
+            this, &FX3DeviceManager::slot_FX3_DevM_handleAcquisitionError, Qt::QueuedConnection);
+        connect(m_acquisitionManager.get(), &DataAcquisitionManager::signal_AQ_statsUpdated,
+            this, &FX3DeviceManager::slot_FX3_DevM_handleStatsUpdated, Qt::QueuedConnection);
+        connect(m_acquisitionManager.get(), &DataAcquisitionManager::signal_AQ_acquisitionStateChanged,
+            this, &FX3DeviceManager::slot_FX3_DevM_handleAcquisitionStateChanged, Qt::QueuedConnection);
+        connect(m_acquisitionManager.get(), &DataAcquisitionManager::signal_AQ_acquisitionStarted,
+            this, &FX3DeviceManager::slot_FX3_DevM_handleAcquisitionStarted, Qt::QueuedConnection);
+        connect(m_acquisitionManager.get(), &DataAcquisitionManager::signal_AQ_acquisitionStopped,
+            this, &FX3DeviceManager::slot_FX3_DevM_handleAcquisitionStopped, Qt::QueuedConnection);
     }
 }
 
@@ -204,7 +191,7 @@ bool FX3DeviceManager::checkAndOpenDevice()
             StateEvent::DEVICE_DISCONNECTED,
             LocalQTCompat::fromLocal8Bit("未检测到设备连接")
         );
-        emit deviceConnectionChanged(false);
+        emit signal_FX3_DevM_usbSpeedUpdated(getUsbSpeedDescription(), false, false);
         return false;
     }
 
@@ -232,8 +219,8 @@ bool FX3DeviceManager::checkAndOpenDevice()
     );
 
     // 通知UI更新
-    emit deviceConnectionChanged(true);
-    emit usbSpeedUpdated(getUsbSpeedDescription(), isUSB3());
+    LOG_INFO("发送设备连接信息");
+    emit signal_FX3_DevM_usbSpeedUpdated(getUsbSpeedDescription(), isUSB3(), true);
 
     return true;
 }
@@ -285,7 +272,6 @@ bool FX3DeviceManager::resetDevice()
         StateEvent::DEVICE_DISCONNECTED,
         LocalQTCompat::fromLocal8Bit("正在重置设备")
     );
-    emit deviceConnectionChanged(false);
 
     if (m_usbDevice->reset()) {
         LOG_INFO(LocalQTCompat::fromLocal8Bit("设备重置成功"));
@@ -295,11 +281,8 @@ bool FX3DeviceManager::resetDevice()
             StateEvent::DEVICE_CONNECTED,
             LocalQTCompat::fromLocal8Bit("设备重置成功")
         );
-        emit deviceConnectionChanged(true);
-
         // 通知UI更新USB速度信息
-        emit usbSpeedUpdated(getUsbSpeedDescription(), isUSB3());
-
+        emit signal_FX3_DevM_usbSpeedUpdated(getUsbSpeedDescription(), isUSB3(), true);
         return true;
     }
     else {
@@ -309,6 +292,7 @@ bool FX3DeviceManager::resetDevice()
             StateEvent::ERROR_OCCURRED,
             LocalQTCompat::fromLocal8Bit("设备重置失败")
         );
+        emit signal_FX3_DevM_usbSpeedUpdated(getUsbSpeedDescription(), false, false);
         return false;
     }
 }
@@ -465,7 +449,7 @@ bool FX3DeviceManager::startTransfer(uint16_t width, uint16_t height, uint8_t ca
 
     // 标记为传输中
     m_isTransferring = true;
-    emit transferStateChanged(true);
+    emit signal_FX3_DevM_transferStateChanged(true);
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("数据采集启动成功"));
     return true;
@@ -480,7 +464,7 @@ bool FX3DeviceManager::stopTransfer()
         return true;
     }
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("停止数据传输"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("Fx3设备管理器停止数据传输"));
 
     // 避免多次调用停止
     if (m_stoppingInProgress) {
@@ -516,7 +500,7 @@ bool FX3DeviceManager::stopTransfer()
         }
 
         // 在这里不调用成功事件，等待来自采集管理器的停止通知
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("停止请求已发送"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("FX3设备管理器停止请求已发送"));
         return true;
     }
     catch (const std::exception& e) {
@@ -577,7 +561,7 @@ void FX3DeviceManager::stopAllTransfers()
             // 强制重置状态
             m_isTransferring = false;
             m_stoppingInProgress = false;
-            emit transferStateChanged(false);
+            emit signal_FX3_DevM_transferStateChanged(false);
         }
         catch (const std::exception& e) {
             LOG_ERROR(LocalQTCompat::fromLocal8Bit("停止传输异常: %1").arg(e.what()));
@@ -684,21 +668,21 @@ void FX3DeviceManager::handleCriticalError(const QString& title, const QString& 
     }
 
     // 发送错误信号
-    emit deviceError(title, message);
+    emit signal_FX3_DevM_deviceError(title, message);
 }
 
-void FX3DeviceManager::updateTransferStats(uint64_t transferred, double speed, uint32_t errors)
+void FX3DeviceManager::updateTransferStats(uint64_t transferred, double speed, uint32_t elapseMs)
 {
     // 更新内部统计
     {
         std::lock_guard<std::mutex> lock(m_statsMutex);
         m_transferStats.bytesTransferred = transferred;
         m_transferStats.transferRate = speed;
-        m_transferStats.errorCount = errors;
+        m_transferStats.elapseMs = elapseMs;
     }
 
     // 发送更新信号
-    emit transferStatsUpdated(transferred, speed, errors);
+    emit signal_FX3_DevM_transferStatsUpdated(transferred, speed, elapseMs);
 }
 
 DeviceTransferStats FX3DeviceManager::getTransferStats() const
@@ -728,6 +712,7 @@ QString FX3DeviceManager::getDeviceInfo() const
 QString FX3DeviceManager::getUsbSpeedDescription() const
 {
     if (!m_usbDevice) {
+        LOG_INFO("未连接");
         return LocalQTCompat::fromLocal8Bit("未连接");
     }
     return m_usbDevice->getUsbSpeedDescription();
@@ -739,7 +724,7 @@ bool FX3DeviceManager::isUSB3() const
 }
 
 // 事件处理方法
-void FX3DeviceManager::onDeviceArrival()
+void FX3DeviceManager::slot_FX3_DevM_onDeviceArrival()
 {
     debounceDeviceEvent([this]() {
         LOG_INFO(LocalQTCompat::fromLocal8Bit("检测到USB设备接入"));
@@ -759,7 +744,7 @@ void FX3DeviceManager::onDeviceArrival()
         });
 }
 
-void FX3DeviceManager::onDeviceRemoval()
+void FX3DeviceManager::slot_FX3_DevM_onDeviceRemoval()
 {
     debounceDeviceEvent([this]() {
         LOG_INFO(LocalQTCompat::fromLocal8Bit("检测到USB设备移除"));
@@ -773,7 +758,7 @@ void FX3DeviceManager::onDeviceRemoval()
         if (m_isTransferring) {
             m_isTransferring = false;
             m_stoppingInProgress = false;
-            emit transferStateChanged(false);
+            emit signal_FX3_DevM_transferStateChanged(false);
         }
 
         // 确保设备正确关闭
@@ -786,12 +771,12 @@ void FX3DeviceManager::onDeviceRemoval()
             StateEvent::DEVICE_DISCONNECTED,
             LocalQTCompat::fromLocal8Bit("设备已断开连接")
         );
-        emit deviceConnectionChanged(false);
+        emit signal_FX3_DevM_usbSpeedUpdated(getUsbSpeedDescription(), false, false);
         });
 }
 
 // 信号处理方法
-void FX3DeviceManager::handleUsbStatusChanged(const std::string& status)
+void FX3DeviceManager::slot_FX3_DevM_handleUsbStatusChanged(const std::string& status)
 {
     if (m_shuttingDown) {
         return;
@@ -800,7 +785,7 @@ void FX3DeviceManager::handleUsbStatusChanged(const std::string& status)
     LOG_INFO(LocalQTCompat::fromLocal8Bit("FX3 USB设备状态变更: ") + QString::fromStdString(status));
 
     if (status == "ready") {
-        emit deviceConnectionChanged(true);
+        emit signal_FX3_DevM_usbSpeedUpdated(getUsbSpeedDescription(), isUSB3(), true);
 
         if (m_commandsLoaded) {
             AppStateMachine::instance().processEvent(
@@ -817,7 +802,7 @@ void FX3DeviceManager::handleUsbStatusChanged(const std::string& status)
     }
     else if (status == "transferring") {
         m_isTransferring = true;
-        emit transferStateChanged(true);
+        emit signal_FX3_DevM_transferStateChanged(true);
 
         AppStateMachine::instance().processEvent(
             StateEvent::START_SUCCEEDED,
@@ -826,8 +811,8 @@ void FX3DeviceManager::handleUsbStatusChanged(const std::string& status)
     }
     else if (status == "disconnected") {
         m_isTransferring = false;
-        emit transferStateChanged(false);
-        emit deviceConnectionChanged(false);
+        emit signal_FX3_DevM_transferStateChanged(false);
+        emit signal_FX3_DevM_usbSpeedUpdated(getUsbSpeedDescription(), false, false);
 
         AppStateMachine::instance().processEvent(
             StateEvent::DEVICE_DISCONNECTED,
@@ -844,39 +829,13 @@ void FX3DeviceManager::handleUsbStatusChanged(const std::string& status)
     }
 }
 
-void FX3DeviceManager::handleTransferProgress(uint64_t transferred, int length, int success, int failed)
+void FX3DeviceManager::slot_FX3_DevM_handleTransferProgress(uint64_t transferred, int length, int success, int failed)
 {
-    if (m_shuttingDown) {
-        return;
-    }
-
-    static QElapsedTimer speedTimer;
-    static uint64_t lastTransferred = 0;
-
-    // 初始化计时器
-    if (!speedTimer.isValid()) {
-        speedTimer.start();
-        lastTransferred = transferred;
-        return;
-    }
-
-    // 计算速度
-    qint64 elapsed = speedTimer.elapsed();
-    if (elapsed > 0) {
-        double intervalBytes = static_cast<double>(transferred - lastTransferred);
-        // 转换为MB/s
-        double speed = (intervalBytes * 1000.0) / (elapsed * 1024.0 * 1024.0);
-
-        // 更新统计数据
-        updateTransferStats(transferred, speed, failed);
-
-        // 更新基准值
-        speedTimer.restart();
-        lastTransferred = transferred;
-    }
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("传输进度, 已传输: %1, 长度: %2, 成功: %3, 失败: %4")
+        .arg(transferred).arg(length).arg(success).arg(failed));
 }
 
-void FX3DeviceManager::handleDeviceError(const QString& error)
+void FX3DeviceManager::slot_FX3_DevM_handleDeviceError(const QString& error)
 {
     if (m_shuttingDown) {
         return;
@@ -890,7 +849,7 @@ void FX3DeviceManager::handleDeviceError(const QString& error)
     );
 }
 
-void FX3DeviceManager::handleAcquisitionStarted()
+void FX3DeviceManager::slot_FX3_DevM_handleAcquisitionStarted()
 {
     if (m_shuttingDown) {
         return;
@@ -899,7 +858,7 @@ void FX3DeviceManager::handleAcquisitionStarted()
     LOG_INFO(LocalQTCompat::fromLocal8Bit("采集已开始"));
 
     m_isTransferring = true;
-    emit transferStateChanged(true);
+    emit signal_FX3_DevM_transferStateChanged(true);
 
     // 发送传输开始成功事件
     AppStateMachine::instance().processEvent(
@@ -908,7 +867,7 @@ void FX3DeviceManager::handleAcquisitionStarted()
     );
 }
 
-void FX3DeviceManager::handleAcquisitionStopped()
+void FX3DeviceManager::slot_FX3_DevM_handleAcquisitionStopped()
 {
     if (m_shuttingDown) {
         return;
@@ -923,7 +882,7 @@ void FX3DeviceManager::handleAcquisitionStopped()
     m_stoppingInProgress = false;
 
     // 通知UI
-    emit transferStateChanged(false);
+    emit signal_FX3_DevM_transferStateChanged(false);
 
     // 发送停止成功事件
     AppStateMachine::instance().processEvent(
@@ -932,17 +891,17 @@ void FX3DeviceManager::handleAcquisitionStopped()
     );
 }
 
-void FX3DeviceManager::handleDataReceived(const DataPacket& packet)
+void FX3DeviceManager::slot_FX3_DevM_handleDataReceived(const DataPacket& packet)
 {
     if (m_shuttingDown) {
         return;
     }
 
     // 转发数据包
-    emit dataPacketAvailable(packet);
+    emit signal_FX3_DevM_dataPacketAvailable(packet);
 }
 
-void FX3DeviceManager::handleAcquisitionError(const QString& error)
+void FX3DeviceManager::slot_FX3_DevM_handleAcquisitionError(const QString& error)
 {
     if (m_shuttingDown) {
         return;
@@ -951,7 +910,7 @@ void FX3DeviceManager::handleAcquisitionError(const QString& error)
     // 重置传输状态
     m_isTransferring = false;
     m_stoppingInProgress = false;
-    emit transferStateChanged(false);
+    emit signal_FX3_DevM_transferStateChanged(false);
 
     handleCriticalError(
         LocalQTCompat::fromLocal8Bit("采集错误"),
@@ -961,17 +920,17 @@ void FX3DeviceManager::handleAcquisitionError(const QString& error)
     );
 }
 
-void FX3DeviceManager::handleStatsUpdated(uint64_t receivedBytes, double dataRate, uint64_t elapsedTimeSeconds)
+void FX3DeviceManager::slot_FX3_DevM_handleStatsUpdated(uint64_t receivedBytes, double dataRate, uint64_t elapseMs)
 {
     if (m_shuttingDown) {
         return;
     }
 
     // 更新内部统计
-    updateTransferStats(receivedBytes, dataRate, 0);
+    updateTransferStats(receivedBytes, dataRate, elapseMs);
 }
 
-void FX3DeviceManager::handleAcquisitionStateChanged(const QString& state)
+void FX3DeviceManager::slot_FX3_DevM_handleAcquisitionStateChanged(const QString& state)
 {
     if (m_shuttingDown) {
         return;
@@ -984,7 +943,7 @@ void FX3DeviceManager::handleAcquisitionStateChanged(const QString& state)
         state == LocalQTCompat::fromLocal8Bit("已停止")) {
 
         m_isTransferring = false;
-        emit transferStateChanged(false);
+        emit signal_FX3_DevM_transferStateChanged(false);
 
         if (m_stoppingInProgress) {
             // 如果停止操作正在进行中，这表示停止操作已完成
@@ -997,7 +956,7 @@ void FX3DeviceManager::handleAcquisitionStateChanged(const QString& state)
     }
     else if (state == LocalQTCompat::fromLocal8Bit("采集中")) {
         m_isTransferring = true;
-        emit transferStateChanged(true);
+        emit signal_FX3_DevM_transferStateChanged(true);
 
         AppStateMachine::instance().processEvent(
             StateEvent::START_SUCCEEDED,
@@ -1007,7 +966,7 @@ void FX3DeviceManager::handleAcquisitionStateChanged(const QString& state)
     else if (state == LocalQTCompat::fromLocal8Bit("错误")) {
         m_isTransferring = false;
         m_stoppingInProgress = false;
-        emit transferStateChanged(false);
+        emit signal_FX3_DevM_transferStateChanged(false);
 
         AppStateMachine::instance().processEvent(
             StateEvent::ERROR_OCCURRED,

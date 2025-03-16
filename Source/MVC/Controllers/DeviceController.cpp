@@ -44,16 +44,6 @@ bool DeviceController::initialize(HWND windowHandle)
         // 初始化连接
         initializeConnections();
 
-        // 从模型加载初始参数到视图
-        /*
-        if (m_deviceView) {
-            m_deviceView->updateImageWidth(m_deviceModel->getImageWidth());
-            m_deviceView->updateImageHeight(m_deviceModel->getImageHeight());
-            m_deviceView->updateCaptureType(m_deviceModel->getCaptureType());
-            m_deviceView->updateDeviceState(m_deviceModel->getDeviceState());
-        }
-        */
-
         m_initialized = true;
         LOG_INFO("设备控制器初始化成功");
         return true;
@@ -76,42 +66,38 @@ void DeviceController::initializeConnections()
     if (m_deviceView) {
         // 视图到控制器的信号连接
         connect(dynamic_cast<QObject*>(m_deviceView), SIGNAL(startTransferRequested()),
-            this, SLOT(handleStartTransferRequest()));
+            this, SLOT(slot_andleStartTransferRequest()));
         connect(dynamic_cast<QObject*>(m_deviceView), SIGNAL(stopTransferRequested()),
-            this, SLOT(handleStopTransferRequest()));
+            this, SLOT(slot_Dev_C_handleStopTransferRequest()));
         connect(dynamic_cast<QObject*>(m_deviceView), SIGNAL(resetDeviceRequested()),
-            this, SLOT(handleResetDeviceRequest()));
+            this, SLOT(slot_Dev_C_handleResetDeviceRequest()));
         connect(dynamic_cast<QObject*>(m_deviceView), SIGNAL(imageParametersChanged()),
-            this, SLOT(handleImageParametersChanged()));
+            this, SLOT(slot_Dev_C_handleImageParametersChanged()));
     }
 
     // 连接设备管理器信号到控制器槽
     if (m_deviceManager) {
         // 设备管理器到控制器的信号连接
-        connect(m_deviceManager.get(), &FX3DeviceManager::deviceConnectionChanged,
-            this, &DeviceController::handleDeviceConnectionChanged);
-        connect(m_deviceManager.get(), &FX3DeviceManager::transferStateChanged,
-            this, &DeviceController::handleTransferStateChanged);
-        connect(m_deviceManager.get(), &FX3DeviceManager::transferStatsUpdated,
-            this, &DeviceController::handleTransferStatsUpdated);
-        connect(m_deviceManager.get(), &FX3DeviceManager::usbSpeedUpdated,
-            this, &DeviceController::handleUsbSpeedUpdated);
-        connect(m_deviceManager.get(), &FX3DeviceManager::deviceError,
-            this, &DeviceController::handleDeviceError);
-        connect(m_deviceManager.get(), &FX3DeviceManager::dataPacketAvailable,
-            this, &DeviceController::dataPacketAvailable);
+        connect(m_deviceManager.get(), &FX3DeviceManager::signal_FX3_DevM_transferStateChanged,
+            this, &DeviceController::slot_handleTransferStateChanged);
+        connect(m_deviceManager.get(), &FX3DeviceManager::signal_FX3_DevM_transferStatsUpdated,
+            this, &DeviceController::slot_Dev_C_handleTransferStatsUpdated);
+        connect(m_deviceManager.get(), &FX3DeviceManager::signal_FX3_DevM_usbSpeedUpdated,
+            this, &DeviceController::slot_Dev_C_handleUsbSpeedUpdated);
+        connect(m_deviceManager.get(), &FX3DeviceManager::signal_FX3_DevM_deviceError,
+            this, &DeviceController::slot_Dev_C_handleDeviceError);
 
         // 控制器转发一些信号
-        connect(m_deviceManager.get(), &FX3DeviceManager::deviceConnectionChanged,
-            this, &DeviceController::deviceConnectionChanged);
-        connect(m_deviceManager.get(), &FX3DeviceManager::transferStateChanged,
-            this, &DeviceController::transferStateChanged);
-        connect(m_deviceManager.get(), &FX3DeviceManager::transferStatsUpdated,
-            this, &DeviceController::transferStatsUpdated);
-        connect(m_deviceManager.get(), &FX3DeviceManager::usbSpeedUpdated,
-            this, &DeviceController::usbSpeedUpdated);
-        connect(m_deviceManager.get(), &FX3DeviceManager::deviceError,
-            this, &DeviceController::deviceError);
+        connect(m_deviceManager.get(), &FX3DeviceManager::signal_FX3_DevM_dataPacketAvailable,
+            this, &DeviceController::signal_Dev_C_dataPacketAvailable);
+        connect(m_deviceManager.get(), &FX3DeviceManager::signal_FX3_DevM_transferStateChanged,
+            this, &DeviceController::signal_Dev_C_transferStateChanged);
+        connect(m_deviceManager.get(), &FX3DeviceManager::signal_FX3_DevM_transferStatsUpdated,
+            this, &DeviceController::signal_Dev_C_transferStatsUpdated);
+        connect(m_deviceManager.get(), &FX3DeviceManager::signal_FX3_DevM_usbSpeedUpdated,
+            this, &DeviceController::signal_Dev_C_usbSpeedUpdated);
+        connect(m_deviceManager.get(), &FX3DeviceManager::signal_FX3_DevM_deviceError,
+            this, &DeviceController::signal_Dev_C_deviceError);
     }
 
     LOG_INFO("设备控制器连接初始化完成");
@@ -204,7 +190,7 @@ bool DeviceController::startTransfer()
 
 bool DeviceController::stopTransfer()
 {
-    LOG_INFO("停止数据传输");
+    LOG_INFO("设备控制器停止数据传输");
     if (!m_initialized || !m_deviceManager) {
         LOG_ERROR("设备控制器未初始化");
         return false;
@@ -333,48 +319,33 @@ void DeviceController::updateViewState()
 }
 
 // Slot handlers
-void DeviceController::handleStartTransferRequest()
+void DeviceController::slot_Dev_C_handleStartTransferRequest()
 {
     LOG_INFO("处理开始传输请求");
     startTransfer();
 }
 
-void DeviceController::handleStopTransferRequest()
+void DeviceController::slot_Dev_C_handleStopTransferRequest()
 {
     LOG_INFO("处理停止传输请求");
     stopTransfer();
 }
 
-void DeviceController::handleResetDeviceRequest()
+void DeviceController::slot_Dev_C_handleResetDeviceRequest()
 {
     LOG_INFO("处理重置设备请求");
     resetDevice();
 }
 
-void DeviceController::handleImageParametersChanged()
+void DeviceController::slot_Dev_C_handleImageParametersChanged()
 {
     LOG_INFO("处理图像参数变更");
     updateImageParameters();
 }
 
-void DeviceController::handleDeviceConnectionChanged(bool connected)
+void DeviceController::slot_handleTransferStateChanged(bool transferring)
 {
-    LOG_INFO(QString("设备控制器处理设备连接状态变更: %1").arg(connected ? "已连接" : "已断开"));
-
-    // 更新模型中的设备状态
-    DeviceState newState = connected ? DeviceState::DEV_CONNECTED : DeviceState::DEV_DISCONNECTED;
-    m_deviceModel->setDeviceState(newState);
-
-    // 触发应用状态变化
-    AppStateMachine::instance().processEvent(
-        connected ? StateEvent::DEVICE_CONNECTED : StateEvent::DEVICE_DISCONNECTED,
-        LocalQTCompat::fromLocal8Bit(connected ? "FX3已连接" : "FX3已断开")
-    );
-}
-
-void DeviceController::handleTransferStateChanged(bool transferring)
-{
-    LOG_INFO(QString("处理传输状态变更: %1").arg(transferring ? "传输中" : "已停止"));
+    LOG_INFO(QString("设备控制器处理传输状态变更: %1").arg(transferring ? "传输中" : "已停止"));
 
     // 更新模型中的设备状态
     DeviceState newState = transferring ? DeviceState::DEV_TRANSFERRING : DeviceState::DEV_CONNECTED;
@@ -386,17 +357,18 @@ void DeviceController::handleTransferStateChanged(bool transferring)
     updateViewState();
 }
 
-void DeviceController::handleTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t errorCount)
+void DeviceController::slot_Dev_C_handleTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t elapseMs)
 {
+    // 设备控制器忽略传输更新，转发至主设备控制器处理
 }
 
-void DeviceController::handleUsbSpeedUpdated(const QString& speedDesc, bool isUSB3)
+void DeviceController::slot_Dev_C_handleUsbSpeedUpdated(const QString& speedDesc, bool isUSB3, bool isConnected)
 {
-    LOG_INFO(QString("USB速度更新: %1, 是否USB3: %2").arg(speedDesc).arg(isUSB3));
+    LOG_INFO(QString("设备控制器中（未启用）USB速度更新: %1, %2, %3").arg(speedDesc).arg(isUSB3 ? "u3" : "no-u3").arg(isConnected ? "已连接" : "未连接"));
     // 可能需要更新UI或模型中的USB速度信息
 }
 
-void DeviceController::handleDeviceError(const QString& title, const QString& message)
+void DeviceController::slot_Dev_C_handleDeviceError(const QString& title, const QString& message)
 {
     LOG_ERROR(QString("%1: %2").arg(title).arg(message));
 

@@ -14,7 +14,9 @@ USBDevice::USBDevice(HWND hwnd)
     , m_frameSize(DEFAULT_TRANSFER_SIZE)
     , m_isConfigured(false)
 {
+    LOG_INFO("USBDevice build START");
     m_device = std::make_shared<CCyUSBDevice>(hwnd, CYUSBDRV_GUID, true);
+    m_lastProgressUpdate = std::chrono::steady_clock::now();
 }
 
 USBDevice::~USBDevice() {
@@ -108,7 +110,7 @@ bool USBDevice::open()
         }
 
         LOG_INFO("Device initialized successfully");
-        emit statusChanged("ready");
+        emit signal_USB_statusChanged("ready");
         return true;
     }
 
@@ -128,7 +130,7 @@ void USBDevice::close()
     m_inEndpoint = nullptr;
     m_outEndpoint = nullptr;
 
-    emit statusChanged("disconnected");
+    emit signal_USB_statusChanged("disconnected");
 }
 
 bool USBDevice::reset()
@@ -152,26 +154,17 @@ bool USBDevice::readData(PUCHAR buffer, LONG& length)
         bool success = m_inEndpoint->XferData(buffer, length);
 
         if (success && length > 0) {
-            // 统计数据更新
+            // 只更新基本字节计数器，不进行速率计算
             m_totalBytes.fetch_add(length);
 
-            // 速度计算优化 - 使用双缓冲减少抖动
+            // 只在固定间隔发送进度信号，减少UI更新频率
             auto now = std::chrono::steady_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-                now - m_lastSpeedUpdate).count();
+            auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now - m_lastProgressUpdate).count();
 
-            if (duration >= SPEED_UPDATE_INTERVAL_MS) {
-                uint64_t previousTotal = m_lastTotalBytes.exchange(m_totalBytes.load());
-                double intervalBytes = static_cast<double>(m_totalBytes.load() - previousTotal);
-                double mbPerSec = (intervalBytes / duration) * 1000.0 / (1024.0 * 1024.0);
-
-                // 使用指数平滑滤波减少波动
-                static constexpr double alpha = 0.3; // 平滑因子
-                double currentSpeed = m_currentSpeed.load();
-                m_currentSpeed.store(alpha * mbPerSec + (1.0 - alpha) * currentSpeed);
-
-                m_lastSpeedUpdate = now;
-                emit transferProgress(m_totalBytes.load(), length, 1, 0);
+            if (elapsed >= PROGRESS_UPDATE_INTERVAL_MS) {
+                emit signal_USB_transferProgress(m_totalBytes.load(), length, 1, 0);
+                m_lastProgressUpdate = now;
             }
         }
 
@@ -198,6 +191,9 @@ bool USBDevice::startTransfer()
         return true;
     }
 
+    // 重置字节计数
+    m_totalBytes.store(0);
+
     // 使用命令管理器获取启动命令
     auto startCmd = CommandManager::instance().getCommand(CommandManager::CommandType::CMD_START);
     if (startCmd.empty()) {
@@ -216,7 +212,8 @@ bool USBDevice::startTransfer()
         LOG_INFO("Transfering start OK");
         m_isTransferring = true;
         m_transferStartTime = std::chrono::steady_clock::now();
-        emit statusChanged("transferring");
+        m_lastProgressUpdate = m_transferStartTime;
+        emit signal_USB_statusChanged("transferring");
     }
 
     return true;
@@ -235,7 +232,7 @@ bool USBDevice::stopTransfer()
     m_isTransferring = false;
 
     // 发送终止传输的进度更新（速度设为0表示已停止）
-    emit transferProgress(finalBytes, 0, 0, 0);
+    emit signal_USB_transferProgress(finalBytes, 0, 0, 0);
 
     // 创建后台线程处理所有超时操作
     std::thread cleanupThread([this]() {
@@ -333,13 +330,14 @@ bool USBDevice::stopTransfer()
     cleanupThread.detach();
 
     // 立即更新UI状态
-    emit statusChanged("ready");
+    LOG_INFO("Device stop successfully");
+    emit signal_USB_statusChanged("ready");
     return true;
 }
 
 QString USBDevice::getDeviceInfo() const
 {
-    if (!m_device) return "No Device";
+    if (!m_device || !isConnected()) return "No Device";
 
     return QString("VID:0x%1 PID:0x%2 %3")
         .arg(m_device->VendorID, 4, 16, QChar('0'))
@@ -349,11 +347,17 @@ QString USBDevice::getDeviceInfo() const
 
 bool USBDevice::isUSB3() const
 {
+    if (!isConnected())
+        return false;
+
     return m_device && m_device->bSuperSpeed;  // CCyUSBDevice 直接提供了这个属性
 }
 
 USBDevice::USBSpeedType USBDevice::getUsbSpeedType() const
 {
+    if (!isConnected())
+        return USBSpeedType::NOT_CONNECTED;
+
     if (!m_device) {
         return USBSpeedType::UNKNOWN;
     }
@@ -383,9 +387,11 @@ QString USBDevice::getUsbSpeedDescription() const
         return LocalQTCompat::fromLocal8Bit("USB3.0超速(5Gbps)");
     case USBSpeedType::SUPER_SPEED_P:
         return LocalQTCompat::fromLocal8Bit("USB3.1+超速+(10+Gbps)");
+    case USBSpeedType::NOT_CONNECTED:
+        return LocalQTCompat::fromLocal8Bit("未连接USB设备");
     case USBSpeedType::UNKNOWN:
     default:
-        return LocalQTCompat::fromLocal8Bit("未知 USB 速度");
+        return LocalQTCompat::fromLocal8Bit("未知USB速度");
     }
 }
 
@@ -546,8 +552,8 @@ bool USBDevice::validateDevice()
 void USBDevice::emitError(const QString& error)
 {
     qDebug() << "USB Error:" << error;
-    emit deviceError(error);
-    emit statusChanged("error");
+    emit signal_USB_deviceError(error);
+    emit signal_USB_statusChanged("error");
 }
 
 bool USBDevice::sendCommand(const UCHAR* cmdTemplate, size_t length)
@@ -655,24 +661,4 @@ bool USBDevice::prepareCommandBuffer(PUCHAR buffer, const UCHAR* cmdTemplate)
     buffer[0x4C] = m_invertPn;
 
     return true;
-}
-
-void USBDevice::updateTransferStats()
-{
-    // 移除任何等待或延迟逻辑
-    auto now = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::seconds>(
-        now - m_transferStartTime).count();
-
-    // 即使duration为0也计算统计信息，避免等待
-    double totalMB = static_cast<double>(m_totalTransferred) / (1024 * 1024);
-    double rateMBps = (duration > 0) ? (totalMB / duration) : 0.0;
-
-    LOG_INFO(QString("Transfer complete - Total: %1 MB, Duration: %2s, Rate: %3 MB/s")
-        .arg(totalMB, 0, 'f', 2)
-        .arg(duration)
-        .arg(rateMBps, 0, 'f', 2));
-
-    // 可以选择发送统计信息到UI
-    emit transferProgress(m_totalTransferred, 0, 0, 0);
 }

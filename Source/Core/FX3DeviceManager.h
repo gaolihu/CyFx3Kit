@@ -129,60 +129,55 @@ public slots:
     /**
      * @brief 处理设备接入事件
      */
-    void onDeviceArrival();
+    void slot_FX3_DevM_onDeviceArrival();
 
     /**
      * @brief 处理设备移除事件
      */
-    void onDeviceRemoval();
+    void slot_FX3_DevM_onDeviceRemoval();
 
 signals:
-    /**
-     * @brief 设备连接状态变更信号
-     * @param connected 是否已连接
-     */
-    void deviceConnectionChanged(bool connected);
-
     /**
      * @brief 传输状态变更信号
      * @param transferring 是否正在传输
      */
-    void transferStateChanged(bool transferring);
+    void signal_FX3_DevM_transferStateChanged(bool transferring);
 
     /**
      * @brief 传输统计更新信号
      * @param transferred 已传输字节数
      * @param speed 传输速率(MB/s)
-     * @param errors 错误计数
+     * @param errors 传输时间ms
      */
-    void transferStatsUpdated(uint64_t transferred, double speed, uint32_t errors);
+    void signal_FX3_DevM_transferStatsUpdated(uint64_t transferred, double speed, uint32_t elapseMs);
 
     /**
      * @brief USB速度更新信号
      * @param speedDesc 速度描述
      * @param isUSB3 是否是USB3连接
+     * @param isUSB3 是否已连接设备
      */
-    void usbSpeedUpdated(const QString& speedDesc, bool isUSB3);
+    void signal_FX3_DevM_usbSpeedUpdated(const QString& speedDesc, bool isUSB3, bool isConnected);
 
     /**
      * @brief 设备错误信号
      * @param title 错误标题
      * @param message 错误详细信息
      */
-    void deviceError(const QString& title, const QString& message);
+    void signal_FX3_DevM_deviceError(const QString& title, const QString& message);
 
     /**
      * @brief 数据包可用信号
      * @param packet 数据包
      */
-    void dataPacketAvailable(const DataPacket& packet);
+    void signal_FX3_DevM_dataPacketAvailable(const DataPacket& packet);
 
 private slots:
     /**
      * @brief 处理USB状态变更
      * @param status 新状态
      */
-    void handleUsbStatusChanged(const std::string& status);
+    void slot_FX3_DevM_handleUsbStatusChanged(const std::string& status);
 
     /**
      * @brief 处理传输进度更新
@@ -191,49 +186,49 @@ private slots:
      * @param success 成功计数
      * @param failed 失败计数
      */
-    void handleTransferProgress(uint64_t transferred, int length, int success, int failed);
+    void slot_FX3_DevM_handleTransferProgress(uint64_t transferred, int length, int success, int failed);
 
     /**
      * @brief 处理USB设备错误
      * @param error 错误信息
      */
-    void handleDeviceError(const QString& error);
+    void slot_FX3_DevM_handleDeviceError(const QString& error);
 
     /**
      * @brief 处理采集开始事件
      */
-    void handleAcquisitionStarted();
+    void slot_FX3_DevM_handleAcquisitionStarted();
 
     /**
      * @brief 处理采集停止事件
      */
-    void handleAcquisitionStopped();
+    void slot_FX3_DevM_handleAcquisitionStopped();
 
     /**
      * @brief 处理数据接收事件
      * @param packet 数据包
      */
-    void handleDataReceived(const DataPacket& packet);
+    void slot_FX3_DevM_handleDataReceived(const DataPacket& packet);
 
     /**
      * @brief 处理采集错误事件
      * @param error 错误信息
      */
-    void handleAcquisitionError(const QString& error);
+    void slot_FX3_DevM_handleAcquisitionError(const QString& error);
 
     /**
      * @brief 处理统计更新事件
      * @param receivedBytes 接收字节数
      * @param dataRate 数据速率
-     * @param elapsedTimeSeconds 已用时间(秒)
+     * @param 传输时间ms
      */
-    void handleStatsUpdated(uint64_t receivedBytes, double dataRate, uint64_t elapsedTimeSeconds);
+    void slot_FX3_DevM_handleStatsUpdated(uint64_t receivedBytes, double dataRate, uint64_t elapseMs);
 
     /**
      * @brief 处理采集状态变更事件
      * @param state 新状态
      */
-    void handleAcquisitionStateChanged(const QString& state);
+    void slot_FX3_DevM_handleAcquisitionStateChanged(const QString& state);
 
 private:
     /**
@@ -263,9 +258,9 @@ private:
      * @brief 更新传输统计
      * @param transferred 已传输字节数
      * @param speed 传输速率
-     * @param errors 错误计数
+     * @param errors 传输时间
      */
-    void updateTransferStats(uint64_t transferred, double speed, uint32_t errors);
+    void updateTransferStats(uint64_t transferred, double speed, uint32_t elapseMs);
 
     /**
      * @brief 处理关键错误
