@@ -150,7 +150,7 @@ public:
      * @brief 处理数据包
      * @param packet 数据包
      */
-    void processDataPacket(const DataPacket& packet);
+    void processDataPacket(const std::vector<DataPacket>& packets);
 
 signals:
     /**

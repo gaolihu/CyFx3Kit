@@ -458,7 +458,7 @@ QString ModuleManager::getModuleTypeName(ModuleType type) {
 }
 
 void ModuleManager::notifyAllModules(ModuleEvent event, const QVariant& data) {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("通知所有模块事件: %1").arg(static_cast<int>(event)));
+    //LOG_INFO(LocalQTCompat::fromLocal8Bit("通知所有模块事件: %1").arg(static_cast<int>(event)));
 
     // 发送通用模块事件信号
     emit signal_moduleEvent(event, data);
@@ -481,8 +481,8 @@ void ModuleManager::notifyAllModules(ModuleEvent event, const QVariant& data) {
         prepareForShutdown();
         break;
     case ModuleEvent::DATA_AVAILABLE:
-        if (data.canConvert<DataPacket>()) {
-            processDataPacket(data.value<DataPacket>());
+        if (data.canConvert<std::vector<DataPacket>>()) {
+            processDataPacket(data.value<std::vector<DataPacket>>());
         }
         break;
     case ModuleEvent::CONFIG_CHANGED:
@@ -645,7 +645,7 @@ void ModuleManager::handleModuleTabClosed(int index)
     emit signal_moduleVisibilityChanged(moduleType, false);
 }
 
-void ModuleManager::processDataPacket(const DataPacket& packet)
+void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
 {
     // 将数据包转发到需要的模块
 
@@ -674,11 +674,17 @@ void ModuleManager::processDataPacket(const DataPacket& packet)
     }
 
     // 文件保存模块
+#if 1
     if (m_moduleInitialized[ModuleType::FILE_OPTIONS] &&
         m_fileSaveController && m_fileSaveController->isSaving()) {
         // 文件保存控制器中已经有处理数据包的方法
-        m_fileSaveController->processDataPacket(packet);
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("模块管理器: 数据包packet: %1").arg(packets.size()));
+
+        for (const auto& packet : packets) {
+            m_fileSaveController->processDataPacket(packet);
+        }
     }
+#endif
 }
 
 bool ModuleManager::createChannelConfigModule()

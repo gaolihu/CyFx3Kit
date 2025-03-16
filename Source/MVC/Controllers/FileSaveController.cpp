@@ -254,6 +254,7 @@ void FileSaveController::processDataPacket(const DataPacket& packet)
         return;
     }
 
+    LOG_INFO("save packet");
     try {
         // 发送数据包到工作线程进行保存
         QMetaObject::invokeMethod(m_saveWorker, "processDataPacket",

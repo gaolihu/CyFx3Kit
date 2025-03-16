@@ -219,8 +219,11 @@ private:
     std::atomic<bool> m_isTransferring;                // 传输标志
     std::chrono::steady_clock::time_point m_transferStartTime; // 传输开始时间
 
-    // 基本字节计数 - 不进行速率计算
+    // 基本字节计数
     std::atomic<uint64_t> m_totalBytes{ 0 };           // 总字节数
+
+    std::atomic<uint64_t> m_totalSuccess{ 0 };         // 总字节数
+    std::atomic<uint64_t> m_totalFailed{ 0 };          // 总字节数
 
     // FPGA 命令定义
     static const int CMD_BUFFER_SIZE = 512;            // 命令缓冲区大小
@@ -241,6 +244,6 @@ private:
     bool m_isConfigured;                               // 配置标志
 
     // 进度更新控制
-    static constexpr int PROGRESS_UPDATE_INTERVAL_MS = 500; // 进度更新间隔
+    static constexpr int PROGRESS_UPDATE_INTERVAL_MS = 3000;    // 进度更新间隔
     std::chrono::steady_clock::time_point m_lastProgressUpdate; // 上次进度更新时间
 };

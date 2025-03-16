@@ -156,6 +156,7 @@ bool USBDevice::readData(PUCHAR buffer, LONG& length)
         if (success && length > 0) {
             // 只更新基本字节计数器，不进行速率计算
             m_totalBytes.fetch_add(length);
+            m_totalSuccess.fetch_add(1);
 
             // 只在固定间隔发送进度信号，减少UI更新频率
             auto now = std::chrono::steady_clock::now();
@@ -163,9 +164,12 @@ bool USBDevice::readData(PUCHAR buffer, LONG& length)
                 now - m_lastProgressUpdate).count();
 
             if (elapsed >= PROGRESS_UPDATE_INTERVAL_MS) {
-                emit signal_USB_transferProgress(m_totalBytes.load(), length, 1, 0);
+                emit signal_USB_transferProgress(m_totalBytes.load(), length, m_totalSuccess.load(), m_totalFailed.load());
                 m_lastProgressUpdate = now;
             }
+        }
+        else {
+            m_totalFailed.fetch_add(1);
         }
 
         return success;

@@ -831,7 +831,7 @@ void FX3DeviceManager::slot_FX3_DevM_handleUsbStatusChanged(const std::string& s
 
 void FX3DeviceManager::slot_FX3_DevM_handleTransferProgress(uint64_t transferred, int length, int success, int failed)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("传输进度, 已传输: %1, 长度: %2, 成功: %3, 失败: %4")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("传输进度, 已传输: %1 bytes, buf大小: %2, 成功: %3, 失败: %4")
         .arg(transferred).arg(length).arg(success).arg(failed));
 }
 

@@ -94,9 +94,9 @@ void Logger::setLogWidget(QTextEdit* logWidget)
 
 void Logger::log(const QString& message, LogLevel level, const QString& file, int line)
 {
-#if 1
+#ifdef _DEBUG
     qDebug() << "Logging: " << message;
-#endif
+#endif // _DEBUG
     if (!m_initialized || !shouldLog(level)) return;
 
     LogEntry entry{

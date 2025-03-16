@@ -918,10 +918,10 @@ void FX3MainController::slot_FX3Main_C_onTransferStatsUpdated(uint64_t bytesTran
     static QTime lastLogTime = QTime::currentTime();
     QTime currentTime = QTime::currentTime();
 
-    // 每5秒或每100MB记录一次
+    // 每7秒或每800Mb记录一次
     if (lastLoggedBytes == 0 ||
-        bytesTransferred - lastLoggedBytes > 100 * 1024 * 1024 ||
-        lastLogTime.msecsTo(currentTime) > 5000) {
+        bytesTransferred - lastLoggedBytes > 800 * 1024 * 1024 ||
+        lastLogTime.msecsTo(currentTime) > 10000) {
 
         LOG_INFO(LocalQTCompat::fromLocal8Bit("传输统计 - 总数据: %1 Bytes, 速率: %2 MB/s, 时间: %3 ms")
             .arg(bytesTransferred)
@@ -959,13 +959,14 @@ void FX3MainController::slot_FX3Main_C_handleResetButtonClicked()
 
 void FX3MainController::slot_FX3Main_C_handleDataPacketAvailable(const std::vector<DataPacket>& packets)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("主控制器: 数据来了: %1").arg(packets.size()));
+    // LOG_INFO(LocalQTCompat::fromLocal8Bit("主控制器: 数据来了: %1").arg(packets.size()));
     // 数据包处理逻辑
     // 例如转发到文件保存控制器、视频显示模块等
     // 转发到模块管理器
     if (m_moduleManager) {
         // Use ModuleManager's notification system
-        //m_moduleManager->notifyAllModules(ModuleManager::ModuleEvent::DATA_AVAILABLE, QVariant::fromValue(packet));
+        // m_moduleManager->notifyAllModules(ModuleManager::ModuleEvent::DATA_AVAILABLE, QVariant::fromValue(packet));
+        m_moduleManager->notifyAllModules(ModuleManager::ModuleEvent::DATA_AVAILABLE, QVariant::fromValue(packets));
     }
 }
 
