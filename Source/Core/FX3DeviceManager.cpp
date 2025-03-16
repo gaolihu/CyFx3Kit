@@ -150,7 +150,7 @@ void FX3DeviceManager::initConnections()
     // 采集管理器信号连接
     if (m_acquisitionManager) {
         // 使用新的处理方法名称
-        connect(m_acquisitionManager.get(), &DataAcquisitionManager::signal_AQ_dataReceived,
+        connect(m_acquisitionManager.get(), &DataAcquisitionManager::signal_AQ_batchDataReceived,
             this, &FX3DeviceManager::slot_FX3_DevM_handleDataReceived, Qt::QueuedConnection);
         connect(m_acquisitionManager.get(), &DataAcquisitionManager::signal_AQ_errorOccurred,
             this, &FX3DeviceManager::slot_FX3_DevM_handleAcquisitionError, Qt::QueuedConnection);
@@ -311,7 +311,7 @@ bool FX3DeviceManager::loadCommandFiles(const QString& directoryPath)
         handleCriticalError(
             LocalQTCompat::fromLocal8Bit("命令错误"),
             LocalQTCompat::fromLocal8Bit("设置命令目录失败: ") + directoryPath,
-            StateEvent::ERROR_OCCURRED,
+            StateEvent::COMMANDS_UNLOADED,
             LocalQTCompat::fromLocal8Bit("设置命令目录失败")
         );
         m_commandsLoaded = false;
@@ -891,14 +891,14 @@ void FX3DeviceManager::slot_FX3_DevM_handleAcquisitionStopped()
     );
 }
 
-void FX3DeviceManager::slot_FX3_DevM_handleDataReceived(const DataPacket& packet)
+void FX3DeviceManager::slot_FX3_DevM_handleDataReceived(const std::vector<DataPacket>& packets)
 {
     if (m_shuttingDown) {
         return;
     }
 
     // 转发数据包
-    emit signal_FX3_DevM_dataPacketAvailable(packet);
+    emit signal_FX3_DevM_dataPacketAvailable(packets);
 }
 
 void FX3DeviceManager::slot_FX3_DevM_handleAcquisitionError(const QString& error)

@@ -215,6 +215,8 @@ public slots:
     // 处理数据包
     void processDataPacket(const DataPacket& packet);
 
+    void processDataBatch(const DataPacketBatch& packets);
+
 signals:
     // 保存状态变更信号
     void saveStatusChanged(SaveStatus status);
@@ -252,6 +254,8 @@ private:
     // 重置文件写入器
     void resetFileWriter();
 
+    void saveDataBatch(const DataPacketBatch& packets);
+
 private:
     SaveParameters m_saveParams;
     SaveStatistics m_statistics;
@@ -267,6 +271,7 @@ private:
 
     std::thread m_saveThread;
     std::queue<DataPacket> m_dataQueue;
+    std::queue<DataPacketBatch> m_batchQueue;
     std::mutex m_queueMutex;
     std::condition_variable m_dataReady;
 

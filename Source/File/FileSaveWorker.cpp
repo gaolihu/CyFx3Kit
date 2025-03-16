@@ -1,4 +1,4 @@
-﻿// Source/MVC/Workers/FileSaveWorker.cpp
+﻿// Source/File/DataConverters.cpp
 #include "FileSaveWorker.h"
 #include "Logger.h"
 #include <QDir>
@@ -21,7 +21,6 @@ FileSaveWorker::FileSaveWorker(QObject* parent)
 FileSaveWorker::~FileSaveWorker()
 {
     stop();
-    m_packetQueue.clear();
     LOG_INFO("文件保存工作线程已销毁");
 }
 
@@ -29,15 +28,19 @@ void FileSaveWorker::setParameters(const SaveParameters& params)
 {
     QMutexLocker locker(&m_mutex);
     m_parameters = params;
+
+    // 根据文件格式创建对应的转换器
+    m_converter = DataConverterFactory::createConverter(params.format);
+
+    LOG_INFO(QString("文件保存参数已更新，格式: %1，转换器: %2")
+        .arg(static_cast<int>(params.format))
+        .arg(m_converter ? m_converter->getFileExtension() : "未知"));
 }
 
 void FileSaveWorker::stop()
 {
     m_isStopping = true;
-
-    // 等待队列处理完成
-    QMutexLocker locker(&m_mutex);
-    m_packetQueue.clear();
+    LOG_INFO("文件保存已停止");
 }
 
 void FileSaveWorker::startSaving()
@@ -63,15 +66,24 @@ void FileSaveWorker::startSaving()
         }
     }
 
-    // 确保有足够的磁盘空间 (为简化，只进行基本检查)
-    if (!checkDiskSpace(m_savePath, 1024 * 1024)) { // 至少1MB的空间
+    // 确保有足够的磁盘空间
+    if (!checkDiskSpace(m_savePath, 100 * 1024 * 1024)) { // 至少100MB的空间
         QString errorMsg = QString("磁盘空间不足: %1").arg(m_savePath);
         LOG_ERROR(errorMsg);
         emit saveError(errorMsg);
         return;
     }
 
-    LOG_INFO(QString("开始保存文件到: %1").arg(m_savePath));
+    // 确保转换器已创建
+    if (!m_converter) {
+        m_converter = DataConverterFactory::createConverter(m_parameters.format);
+    }
+
+    LOG_INFO(QString("开始保存文件到: %1，格式: %2")
+        .arg(m_savePath)
+        .arg(m_converter ? m_converter->getFileExtension() : "未知"));
+
+    emit saveProgress(0, 0); // 初始化进度
 }
 
 void FileSaveWorker::processDataPacket(const DataPacket& packet)
@@ -81,14 +93,42 @@ void FileSaveWorker::processDataPacket(const DataPacket& packet)
         return;
     }
 
-    // 保存数据包
-    if (saveDataPacket(packet)) {
+    // 单个数据包处理 - 简单将其放入只有一个元素的批次中处理
+    DataPacketBatch singlePacketBatch = { packet };
+    processDataBatch(singlePacketBatch);
+}
+
+void FileSaveWorker::processDataBatch(const DataPacketBatch& packets)
+{
+    // 检查是否停止
+    if (m_isStopping) {
+        return;
+    }
+
+    // 检查批次是否为空
+    if (packets.empty()) {
+        LOG_WARN("收到空的数据包批次，忽略");
+        return;
+    }
+
+    // 计算批次的总大小
+    uint64_t batchSize = 0;
+    for (const auto& packet : packets) {
+        batchSize += packet.getSize();
+    }
+
+    // 保存数据批次
+    if (saveDataBatch(packets)) {
         QMutexLocker locker(&m_mutex);
-        m_totalBytes += packet.size;
+        m_totalBytes += batchSize;
         m_fileCount++;
 
         // 通知进度更新
         emit saveProgress(m_totalBytes, m_fileCount);
+
+        LOG_INFO(QString("已保存数据批次，大小: %1 字节，包含 %2 个数据包")
+            .arg(batchSize)
+            .arg(packets.size()));
     }
 
     // 定期处理Qt事件，确保信号正常传递
@@ -99,12 +139,19 @@ bool FileSaveWorker::saveDataPacket(const DataPacket& packet)
 {
     SaveParameters params;
     QString savePath;
+    std::shared_ptr<IDataConverter> converter;
 
     // 获取线程安全的参数和路径
     {
         QMutexLocker locker(&m_mutex);
         params = m_parameters;
         savePath = m_savePath;
+        converter = m_converter;
+    }
+
+    if (!converter) {
+        LOG_ERROR("数据转换器未初始化");
+        return false;
     }
 
     try {
@@ -112,96 +159,28 @@ bool FileSaveWorker::saveDataPacket(const DataPacket& packet)
         QString filename = generateFileName();
 
         // 添加扩展名
-        filename = addFileExtension(filename);
+        filename = addFileExtension(filename, params.format);
 
         // 完整文件路径
         QString fullPath = QDir(savePath).filePath(filename);
 
-        // 实际数据保存逻辑
-        QFile file(fullPath);
-        if (!file.open(QIODevice::WriteOnly)) {
-            LOG_ERROR(QString("无法打开文件进行写入: %1, 错误: %2")
-                .arg(fullPath).arg(file.errorString()));
+        // 转换数据
+        QByteArray convertedData = converter->convert(packet, params);
+        if (convertedData.isEmpty()) {
+            LOG_ERROR("数据转换失败，无法获取有效数据");
             return false;
         }
 
-        // 根据不同格式处理文件保存
-        bool result = false;
-        switch (params.format) {
-        case FileFormat::RAW:
-            // 直接写入原始数据
-            //result = (file.write(reinterpret_cast<const char*>(packet.data), packet.size) == packet.size);
-            // TODO
-            break;
-
-        case FileFormat::CSV:
-            // 将数据格式化为CSV
-        {
-            QByteArray csvData;
-            uint32_t width = params.options.value("width", 1920).toUInt();
-            uint32_t bytesPerLine = params.options.value("bytes_per_line", 16).toUInt();
-
-            // 格式化数据为CSV
-            for (uint32_t i = 0; i < packet.size; i++) {
-                csvData.append(QString::number(packet.data[i]).toUtf8());
-
-                // 添加分隔符或换行
-                if (i < packet.size - 1) {
-                    if ((i + 1) % bytesPerLine == 0 || (i + 1) % width == 0) {
-                        csvData.append("\n");
-                    }
-                    else {
-                        csvData.append(",");
-                    }
-                }
-            }
-
-            result = (file.write(csvData) == csvData.size());
-        }
-        break;
-
-        case FileFormat::TEXT:
-            // 将数据格式化为文本
-        {
-            QByteArray textData;
-            uint32_t bytesPerLine = params.options.value("bytes_per_line", 16).toUInt();
-
-            // 格式化数据为文本
-            for (uint32_t i = 0; i < packet.size; i++) {
-                textData.append(QString("%1 ").arg(packet.data[i], 2, 16, QChar('0')).toUpper().toUtf8());
-
-                // 添加换行
-                if ((i + 1) % bytesPerLine == 0 && i < packet.size - 1) {
-                    textData.append("\n");
-                }
-            }
-
-            result = (file.write(textData) == textData.size());
-        }
-        break;
-
-        case FileFormat::BMP:
-            // 处理BMP格式 (简化实现，实际需要根据图像格式构建BMP文件头和数据)
-            //result = (file.write(reinterpret_cast<const char*>(packet.data), packet.size) == packet.size);
-            //TODO
-            break;
-
-        default:
-            LOG_ERROR(QString("不支持的文件格式: %1").arg(static_cast<int>(params.format)));
-            result = false;
-            break;
+        // 写入文件
+        if (!writeToFile(fullPath, convertedData)) {
+            return false;
         }
 
-        file.close();
+        LOG_INFO(QString("数据包已保存到: %1，大小: %2 字节")
+            .arg(fullPath)
+            .arg(convertedData.size()));
 
-        if (result) {
-            LOG_INFO(QString("数据包已保存到: %1").arg(fullPath));
-        }
-        else {
-            LOG_ERROR(QString("保存数据包失败: %1").arg(fullPath));
-        }
-
-        return result;
+        return true;
     }
     catch (const std::exception& e) {
         LOG_ERROR(QString("保存数据包异常: %1").arg(e.what()));
@@ -211,6 +190,98 @@ bool FileSaveWorker::saveDataPacket(const DataPacket& packet)
         LOG_ERROR("保存数据包未知异常");
         return false;
     }
+}
+
+bool FileSaveWorker::saveDataBatch(const DataPacketBatch& packets)
+{
+    if (packets.empty()) {
+        return false;
+    }
+
+    SaveParameters params;
+    QString savePath;
+    std::shared_ptr<IDataConverter> converter;
+
+    // 获取线程安全的参数和路径
+    {
+        QMutexLocker locker(&m_mutex);
+        params = m_parameters;
+        savePath = m_savePath;
+        converter = m_converter;
+    }
+
+    if (!converter) {
+        LOG_ERROR("数据转换器未初始化");
+        return false;
+    }
+
+    try {
+        // 生成文件名
+        QString filename = generateFileName();
+
+        // 添加扩展名
+        filename = addFileExtension(filename, params.format);
+
+        // 完整文件路径
+        QString fullPath = QDir(savePath).filePath(filename);
+
+        // 使用批量转换方法
+        QByteArray convertedData = converter->convertBatch(packets, params);
+        if (convertedData.isEmpty()) {
+            LOG_ERROR("批量数据转换失败，无法获取有效数据");
+            return false;
+        }
+
+        // 写入文件
+        if (!writeToFile(fullPath, convertedData)) {
+            return false;
+        }
+
+        LOG_INFO(QString("数据批次已保存到: %1，大小: %2 字节，包含 %3 个数据包")
+            .arg(fullPath)
+            .arg(convertedData.size())
+            .arg(packets.size()));
+
+        return true;
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR(QString("保存数据批次异常: %1").arg(e.what()));
+        return false;
+    }
+    catch (...) {
+        LOG_ERROR("保存数据批次未知异常");
+        return false;
+    }
+}
+
+bool FileSaveWorker::writeToFile(const QString& fullPath, const QByteArray& data)
+{
+    QFile file(fullPath);
+
+    // 使用"无缓冲"的方式打开文件，优化大文件写入性能
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        LOG_ERROR(QString("无法打开文件进行写入: %1, 错误: %2")
+            .arg(fullPath).arg(file.errorString()));
+        return false;
+    }
+
+    // 写入数据
+    qint64 written = file.write(data);
+    bool success = (written == data.size());
+
+    if (!success) {
+        LOG_ERROR(QString("文件写入失败: %1, 写入: %2/%3 字节, 错误: %4")
+            .arg(fullPath)
+            .arg(written)
+            .arg(data.size())
+            .arg(file.errorString()));
+    }
+
+    // 确保数据写入磁盘
+    file.flush();
+    file.close();
+
+    return success;
 }
 
 QString FileSaveWorker::generateFileName()
@@ -252,12 +323,14 @@ QString FileSaveWorker::createSavePath()
     return basePath;
 }
 
-QString FileSaveWorker::addFileExtension(const QString& baseName)
+QString FileSaveWorker::addFileExtension(const QString& baseName, FileFormat format)
 {
-    QMutexLocker locker(&m_mutex);
+    if (m_converter) {
+        return baseName + "." + m_converter->getFileExtension();
+    }
 
-    // 根据格式添加扩展名
-    switch (m_parameters.format) {
+    // 回退到基于格式的默认扩展名
+    switch (format) {
     case FileFormat::RAW:
         return baseName + ".raw";
     case FileFormat::BMP:

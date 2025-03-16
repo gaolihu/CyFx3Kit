@@ -170,7 +170,7 @@ signals:
      * @brief 数据包可用信号
      * @param packet 数据包
      */
-    void signal_FX3_DevM_dataPacketAvailable(const DataPacket& packet);
+    void signal_FX3_DevM_dataPacketAvailable(const std::vector<DataPacket>& packets);
 
 private slots:
     /**
@@ -208,7 +208,7 @@ private slots:
      * @brief 处理数据接收事件
      * @param packet 数据包
      */
-    void slot_FX3_DevM_handleDataReceived(const DataPacket& packet);
+    void slot_FX3_DevM_handleDataReceived(const std::vector<DataPacket>& packets);
 
     /**
      * @brief 处理采集错误事件

@@ -11,6 +11,10 @@
 #include <queue>
 #include "USBDevice.h"
 #include "DataPacket.h"
+//#define AQ_DBG
+#ifdef AQ_DBG
+#include "Logger.h"
+#endif // AQ_DBG
 
 class USBDevice;
 
@@ -28,6 +32,16 @@ public:
      * @param packet 要处理的数据包
      */
     virtual void processData(const DataPacket& packet) = 0;
+
+    /**
+     * @brief 处理批量数据包（默认实现，可被具体处理器覆盖以提高性能）
+     * @param packets 批量数据包
+     */
+    virtual void processBatchData(const DataPacketBatch& packets) {
+        for (const auto& packet : packets) {
+            processData(packet);
+        }
+    }
 };
 
 /**
@@ -152,6 +166,8 @@ signals:
      * @param packet 接收到的数据包
      */
     void signal_AQ_dataReceived(const DataPacket& packet);
+
+    void signal_AQ_batchDataReceived(const std::vector<DataPacket>& packets);
 
     /**
      * @brief 错误发生信号
@@ -296,6 +312,39 @@ private:
         void commitBuffer(size_t bytesWritten);
 
         /**
+         * @brief 设置批处理参数
+         * @param maxPacketsPerBatch 每批最大数据包数量
+         * @param maxBatchIntervalMs 最大批处理间隔(毫秒)
+         */
+        void setBatchingParams(size_t maxPacketsPerBatch, uint64_t maxBatchIntervalMs) {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_maxPacketsPerBatch = maxPacketsPerBatch;
+            m_maxBatchIntervalMs = maxBatchIntervalMs;
+        }
+
+        /**
+         * @brief 获取批处理的数据包
+         * @return 数据包批次的可选值
+         */
+        std::optional<DataPacketBatch> getReadyBatch() {
+            std::lock_guard<std::mutex> lock(m_mutex);
+
+            if (m_readyBatches.empty()) {
+#ifdef AQ_DBG
+                LOG_DEBUG(LocalQTCompat::fromLocal8Bit("没有可用的批次数据"));
+#endif // AQ_DBG
+                return std::nullopt;
+            }
+
+            DataPacketBatch batch = std::move(m_readyBatches.front());
+            m_readyBatches.pop();
+#ifdef AQ_DBG
+            LOG_DEBUG(LocalQTCompat::fromLocal8Bit("获取批次数据，包含 %1 个数据包").arg(batch.size()));
+#endif // AQ_DBG
+            return batch;
+        }
+
+        /**
          * @brief 获取读取缓冲区
          * @return 可选的数据包
          */
@@ -314,6 +363,14 @@ private:
         const size_t m_warningThreshold;               // 警告阈值
         const size_t m_criticalThreshold;              // 严重阈值
         WarningLevel m_lastWarningLevel{ WarningLevel::C_NORMAL }; // 上次警告级别
+
+        size_t m_maxPacketsPerBatch = 10;               // 每批最多包数量
+        uint64_t m_maxBatchIntervalMs = 50;             // 最大批处理间隔(ms)
+        uint32_t m_currentBatchId = 0;                  // 当前批次ID
+        size_t m_packetsInCurrentBatch = 0;             // 当前批次中的包数量
+        std::chrono::steady_clock::time_point m_batchStartTime; // 批次开始时间
+        std::queue<DataPacketBatch> m_readyBatches;     // 就绪批次队列
+        std::vector<DataPacket> m_currentBatch;         // 当前构建中的批次
     };
 
 private:
@@ -407,9 +464,9 @@ private:
     } m_stats;
 
     // 流控制和错误处理参数
-    static constexpr size_t MAX_PACKET_SIZE = 16 * 1024;     // 16KB 每包
-    static constexpr size_t BUFFER_SIZE = 16 * 1024;         // 16KB 每缓冲区
-    static constexpr size_t BUFFER_COUNT = 32;               // 32 个缓冲区
+    static constexpr size_t MAX_PACKET_SIZE = 16 * 16 * 1024;     // 16KB 每包
+    static constexpr size_t BUFFER_SIZE = 16 * 16 * 1024;         // 16KB 每缓冲区
+    static constexpr size_t BUFFER_COUNT = 64;               // 32 个缓冲区
     static constexpr int MAX_READ_RETRIES = 3;               // 最大重试次数
     static constexpr int READ_RETRY_DELAY_MS = 100;          // 重试延迟
     static constexpr int MAX_CONSECUTIVE_FAILURES = 10;      // 最大连续失败次数

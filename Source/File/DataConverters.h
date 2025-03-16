@@ -1,3 +1,4 @@
+// Source/File/DataConverters.h
 #pragma once
 
 #include <memory>
@@ -6,6 +7,7 @@
 #include <QImage>
 #include <QBuffer>
 #include <QDebug>
+#include "DataPacket.h"
 
 // 数据转换器接口
 class IDataConverter {
@@ -14,6 +16,16 @@ public:
 
     // 转换数据格式
     virtual QByteArray convert(const DataPacket& packet, const SaveParameters& params) = 0;
+
+    // 批量转换数据
+    virtual QByteArray convertBatch(const DataPacketBatch& batch, const SaveParameters& params) {
+        // 默认实现：仅转换批次的第一个包
+        // 具体转换器可以覆盖此方法实现更高效的批处理
+        if (!batch.empty()) {
+            return convert(batch[0], params);
+        }
+        return QByteArray();
+    }
 
     // 获取输出文件扩展名
     virtual QString getFileExtension() const = 0;
@@ -143,14 +155,22 @@ protected:
         uint8_t format = params.options.value("format", 0x39).toUInt();
 
         try {
+            // 使用新的访问方法
+            const uint8_t* data = packet.getData();
+            size_t size = packet.getSize();
+
+            if (!data || size == 0) {
+                throw std::runtime_error("Empty or invalid data packet");
+            }
+
             // 根据格式类型转换数据为图像
             switch (format) {
             case 0x38: // RAW8
-                return convertRaw8ToImage(packet.data.data(), packet.size, width, height);
+                return convertRaw8ToImage(data, size, width, height);
             case 0x39: // RAW10
-                return convertRaw10ToImage(packet.data.data(), packet.size, width, height);
+                return convertRaw10ToImage(data, size, width, height);
             case 0x3A: // RAW12
-                return convertRaw12ToImage(packet.data.data(), packet.size, width, height);
+                return convertRaw12ToImage(data, size, width, height);
             default:
                 LOG_ERROR(LocalQTCompat::fromLocal8Bit("不支持的图像格式: 0x%1")
                     .arg(format, 2, 16, QChar('0')));
@@ -192,9 +212,46 @@ public:
     ~RawDataConverter() override = default;
 
     QByteArray convert(const DataPacket& packet, const SaveParameters& params) override {
-        // 简单直接返回原始数据
-        return QByteArray(reinterpret_cast<const char*>(packet.data.data()),
-            static_cast<int>(packet.size));
+        // 使用新的访问方法获取数据和大小
+        const uint8_t* data = packet.getData();
+        size_t size = packet.getSize();
+
+        if (!data || size == 0) {
+            LOG_WARN("尝试转换空数据包");
+            return QByteArray();
+        }
+
+        // 创建QByteArray并返回
+        return QByteArray(reinterpret_cast<const char*>(data), static_cast<int>(size));
+    }
+
+    // 优化的批量转换实现
+    QByteArray convertBatch(const DataPacketBatch& batch, const SaveParameters& params) override {
+        // 对于原始数据，我们可以直接合并多个数据包
+        if (batch.empty()) {
+            return QByteArray();
+        }
+
+        // 估算总大小以优化内存分配
+        size_t totalSize = 0;
+        for (const auto& packet : batch) {
+            totalSize += packet.getSize();
+        }
+
+        QByteArray result;
+        result.reserve(static_cast<int>(totalSize));
+
+        // 合并所有数据包
+        for (const auto& packet : batch) {
+            const uint8_t* data = packet.getData();
+            size_t size = packet.getSize();
+
+            if (data && size > 0) {
+                result.append(reinterpret_cast<const char*>(data), static_cast<int>(size));
+            }
+        }
+
+        return result;
     }
 
     QString getFileExtension() const override {
@@ -309,11 +366,51 @@ public:
 
         // 写入数据行
         stream << timestamp.toString(Qt::ISODate) << ",";
-        stream << packet.size << ",";
+        stream << packet.getSize() << ","; // 使用新的访问方法
         stream << width << ",";
         stream << height << ",";
         stream << "0x" << QString::number(format, 16) << ",";
         stream << QDateTime::currentDateTime().toString(Qt::ISODate) << "\n";
+
+        return csvData;
+    }
+
+    // 批量转换CSV元数据
+    QByteArray convertBatch(const DataPacketBatch& batch, const SaveParameters& params) override {
+        if (batch.empty()) {
+            return QByteArray();
+        }
+
+        QByteArray csvData;
+        QTextStream stream(&csvData);
+
+        // 写入CSV头
+        stream << "Timestamp,Size,Width,Height,Format,CaptureTime,BatchId,PacketInBatch\n";
+
+        // 获取参数
+        uint16_t width = params.options.value("width", 1920).toUInt();
+        uint16_t height = params.options.value("height", 1080).toUInt();
+        uint8_t format = params.options.value("format", 0x39).toUInt();
+
+        // 获取当前时间（一次）
+        QString currentDateTime = QDateTime::currentDateTime().toString(Qt::ISODate);
+
+        // 为批次中的每个包写入一行
+        for (const auto& packet : batch) {
+            // 格式化时间戳
+            QDateTime timestamp;
+            timestamp.setMSecsSinceEpoch(packet.timestamp / 1000000); // 从纳秒转换为毫秒
+
+            // 写入数据行
+            stream << timestamp.toString(Qt::ISODate) << ",";
+            stream << packet.getSize() << ",";
+            stream << width << ",";
+            stream << height << ",";
+            stream << "0x" << QString::number(format, 16) << ",";
+            stream << currentDateTime << ",";
+            stream << packet.batchId << ",";
+            stream << packet.packetsInBatch << "\n";
+        }
 
         return csvData;
     }

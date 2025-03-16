@@ -27,6 +27,9 @@ DataAcquisitionManager::DataAcquisitionManager(std::shared_ptr<USBDevice> device
         .arg(BUFFER_COUNT)
         .arg(BUFFER_SIZE));
 
+    // 设置批处理参数
+    m_buffer->setBatchingParams(8, 50); // 每批最多8个包，最大间隔50ms
+
     // 记录开始时间
     m_startTime = std::chrono::steady_clock::now();
 }
@@ -109,12 +112,6 @@ void DataAcquisitionManager::CircularBuffer::commitBuffer(size_t bytesWritten)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-#if 0
-    LOG_DEBUG(QString("Committing buffer - Index: %1, Written bytes: %2")
-        .arg(m_currentWriteBuffer)
-        .arg(bytesWritten));
-#endif
-
     if (bytesWritten == 0) {
         LOG_WARN("Attempting to commit empty buffer");
         return;
@@ -127,23 +124,95 @@ void DataAcquisitionManager::CircularBuffer::commitBuffer(size_t bytesWritten)
         return;
     }
 
+    // 创建数据包
     DataPacket packet;
-    packet.data = std::vector<uint8_t>(
+
+    // 使用共享指针管理数据
+    packet.data = std::make_shared<std::vector<uint8_t>>(
         m_buffers[m_currentWriteBuffer].begin(),
         m_buffers[m_currentWriteBuffer].begin() + bytesWritten
         );
-    packet.size = bytesWritten;
+
     packet.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
 
-    m_readyBuffers.push(std::move(packet));
+    // 批处理逻辑
+    auto now = std::chrono::steady_clock::now();
 
+    // 如果是新批次的开始
+    if (m_packetsInCurrentBatch == 0) {
+        m_currentBatchId++;
+        m_batchStartTime = now;
+        m_currentBatch.clear();
+#ifdef AQ_DBG
+        LOG_DEBUG(LocalQTCompat::fromLocal8Bit("开始新批次，ID: %1").arg(m_currentBatchId));
+#endif // AQ_DBG
+    }
+
+    m_packetsInCurrentBatch++;
+
+    // 设置批处理标识
+    packet.batchId = m_currentBatchId;
+    packet.packetsInBatch = m_packetsInCurrentBatch;
+
+    // 添加到当前批次
+    m_currentBatch.push_back(packet);
+#ifdef AQ_DBG
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("添加数据包到批次 %1，当前包含 %2 个数据包").arg(m_currentBatchId).arg(m_packetsInCurrentBatch));
+#endif // AQ_DBG
+    // 判断是否完成当前批次
+    bool completeBatch = false;
+
+    // 达到最大包数量或最大时间间隔
+    std::chrono::milliseconds elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_batchStartTime);
+    if (m_packetsInCurrentBatch >= m_maxPacketsPerBatch ||
+        elapsed.count() >= static_cast<int64_t>(m_maxBatchIntervalMs)) {
+        completeBatch = true;
+#ifdef AQ_DBG
+        LOG_DEBUG(LocalQTCompat::fromLocal8Bit("批次 %1 已完成: 数据包=%2, 经过时间=%3ms")
+            .arg(m_currentBatchId)
+            .arg(m_packetsInCurrentBatch)
+            .arg(elapsed.count()));
+#endif // AQ_DBG
+
+    }
+
+    if (completeBatch) {
+        // 设置最后一个包的批次完成标志
+        if (!m_currentBatch.empty()) {
+            m_currentBatch.back().isBatchComplete = true;
+
+            // 确保批次不为空，再将完整批次放入队列
+            if (!m_currentBatch.empty()) {
+                DataPacketBatch batchCopy = m_currentBatch;  // 创建副本
+                m_readyBatches.push(std::move(batchCopy));
+
+#ifdef AQ_DBG
+                LOG_INFO(LocalQTCompat::fromLocal8Bit("批次 %1 已入队，包含 %2 个数据包")
+                    .arg(m_currentBatchId)
+                    .arg(m_packetsInCurrentBatch));
+#endif // AQ_DBG
+            }
+            else {
+                LOG_WARN(QString("批次 %1 被标记为完成但为空").arg(m_currentBatchId));
+            }
+        }
+
+        // 重置批次计数
+        m_packetsInCurrentBatch = 0;
+        m_currentBatch.clear();  // 清空当前批次
+    }
+    else {
+        // 不是批次的最后一个包
+        if (!m_currentBatch.empty()) {
+            m_currentBatch.back().isBatchComplete = false;
+        }
+    }
+
+    // 同时将数据包添加到单独的队列，用于单包处理
+    m_readyBuffers.push(packet);
+
+    // 更新下一个写缓冲区
     m_currentWriteBuffer = (m_currentWriteBuffer + 1) % m_buffers.size();
-
-#if 0
-    LOG_DEBUG(QString("Buffer committed - Size: %1, Queue size: %2")
-        .arg(bytesWritten)
-        .arg(m_readyBuffers.size()));
-#endif
 }
 
 std::optional<DataPacket> DataAcquisitionManager::CircularBuffer::getReadBuffer()
@@ -237,7 +306,8 @@ bool DataAcquisitionManager::startAcquisition(uint16_t width, uint16_t height, u
     return true;
 }
 
-void DataAcquisitionManager::stopAcquisition() {
+void DataAcquisitionManager::stopAcquisition()
+{
     std::unique_lock<std::mutex> stopLock(m_stopMutex);
 
     if (!m_running) {
@@ -317,7 +387,8 @@ void DataAcquisitionManager::stopAcquisition() {
     }
 }
 
-void DataAcquisitionManager::signalStop(StopReason reason) {
+void DataAcquisitionManager::signalStop(StopReason reason)
+{
     // 先检查是否已经停止，避免多次调用
     {
         std::lock_guard<std::mutex> lock(m_stopMutex);
@@ -558,24 +629,80 @@ void DataAcquisitionManager::processingThread()
 
             // 等待数据或停止信号
             m_dataReady.wait_for(lock, std::chrono::milliseconds(STOP_CHECK_INTERVAL_MS),
-                [this]() { return !m_running || m_buffer->getReadBuffer().has_value(); });
+                [this]() {
+                    return !m_running ||
+                        m_buffer->getReadBuffer().has_value() ||
+                        m_buffer->getReadyBatch().has_value();
+                });
 
             if (!m_running) break;
 
-            // 获取待处理的数据包
-            if (auto packet = m_buffer->getReadBuffer()) {
+            // 优先处理批次数据
+            auto batchOpt = m_buffer->getReadyBatch();
+#ifdef AQ_DBG
+            LOG_DEBUG("Checking for ready batches...");
+#endif // AQ_DBG
+
+            if (batchOpt) {
+                // 获取到一个完整批次
+                DataPacketBatch batch = std::move(*batchOpt);
+#ifdef AQ_DBG
+                LOG_INFO(LocalQTCompat::fromLocal8Bit("获取到批次数据，包含 %1 个数据包").arg(batch.size()));
+#endif
+                lock.unlock();  // 解锁以允许并行处理
+
+                if (!batch.empty()) {
+                    if (m_processor) {
+                        try {
+                            // 调用处理器处理批量数据
+#ifdef AQ_DBG
+                            LOG_DEBUG(LocalQTCompat::fromLocal8Bit("正在处理 %1 个数据包的批次").arg(batch.size()));
+#endif // AQ_DBG
+                            // 处理整个批次数据
+                            m_processor->processBatchData(batch);
+
+                            // 对于向后兼容，如果批次只有一个数据包，也发送单包信号
+                            if (batch.size() == 1) {
+                                emit signal_AQ_dataReceived(batch[0]);
+                            }
+                        }
+                        catch (const std::exception& e) {
+                            LOG_ERROR(QString("Data batch processing error: %1").arg(e.what()));
+                            emit signal_AQ_errorOccurred(QString("批量数据处理错误: %1").arg(e.what()));
+                        }
+                    }
+
+                    // 发送批量数据接收信号
+                    emit signal_AQ_batchDataReceived(batch);
+                }
+                else {
+                    LOG_WARN("获取到空批次 - 这不应该发生");
+                }
+                continue; // 继续检查下一个批次
+            }
+
+            // 向后兼容：处理单个数据包
+            auto packetOpt = m_buffer->getReadBuffer();
+            if (packetOpt) {
+                DataPacket packet = std::move(*packetOpt);
+                LOG_DEBUG("获取到单个数据包");
                 lock.unlock();  // 解锁以允许并行处理
 
                 if (m_processor) {
                     try {
-                        m_processor->processData(*packet);
-                        emit signal_AQ_dataReceived(*packet);
+                        m_processor->processData(packet);
+                        emit signal_AQ_dataReceived(packet);
                     }
                     catch (const std::exception& e) {
                         LOG_ERROR(QString("Data processing error: %1").arg(e.what()));
                         emit signal_AQ_errorOccurred(QString("数据处理错误: %1").arg(e.what()));
                     }
                 }
+            }
+            else {
+                // 没有可用数据，释放锁并短暂让出时间片
+                lock.unlock();
+                std::this_thread::yield();
             }
         }
     }

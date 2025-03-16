@@ -101,6 +101,12 @@ StateTransitionResult AppStateMachine::handleEvent(AppState currentState, StateE
             return StateTransitionResult(AppState::COMMANDS_MISSING, LocalQTCompat::fromLocal8Bit("设备已重新连接，等待命令文件"));
         case StateEvent::DEVICE_DISCONNECTED:
             return StateTransitionResult(AppState::DEVICE_ABSENT, LocalQTCompat::fromLocal8Bit("设备已断开连接"));
+        case StateEvent::COMMANDS_LOADED:
+            return StateTransitionResult(AppState::CONFIGURED, LocalQTCompat::fromLocal8Bit("命令文件已加载，系统已恢复正常"));
+        case StateEvent::ERROR_OCCURRED:
+            // 已经在错误状态，记录新错误但不改变状态
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("设备处于错误状态时收到新错误: %1").arg(reason));
+            return StateTransitionResult(AppState::DEVICE_ERROR, reason, true);
         default:
             break;
         }

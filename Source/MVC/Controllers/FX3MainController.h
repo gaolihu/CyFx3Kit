@@ -6,6 +6,7 @@
 #include <atomic>
 #include "AppStateMachine.h"
 #include "ModuleManager.h"
+#include "DataPacket.h"
 
 // 前向声明，减少头文件依赖
 class FX3MainView;
@@ -198,12 +199,6 @@ private slots:
     void slot_FX3Main_C_onTransferStateChanged(bool transferring);
 
     /**
-     * @brief 处理数据包可用
-     * @param packet 数据包
-     */
-    void slot_FX3Main_C_onDataPacketAvailable(const DataPacket& packet);
-
-    /**
      * @brief 处理传输统计更新
      * @param bytesTransferred 已传输字节数
      * @param transferRate 传输速率
@@ -221,7 +216,7 @@ private slots:
     void slot_FX3Main_C_handleTransferStatsUpdated(uint64_t bytesTransferred, double transferRate, uint32_t elapseMs);
     void slot_FX3Main_C_handleUsbSpeedUpdated(const QString& speedDesc, bool isUSB3, bool isConnected);
     void slot_FX3Main_C_handleDeviceError(const QString& title, const QString& message);
-    void slot_FX3Main_C_handleDataPacketAvailable(const DataPacket& packet);
+    void slot_FX3Main_C_handleDataPacketAvailable(const std::vector<DataPacket>& packets);
 
 private:
     /**

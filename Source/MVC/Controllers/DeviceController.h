@@ -142,7 +142,7 @@ signals:
      * @brief 数据包可用信号
      * @param packet 数据包
      */
-    void signal_Dev_C_dataPacketAvailable(const DataPacket& packet);
+    void signal_Dev_C_dataPacketAvailable(const std::vector<DataPacket>& packets);
 
 private slots:
     /**

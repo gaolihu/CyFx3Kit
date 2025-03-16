@@ -57,6 +57,10 @@ void FX3MainModel::initialize()
         // 连接信号
         connectSignals();
 
+        if (!m_commandDir.isEmpty()) {
+            emit signal_FX3Main_M_commandDirectoryChanged(m_commandDir);
+        }
+
         LOG_INFO(LocalQTCompat::fromLocal8Bit("FX3主模型初始化完成"));
     }
     catch (const std::exception& e) {

@@ -1,4 +1,4 @@
-﻿// Source/MVC/Workers/FileSaveWorker.h
+﻿// Source/File/DataConverters.h
 #pragma once
 
 #include <QObject>
@@ -7,13 +7,15 @@
 #include <QWaitCondition>
 #include <QThread>
 #include <atomic>
+#include <memory>
 #include "FileSaveModel.h"
 #include "DataPacket.h"
+#include "DataConverters.h"
 
 /**
  * @brief 文件保存工作线程类
  *
- * 负责异步处理文件保存操作，避免在主线程中执行I/O操作阻塞UI
+ * 负责异步处理文件保存操作，支持批量处理，避免在主线程中执行I/O操作阻塞UI
  */
 class FileSaveWorker : public QObject
 {
@@ -49,10 +51,16 @@ public slots:
     void startSaving();
 
     /**
-     * @brief 处理数据包
+     * @brief 处理单个数据包
      * @param packet 数据包
      */
     void processDataPacket(const DataPacket& packet);
+
+    /**
+     * @brief 处理批量数据包
+     * @param packets 数据包批次
+     */
+    void processDataBatch(const DataPacketBatch& packets);
 
 signals:
     /**
@@ -84,6 +92,13 @@ private:
     bool saveDataPacket(const DataPacket& packet);
 
     /**
+     * @brief 保存批量数据包到文件
+     * @param packets 数据包批次
+     * @return 是否保存成功
+     */
+    bool saveDataBatch(const DataPacketBatch& packets);
+
+    /**
      * @brief 生成文件名
      * @return 文件名（不含扩展名）
      */
@@ -98,9 +113,10 @@ private:
     /**
      * @brief 添加扩展名
      * @param baseName 基本文件名
+     * @param format 文件格式
      * @return 带扩展名的文件名
      */
-    QString addFileExtension(const QString& baseName);
+    QString addFileExtension(const QString& baseName, FileFormat format);
 
     /**
      * @brief 检查磁盘空间
@@ -110,13 +126,21 @@ private:
      */
     bool checkDiskSpace(const QString& path, uint64_t requiredBytes);
 
+    /**
+     * @brief 写入数据到文件
+     * @param fullPath 完整文件路径
+     * @param data 数据字节数组
+     * @return 是否成功写入
+     */
+    bool writeToFile(const QString& fullPath, const QByteArray& data);
+
 private:
-    SaveParameters m_parameters;    // 保存参数
-    QString m_savePath;             // 保存路径
-    std::atomic<bool> m_isStopping; // 停止标志
-    QMutex m_mutex;                 // 互斥锁
-    uint64_t m_totalBytes;          // 总字节数
-    int m_fileCount;                // 文件数量
-    int m_fileIndex;                // 文件索引（用于自动命名）
-    QQueue<DataPacket> m_packetQueue; // 数据包队列
+    SaveParameters m_parameters;           // 保存参数
+    QString m_savePath;                    // 保存路径
+    std::atomic<bool> m_isStopping;        // 停止标志
+    QMutex m_mutex;                        // 互斥锁
+    uint64_t m_totalBytes;                 // 总字节数
+    int m_fileCount;                       // 文件数量
+    int m_fileIndex;                       // 文件索引（用于自动命名）
+    std::shared_ptr<IDataConverter> m_converter; // 当前使用的数据转换器
 };

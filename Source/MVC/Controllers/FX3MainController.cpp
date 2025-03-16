@@ -106,6 +106,12 @@ bool FX3MainController::initialize()
             }
         }
 
+        // After device controller is initialized, check for command directory
+        if (m_deviceController && !m_mainModel->getCommandDirectory().isEmpty()) {
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("初始化时加载命令目录: %1").arg(m_mainModel->getCommandDirectory()));
+            m_deviceController->setCommandDirectory(m_mainModel->getCommandDirectory());
+        }
+
         m_initialized = true;
         LOG_INFO(LocalQTCompat::fromLocal8Bit("FX3主控制器初始化完成"));
         return true;
@@ -385,6 +391,15 @@ void FX3MainController::connectSignals()
         this, [this](const QString& deviceName, const QString& firmwareVersion, const QString& serialNumber) {
             if (m_mainView) {
                 m_mainView->updateDeviceInfoDisplay(deviceName, firmwareVersion, serialNumber);
+            }
+        });
+
+    // Connect command directory changed signal from model
+    connect(m_mainModel, &FX3MainModel::signal_FX3Main_M_commandDirectoryChanged,
+        this, [this](const QString& dir) {
+            if (!dir.isEmpty() && m_deviceController) {
+                LOG_INFO(LocalQTCompat::fromLocal8Bit("处理命令目录变更: %1").arg(dir));
+                m_deviceController->setCommandDirectory(dir);
             }
         });
 
@@ -840,43 +855,6 @@ void FX3MainController::slot_FX3Main_C_onTransferStateChanged(bool transferring)
     }
 }
 
-void FX3MainController::slot_FX3Main_C_onDataPacketAvailable(const DataPacket& packet)
-{
-    // 数据包处理逻辑
-    // 例如转发到文件保存控制器、视频显示模块等
-    if (m_moduleManager) {
-        m_moduleManager->processDataPacket(packet);
-    }
-}
-
-#if 0
-void FX3MainController::slot_FX3Main_C_handleDeviceConnectionChanged(bool connected)
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("FX3主设备控制器处理设备连接状态变更: %1").arg(connected ? "已连接" : "已断开"));
-
-    // 通知模型
-    m_mainModel->setDeviceConnected(connected);
-
-    // 通知模块管理器 - 使用新的事件系统
-    if (m_moduleManager) {
-        ModuleManager::ModuleEvent event = connected ?
-            ModuleManager::ModuleEvent::DEVICE_CONNECTED :
-            ModuleManager::ModuleEvent::DEVICE_DISCONNECTED;
-        m_moduleManager->notifyAllModules(event);
-    }
-
-    // 更新UI
-    if (m_mainView && m_mainView->getUiStateManager()) {
-        m_mainView->getUiStateManager()->slot_MainUI_STM_onDeviceConnectionChanged(connected);
-    }
-
-    // 更新应用状态机
-    StateEvent stateEvent = connected ? StateEvent::DEVICE_CONNECTED : StateEvent::DEVICE_DISCONNECTED;
-    QString reason = connected ? LocalQTCompat::fromLocal8Bit("设备已连接") : LocalQTCompat::fromLocal8Bit("设备已断开");
-    AppStateMachine::instance().processEvent(stateEvent, reason);
-}
-#endif
-
 void FX3MainController::slot_FX3Main_C_handleTransferStateChanged(bool transferring) {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("主设备控制器处理传输状态变更: %1").arg(transferring ? "传输中" : "已停止"));
 
@@ -945,7 +923,7 @@ void FX3MainController::slot_FX3Main_C_onTransferStatsUpdated(uint64_t bytesTran
         bytesTransferred - lastLoggedBytes > 100 * 1024 * 1024 ||
         lastLogTime.msecsTo(currentTime) > 5000) {
 
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("传输统计 - 总数据: %1 Bytes, 速率: %2 MB/s, 时间: %3")
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("传输统计 - 总数据: %1 Bytes, 速率: %2 MB/s, 时间: %3 ms")
             .arg(bytesTransferred)
             .arg(transferRate, 0, 'f', 2)
             .arg(elapseMs));
@@ -957,7 +935,7 @@ void FX3MainController::slot_FX3Main_C_onTransferStatsUpdated(uint64_t bytesTran
 
 void FX3MainController::slot_FX3Main_C_handleStartButtonClicked()
 {
-    LOG_INFO("处理开始按钮点击");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("主控制器: 处理开始按钮点击"));
     if (m_deviceController) {
         m_deviceController->startTransfer();
     }
@@ -965,7 +943,7 @@ void FX3MainController::slot_FX3Main_C_handleStartButtonClicked()
 
 void FX3MainController::slot_FX3Main_C_handleStopButtonClicked()
 {
-    LOG_INFO("处理停止按钮点击");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("主控制器: 处理停止按钮点击"));
     if (m_deviceController) {
         m_deviceController->stopTransfer();
     }
@@ -973,20 +951,21 @@ void FX3MainController::slot_FX3Main_C_handleStopButtonClicked()
 
 void FX3MainController::slot_FX3Main_C_handleResetButtonClicked()
 {
-    LOG_INFO("处理重置按钮点击");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("主控制器: 处理重置按钮点击"));
     if (m_deviceController) {
         m_deviceController->resetDevice();
     }
 }
 
-void FX3MainController::slot_FX3Main_C_handleDataPacketAvailable(const DataPacket& packet)
+void FX3MainController::slot_FX3Main_C_handleDataPacketAvailable(const std::vector<DataPacket>& packets)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("主控制器: 数据来了: %1").arg(packets.size()));
     // 数据包处理逻辑
     // 例如转发到文件保存控制器、视频显示模块等
     // 转发到模块管理器
     if (m_moduleManager) {
         // Use ModuleManager's notification system
-        m_moduleManager->notifyAllModules(ModuleManager::ModuleEvent::DATA_AVAILABLE, QVariant::fromValue(packet));
+        //m_moduleManager->notifyAllModules(ModuleManager::ModuleEvent::DATA_AVAILABLE, QVariant::fromValue(packet));
     }
 }
 
