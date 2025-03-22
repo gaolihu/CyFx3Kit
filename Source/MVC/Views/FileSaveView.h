@@ -59,75 +59,75 @@ signals:
      * @brief 保存参数变更信号
      * @param parameters 新的保存参数
      */
-    void saveParametersChanged(const SaveParameters& parameters);
+    void signal_FS_V_saveParametersChanged(const SaveParameters& parameters);
 
     /**
      * @brief 开始保存请求信号
      */
-    void startSaveRequested();
+    void signal_FS_V_startSaveRequested();
 
     /**
      * @brief 停止保存请求信号
      */
-    void stopSaveRequested();
+    void signal_FS_V_stopSaveRequested();
 
 public slots:
     /**
      * @brief 更新状态显示
      * @param status 保存状态
      */
-    void updateStatusDisplay(SaveStatus status);
+    void slot_FS_V_updateStatusDisplay(SaveStatus status);
 
     /**
      * @brief 更新统计信息显示
      * @param stats 保存统计信息
      */
-    void updateStatisticsDisplay(const SaveStatistics& stats);
+    void slot_FS_V_updateStatisticsDisplay(const SaveStatistics& stats);
 
     /**
      * @brief 保存开始响应
      */
-    void onSaveStarted();
+    void slot_FS_V_onSaveStarted();
 
     /**
      * @brief 保存停止响应
      */
-    void onSaveStopped();
+    void slot_FS_V_onSaveStopped();
 
     /**
      * @brief 保存完成响应
      * @param path 保存路径
      * @param totalBytes 总字节数
      */
-    void onSaveCompleted(const QString& path, uint64_t totalBytes);
+    void slot_FS_V_onSaveCompleted(const QString& path, uint64_t totalBytes);
 
     /**
      * @brief 保存错误响应
      * @param error 错误消息
      */
-    void onSaveError(const QString& error);
+    void slot_FS_V_onSaveError(const QString& error);
 
 private slots:
     /**
      * @brief 保存按钮点击处理
      */
-    void onSaveButtonClicked();
+    void slot_FS_V_onSaveButtonClicked();
 
     /**
      * @brief 取消按钮点击处理
      */
-    void onCancelButtonClicked();
+    void slot_FS_V_onCancelButtonClicked();
 
     /**
      * @brief 浏览文件夹按钮点击处理
      */
-    void onBrowseFolderButtonClicked();
+    void slot_FS_V_onBrowseFolderButtonClicked();
 
     /**
      * @brief 保存范围单选按钮切换处理
      * @param checked 是否选中
      */
-    void onSaveRangeRadioButtonToggled(bool checked);
+    void slot_FS_V_onSaveRangeRadioButtonToggled(bool checked);
 
 private:
     /**

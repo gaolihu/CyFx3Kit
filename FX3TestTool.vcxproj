@@ -122,9 +122,9 @@
     <ClCompile Include="Source\Core\MainUiStateManager.cpp" />
     <ClCompile Include="Source\Core\USBDevice.cpp" />
     <ClCompile Include="Source\File\AsyncFileWriter.cpp" />
-    <ClCompile Include="Source\File\FileCacheManager.cpp" />
+    <ClCompile Include="Source\File\DataCacheManager.cpp" />
     <ClCompile Include="Source\File\FileSaveManager.cpp" />
-    <ClCompile Include="Source\File\FileSaveWorker.cpp" />
+    <ClCompile Include="Source\File\IndexGenerator.cpp" />
     <ClCompile Include="Source\File\StandardFileWriter.cpp" />
     <ClCompile Include="Source\Main\main.cpp" />
     <ClCompile Include="Source\MVC\Controllers\ChannelSelectController.cpp" />
@@ -187,8 +187,8 @@
     <ClInclude Include="Source\Core\DeviceTransferStats.h" />
     <QtMoc Include="Source\Core\ModuleManager.h" />
     <QtMoc Include="Source\MVC\Views\FileSaveView.h" />
-    <QtMoc Include="Source\File\FileSaveWorker.h" />
     <QtMoc Include="Source\Core\MainUiStateManager.h" />
+    <QtMoc Include="Source\File\IndexGenerator.h" />
     <ClInclude Include="Source\MVC\Views\IDeviceView.h" />
     <QtMoc Include="Source\MVC\Views\UpdateDeviceView.h" />
     <QtMoc Include="Source\MVC\Views\VideoDisplayView.h" />

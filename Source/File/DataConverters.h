@@ -352,13 +352,38 @@ public:
         QByteArray csvData;
         QTextStream stream(&csvData);
 
-        // 写入CSV头
-        stream << "Timestamp,Size,Width,Height,Format,CaptureTime\n";
+        // 写入CSV头 (只在第一次写入)
+        static bool headerWritten = false;
+        if (!headerWritten) {
+            stream << "Timestamp,PacketSize,Width,Height,Format,FormatName,PixelDepth,CaptureTime,Notes\n";
+            headerWritten = true;
+        }
 
         // 获取参数
         uint16_t width = params.options.value("width", 1920).toUInt();
         uint16_t height = params.options.value("height", 1080).toUInt();
         uint8_t format = params.options.value("format", 0x39).toUInt();
+
+        // 获取格式名称和像素深度
+        QString formatName;
+        int pixelDepth = 0;
+        switch (format) {
+        case 0x38:
+            formatName = "RAW8";
+            pixelDepth = 8;
+            break;
+        case 0x39:
+            formatName = "RAW10";
+            pixelDepth = 10;
+            break;
+        case 0x3A:
+            formatName = "RAW12";
+            pixelDepth = 12;
+            break;
+        default:
+            formatName = "Unknown";
+            pixelDepth = 0;
+        }
 
         // 格式化时间戳
         QDateTime timestamp;
@@ -370,7 +395,10 @@ public:
         stream << width << ",";
         stream << height << ",";
         stream << "0x" << QString::number(format, 16) << ",";
-        stream << QDateTime::currentDateTime().toString(Qt::ISODate) << "\n";
+        stream << formatName << ",";
+        stream << pixelDepth << ",";
+        stream << QDateTime::currentDateTime().toString(Qt::ISODate) << ",";
+        stream << "数据包内容不适合CSV格式，建议使用RAW格式保存" << "\n";
 
         return csvData;
     }

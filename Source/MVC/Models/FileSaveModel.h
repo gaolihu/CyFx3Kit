@@ -127,37 +127,42 @@ public:
      */
     void resetToDefault();
 
+    bool startSaving();
+    bool stopSaving();
+    void processDataPacket(const DataPacket& packet);
+    void processDataBatch(const DataPacketBatch& packets);
+
 signals:
     /**
      * @brief 参数变更信号
      * @param parameters 新的保存参数
      */
-    void parametersChanged(const SaveParameters& parameters);
+    void signal_FS_M_parametersChanged(const SaveParameters& parameters);
 
     /**
      * @brief 状态变更信号
      * @param status 新的保存状态
      */
-    void statusChanged(SaveStatus status);
+    void signal_FS_M_statusChanged(SaveStatus status);
 
     /**
      * @brief 统计信息更新信号
      * @param statistics 新的统计信息
      */
-    void statisticsUpdated(const SaveStatistics& statistics);
+    void signal_FS_M_statisticsUpdated(const SaveStatistics& statistics);
 
     /**
      * @brief 保存完成信号
      * @param path 保存路径
      * @param totalBytes 总字节数
      */
-    void saveCompleted(const QString& path, uint64_t totalBytes);
+    void signal_FS_M_saveCompleted(const QString& path, uint64_t totalBytes);
 
     /**
      * @brief 保存错误信号
      * @param error 错误消息
      */
-    void saveError(const QString& error);
+    void signal_FS_M_saveError(const QString& error);
 
 private:
     /**
@@ -180,10 +185,19 @@ private:
      */
     FileSaveModel& operator=(const FileSaveModel&) = delete;
 
+    void syncFromManager();
+
+    // 加FileSaveManager事件处理方法
+    void onSaveManagerStatusChanged(SaveStatus status);
+    void onSaveManagerProgressUpdated(const SaveStatistics& stats);
+    void onSaveManagerCompleted(const QString& path, uint64_t totalBytes);
+    void onSaveManagerError(const QString& error);
+
 private:
-    SaveParameters m_parameters;                       // 保存参数
-    std::atomic<SaveStatus> m_status;                  // 当前状态
-    SaveStatistics m_statistics;                       // 统计信息
-    mutable QMutex m_dataMutex;                        // 数据互斥锁
-    bool m_useAsyncWriter;                             // 使用异步写入器
+    FileSaveManager& m_saveManager;         // 引用FileSaveManager单例
+    SaveParameters m_parameters;            // 保存参数
+    std::atomic<SaveStatus> m_status;       // 当前状态
+    SaveStatistics m_statistics;            // 统计信息
+    mutable QMutex m_dataMutex;             // 数据互斥锁
+    bool m_useAsyncWriter;                  // 使用异步写入器
 };

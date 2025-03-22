@@ -15,11 +15,9 @@ FileSaveController::FileSaveController(QObject* parent)
     , m_currentWidth(1920)
     , m_currentHeight(1080)
     , m_currentFormat(0x39)  // 默认 RAW10
-    , m_saveWorker(nullptr)
-    , m_workerThread(nullptr)
     , m_initialized(false)
 {
-    LOG_INFO("文件保存控制器构建");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存控制器构建"));
 
     // 设置定时器，定期更新统计信息
     m_statsUpdateTimer.setInterval(1000); // 每秒更新一次
@@ -28,27 +26,16 @@ FileSaveController::FileSaveController(QObject* parent)
     // 连接模型信号
     connectModelSignals();
 
-    // 创建工作线程
-    m_workerThread = new QThread(this);
-    m_saveWorker = new FileSaveWorker();
-    m_saveWorker->moveToThread(m_workerThread);
-
-    // 连接工作线程信号
-    connectWorkerSignals();
-
-    // 启动工作线程
-    m_workerThread->start();
-
-    LOG_INFO("文件保存控制器已创建");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存控制器已创建"));
 }
 
 FileSaveController::~FileSaveController()
 {
-    LOG_INFO("文件保存控制器销毁开始");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存控制器销毁开始"));
 
     // 确保停止保存
     if (isSaving()) {
-        stopSaving();
+        slot_FS_C_stopSaving();
     }
 
     // 停止统计更新定时器
@@ -56,26 +43,7 @@ FileSaveController::~FileSaveController()
         m_statsUpdateTimer.stop();
     }
 
-    // 停止并清理工作线程
-    if (m_workerThread) {
-        if (m_saveWorker) {
-            m_saveWorker->stop();
-        }
-
-        m_workerThread->quit();
-        m_workerThread->wait(1000); // 等待最多1秒
-
-        if (m_workerThread->isRunning()) {
-            LOG_WARN("工作线程未能正常退出，强制终止");
-            m_workerThread->terminate();
-            m_workerThread->wait();
-        }
-
-        delete m_saveWorker;
-        m_saveWorker = nullptr;
-    }
-
-    LOG_INFO("文件保存控制器已销毁");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存控制器已销毁"));
 }
 
 bool FileSaveController::initialize()
@@ -83,29 +51,42 @@ bool FileSaveController::initialize()
     try {
         // 加载模型配置
         if (!m_model->loadConfigFromSettings()) {
-            LOG_WARN("加载文件保存配置失败，使用默认设置");
+            LOG_WARN(LocalQTCompat::fromLocal8Bit("加载文件保存配置失败，使用默认设置"));
             m_model->resetToDefault();
         }
+
+        // 强制设置保存格式为RAW格式
+        SaveParameters params = m_model->getSaveParameters();
+        params.format = FileFormat::RAW;
+        m_model->setSaveParameters(params);
 
         // 设置初始化标志
         m_initialized = true;
 
-        LOG_INFO("文件保存控制器初始化成功");
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存控制器初始化成功，默认使用RAW格式保存"));
         return true;
     }
     catch (const std::exception& e) {
-        LOG_ERROR(QString("文件保存控制器初始化异常: %1").arg(e.what()));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件保存控制器初始化异常: %1").arg(e.what()));
         return false;
     }
     catch (...) {
-        LOG_ERROR("文件保存控制器初始化未知异常");
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件保存控制器初始化未知异常"));
         return false;
     }
 }
 
+
 bool FileSaveController::isSaving() const
 {
-    return m_model->getStatus() == SaveStatus::FS_SAVING;
+    if (!m_initialized) {
+        return false;
+    }
+
+    SaveStatus status = m_model->getStatus();
+    bool saving = (status == SaveStatus::FS_SAVING);
+
+    return saving;
 }
 
 void FileSaveController::setImageParameters(uint16_t width, uint16_t height, uint8_t format)
@@ -117,7 +98,7 @@ void FileSaveController::setImageParameters(uint16_t width, uint16_t height, uin
     // 更新模型中的图像参数
     m_model->setImageParameters(width, height, format);
 
-    LOG_INFO(QString("设置图像参数：宽度=%1，高度=%2，格式=0x%3")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置图像参数：宽度=%1，高度=%2，格式=0x%3")
         .arg(width).arg(height).arg(format, 2, 16, QChar('0')));
 
     // 更新所有活动视图
@@ -136,16 +117,16 @@ FileSaveView* FileSaveController::createSaveView(QWidget* parent)
     return m_currentView;
 }
 
-bool FileSaveController::startSaving()
+bool FileSaveController::slot_FS_C_startSaving()
 {
     if (isSaving()) {
-        LOG_WARN("文件保存已经在进行中");
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("文件保存已经在进行中"));
         return false;
     }
 
     if (!m_initialized) {
-        LOG_ERROR("文件保存控制器未初始化");
-        emit saveError(LocalQTCompat::fromLocal8Bit("文件保存控制器未初始化"));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件保存控制器未初始化"));
+        emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit("文件保存控制器未初始化"));
         return false;
     }
 
@@ -158,43 +139,36 @@ bool FileSaveController::startSaving()
         params.options["height"] = m_currentHeight;
         params.options["format"] = m_currentFormat;
 
-        // 设置工作线程参数
-        m_saveWorker->setParameters(params);
+        // 更新模型参数
+        m_model->setSaveParameters(params);
 
-        // 重置统计信息
-        m_model->resetStatistics();
-
-        // 设置状态为保存中
-        m_model->setStatus(SaveStatus::FS_SAVING);
-
-        // 启动工作线程处理
-        QMetaObject::invokeMethod(m_saveWorker, "startSaving", Qt::QueuedConnection);
+        // 启动保存 - 直接使用Model的方法，Model会调用FileSaveManager
+        if (!m_model->startSaving()) {
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("启动保存失败"));
+            emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit("启动保存失败"));
+            return false;
+        }
 
         // 启动统计更新定时器
         m_statsUpdateTimer.start();
 
-        LOG_INFO(QString("开始保存文件到: %1").arg(m_model->getFullSavePath()));
-        emit saveStarted();
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("开始保存文件到: %1").arg(m_model->getFullSavePath()));
+        emit signal_FS_C_saveStarted();
         return true;
     }
     catch (const std::exception& e) {
-        QString errorMsg = QString("开始保存异常: %1").arg(e.what());
+        QString errorMsg = LocalQTCompat::fromLocal8Bit("开始保存异常: %1").arg(e.what());
         LOG_ERROR(errorMsg);
-        emit saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
-        return false;
-    }
-    catch (...) {
-        QString errorMsg = "开始保存未知异常";
-        LOG_ERROR(errorMsg);
-        emit saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
+        emit signal_FS_C_saveError(errorMsg);
         return false;
     }
 }
 
-bool FileSaveController::stopSaving()
+
+bool FileSaveController::slot_FS_C_stopSaving()
 {
     if (!isSaving()) {
-        LOG_WARN("没有正在进行的保存任务");
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("没有正在进行的保存任务"));
         return false;
     }
 
@@ -204,33 +178,28 @@ bool FileSaveController::stopSaving()
             m_statsUpdateTimer.stop();
         }
 
-        // 停止工作线程
-        if (m_saveWorker) {
-            m_saveWorker->stop();
-        }
-
         // 设置状态为已完成
         m_model->setStatus(SaveStatus::FS_COMPLETED);
 
-        LOG_INFO("停止文件保存");
-        emit saveStopped();
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("停止文件保存"));
+        emit signal_FS_C_saveStopped();
         return true;
     }
     catch (const std::exception& e) {
-        QString errorMsg = QString("停止保存异常: %1").arg(e.what());
+        QString errorMsg = LocalQTCompat::fromLocal8Bit("停止保存异常: %1").arg(e.what());
         LOG_ERROR(errorMsg);
-        emit saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
+        emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
         return false;
     }
     catch (...) {
-        QString errorMsg = "停止保存未知异常";
+        QString errorMsg = LocalQTCompat::fromLocal8Bit("停止保存未知异常");
         LOG_ERROR(errorMsg);
-        emit saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
+        emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
         return false;
     }
 }
 
-void FileSaveController::showSettings(QWidget* parent)
+void FileSaveController::slot_FS_C_showSettings(QWidget* parent)
 {
     // 如果已有视图，显示它
     if (m_currentView) {
@@ -247,40 +216,81 @@ void FileSaveController::showSettings(QWidget* parent)
     view->show();
 }
 
-void FileSaveController::processDataPacket(const DataPacket& packet)
+void FileSaveController::slot_FS_C_processDataPacket(const DataPacket& packet)
 {
     // 如果不在保存状态，忽略数据包
     if (!isSaving()) {
+        LOG_DEBUG(LocalQTCompat::fromLocal8Bit("收到数据包但未在保存状态，忽略"));
         return;
     }
 
-    LOG_INFO("save packet");
-    try {
-        // 发送数据包到工作线程进行保存
-        QMetaObject::invokeMethod(m_saveWorker, "processDataPacket",
-            Qt::QueuedConnection,
-            Q_ARG(DataPacket, packet));
+#if 0
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("处理数据包: 大小=%1 字节, 时间戳=%2")
+        .arg(packet.getSize())
+        .arg(packet.timestamp));
+#endif
 
-        // 更新统计信息
-        SaveStatistics stats = m_model->getStatistics();
-        stats.packetCount++; // 增加包计数
-        m_model->updateStatistics(stats);
+    try {
+        // 始终使用RAW格式，无需检测
+        m_model->processDataPacket(packet);
     }
     catch (const std::exception& e) {
-        QString errorMsg = QString("处理数据包异常: %1").arg(e.what());
+        QString errorMsg = LocalQTCompat::fromLocal8Bit("处理数据包异常: %1").arg(e.what());
         LOG_ERROR(errorMsg);
-        emit saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
-        stopSaving();
-    }
-    catch (...) {
-        QString errorMsg = "处理数据包未知异常";
-        LOG_ERROR(errorMsg);
-        emit saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
-        stopSaving();
+        emit signal_FS_C_saveError(errorMsg);
+        slot_FS_C_stopSaving();
     }
 }
 
-void FileSaveController::onModelStatusChanged(SaveStatus status)
+void FileSaveController::slot_FS_C_processDataBatch(const DataPacketBatch& packets)
+{
+    // 如果不在保存状态，忽略数据包
+    if (!isSaving() || packets.empty()) {
+        return;
+    }
+
+    try {
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("处理数据批次: %1 个包").arg(packets.size()));
+
+        // 更新统计信息
+        SaveStatistics stats = m_model->getStatistics();
+        stats.packetCount += packets.size(); // 增加包计数
+
+        // 计算批次总大小
+        uint64_t batchSize = 0;
+        for (const auto& packet : packets) {
+            batchSize += packet.getSize();
+        }
+        stats.totalBytes += batchSize;
+
+        m_model->updateStatistics(stats);
+    }
+    catch (const std::exception& e) {
+        QString errorMsg = QString("处理数据包批次异常: %1").arg(e.what());
+        LOG_ERROR(errorMsg);
+        emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
+        slot_FS_C_stopSaving();
+    }
+    catch (...) {
+        QString errorMsg = "处理数据包批次未知异常";
+        LOG_ERROR(errorMsg);
+        emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
+        slot_FS_C_stopSaving();
+    }
+}
+
+bool FileSaveController::slot_FS_C_isAutoSaveEnabled() const
+{
+    return m_model->getOption("auto_save", false).toBool();
+}
+
+void FileSaveController::slot_FS_C_setAutoSaveEnabled(bool enabled)
+{
+    m_model->setOption("auto_save", enabled);
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("自动保存设置为: %1").arg(enabled ? "启用" : "禁用"));
+}
+
+void FileSaveController::slot_FS_C_onModelStatusChanged(SaveStatus status)
 {
     // 根据状态采取相应操作
     switch (status) {
@@ -294,7 +304,7 @@ void FileSaveController::onModelStatusChanged(SaveStatus status)
         // 保存完成后的操作
         SaveStatistics stats = m_model->getStatistics();
         QString path = m_model->getFullSavePath();
-        emit saveCompleted(path, stats.totalBytes);
+        emit signal_FS_C_saveCompleted(path, stats.totalBytes);
         break;
     }
     case SaveStatus::FS_ERROR:
@@ -303,33 +313,33 @@ void FileSaveController::onModelStatusChanged(SaveStatus status)
     }
 }
 
-void FileSaveController::onModelStatisticsUpdated(const SaveStatistics& statistics)
+void FileSaveController::slot_FS_C_onModelStatisticsUpdated(const SaveStatistics& statistics)
 {
     // 控制器可以在这里处理统计信息更新
     // 例如，可以记录日志、更新内部状态等
 }
 
-void FileSaveController::onModelSaveCompleted(const QString& path, uint64_t totalBytes)
+void FileSaveController::slot_FS_C_onModelSaveCompleted(const QString& path, uint64_t totalBytes)
 {
     // 转发保存完成信号
-    emit saveCompleted(path, totalBytes);
+    emit signal_FS_C_saveCompleted(path, totalBytes);
 }
 
-void FileSaveController::onModelSaveError(const QString& error)
+void FileSaveController::slot_FS_C_onModelSaveError(const QString& error)
 {
     // 处理保存错误
-    LOG_ERROR(QString("文件保存错误: %1").arg(error));
+    LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件保存错误: %1").arg(error));
 
     // 停止保存
     if (isSaving()) {
-        stopSaving();
+        slot_FS_C_stopSaving();
     }
 
     // 转发错误信号
-    emit saveError(error);
+    emit signal_FS_C_saveError(error);
 }
 
-void FileSaveController::onViewParametersChanged(const SaveParameters& parameters)
+void FileSaveController::slot_FS_C_onViewParametersChanged(const SaveParameters& parameters)
 {
     // 更新模型参数
     m_model->setSaveParameters(parameters);
@@ -337,23 +347,22 @@ void FileSaveController::onViewParametersChanged(const SaveParameters& parameter
     // 保存配置到设置
     m_model->saveConfigToSettings();
 
-    // 同步到工作线程
-    if (m_saveWorker) {
-        m_saveWorker->setParameters(parameters);
-    }
+    bool autoSave = parameters.options.value("auto_save", false).toBool();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("接收参数变更 - 自动保存: %1")
+        .arg(autoSave ? "启用" : "禁用"));
 }
 
-void FileSaveController::onViewStartSaveRequested()
+void FileSaveController::slot_FS_C_onViewStartSaveRequested()
 {
-    startSaving();
+    slot_FS_C_startSaving();
 }
 
-void FileSaveController::onViewStopSaveRequested()
+void FileSaveController::slot_FS_C_onViewStopSaveRequested()
 {
-    stopSaving();
+    slot_FS_C_stopSaving();
 }
 
-void FileSaveController::onWorkerSaveProgress(uint64_t bytesWritten, int fileCount)
+void FileSaveController::slot_FS_C_onWorkerSaveProgress(uint64_t bytesWritten, int fileCount)
 {
     // 更新模型中的统计信息
     SaveStatistics stats = m_model->getStatistics();
@@ -362,19 +371,19 @@ void FileSaveController::onWorkerSaveProgress(uint64_t bytesWritten, int fileCou
     m_model->updateStatistics(stats);
 }
 
-void FileSaveController::onWorkerSaveCompleted(const QString& path, uint64_t totalBytes)
+void FileSaveController::slot_FS_C_onWorkerSaveCompleted(const QString& path, uint64_t totalBytes)
 {
     // 处理工作线程完成信号
     m_model->setStatus(SaveStatus::FS_COMPLETED);
-    emit saveCompleted(path, totalBytes);
+    emit signal_FS_C_saveCompleted(path, totalBytes);
 }
 
-void FileSaveController::onWorkerSaveError(const QString& error)
+void FileSaveController::slot_FS_C_onWorkerSaveError(const QString& error)
 {
     // 处理工作线程错误
-    LOG_ERROR(QString("工作线程保存错误: %1").arg(error));
+    LOG_ERROR(LocalQTCompat::fromLocal8Bit("工作线程保存错误: %1").arg(error));
     m_model->setStatus(SaveStatus::FS_ERROR);
-    emit saveError(error);
+    emit signal_FS_C_saveError(error);
 }
 
 void FileSaveController::updateSaveStatistics()
@@ -410,58 +419,44 @@ void FileSaveController::updateSaveStatistics()
 
 void FileSaveController::connectModelSignals()
 {
-    connect(m_model, &FileSaveModel::statusChanged,
-        this, &FileSaveController::onModelStatusChanged);
-    connect(m_model, &FileSaveModel::statisticsUpdated,
-        this, &FileSaveController::onModelStatisticsUpdated);
-    connect(m_model, &FileSaveModel::saveCompleted,
-        this, &FileSaveController::onModelSaveCompleted);
-    connect(m_model, &FileSaveModel::saveError,
-        this, &FileSaveController::onModelSaveError);
+    connect(m_model, &FileSaveModel::signal_FS_M_statusChanged,
+        this, &FileSaveController::slot_FS_C_onModelStatusChanged);
+    connect(m_model, &FileSaveModel::signal_FS_M_statisticsUpdated,
+        this, &FileSaveController::slot_FS_C_onModelStatisticsUpdated);
+    connect(m_model, &FileSaveModel::signal_FS_M_saveCompleted,
+        this, &FileSaveController::slot_FS_C_onModelSaveCompleted);
+    connect(m_model, &FileSaveModel::signal_FS_M_saveError,
+        this, &FileSaveController::slot_FS_C_onModelSaveError);
 }
 
 void FileSaveController::connectViewSignals(FileSaveView* view)
 {
     if (!view) return;
 
-    connect(view, &FileSaveView::saveParametersChanged,
-        this, &FileSaveController::onViewParametersChanged);
-    connect(view, &FileSaveView::startSaveRequested,
-        this, &FileSaveController::onViewStartSaveRequested);
-    connect(view, &FileSaveView::stopSaveRequested,
-        this, &FileSaveController::onViewStopSaveRequested);
+    connect(view, &FileSaveView::signal_FS_V_saveParametersChanged,
+        this, &FileSaveController::slot_FS_C_onViewParametersChanged);
+    connect(view, &FileSaveView::signal_FS_V_startSaveRequested,
+        this, &FileSaveController::slot_FS_C_onViewStartSaveRequested);
+    connect(view, &FileSaveView::signal_FS_V_stopSaveRequested,
+        this, &FileSaveController::slot_FS_C_onViewStopSaveRequested);
 
     // 连接控制器信号到视图
-    connect(this, &FileSaveController::saveStarted,
-        view, &FileSaveView::onSaveStarted);
-    connect(this, &FileSaveController::saveStopped,
-        view, &FileSaveView::onSaveStopped);
-    connect(this, &FileSaveController::saveCompleted,
-        view, &FileSaveView::onSaveCompleted);
-    connect(this, &FileSaveController::saveError,
-        view, &FileSaveView::onSaveError);
+    connect(this, &FileSaveController::signal_FS_C_saveStarted,
+        view, &FileSaveView::slot_FS_V_onSaveStarted);
+    connect(this, &FileSaveController::signal_FS_C_saveStopped,
+        view, &FileSaveView::slot_FS_V_onSaveStopped);
+    connect(this, &FileSaveController::signal_FS_C_saveCompleted,
+        view, &FileSaveView::slot_FS_V_onSaveCompleted);
+    connect(this, &FileSaveController::signal_FS_C_saveError,
+        view, &FileSaveView::slot_FS_V_onSaveError);
 
     // 连接模型信号到视图
-    connect(m_model, &FileSaveModel::statisticsUpdated,
-        view, &FileSaveView::updateStatisticsDisplay);
-    connect(m_model, &FileSaveModel::statusChanged,
-        view, &FileSaveView::updateStatusDisplay);
+    connect(m_model, &FileSaveModel::signal_FS_M_statisticsUpdated,
+        view, &FileSaveView::slot_FS_V_updateStatisticsDisplay);
+    connect(m_model, &FileSaveModel::signal_FS_M_statusChanged,
+        view, &FileSaveView::slot_FS_V_updateStatusDisplay);
 }
 
 void FileSaveController::connectWorkerSignals()
 {
-    if (!m_saveWorker) return;
-
-    // 连接工作线程信号
-    connect(m_saveWorker, &FileSaveWorker::saveProgress,
-        this, &FileSaveController::onWorkerSaveProgress,
-        Qt::QueuedConnection);
-
-    connect(m_saveWorker, &FileSaveWorker::saveCompleted,
-        this, &FileSaveController::onWorkerSaveCompleted,
-        Qt::QueuedConnection);
-
-    connect(m_saveWorker, &FileSaveWorker::saveError,
-        this, &FileSaveController::onWorkerSaveError,
-        Qt::QueuedConnection);
 }

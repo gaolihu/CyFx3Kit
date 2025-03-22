@@ -53,7 +53,7 @@
     <ClCompile Include="Source\File\AsyncFileWriter.cpp">
       <Filter>Source Files\File</Filter>
     </ClCompile>
-    <ClCompile Include="Source\File\FileCacheManager.cpp">
+    <ClCompile Include="Source\File\DataCacheManager.cpp">
       <Filter>Source Files\File</Filter>
     </ClCompile>
     <ClCompile Include="Source\File\FileSaveManager.cpp">
@@ -158,11 +158,11 @@
     <ClCompile Include="Source\MVC\Views\FileSaveView.cpp">
       <Filter>Source Files\MVC\Views</Filter>
     </ClCompile>
-    <ClCompile Include="Source\File\FileSaveWorker.cpp">
-      <Filter>Source Files\File</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Core\MainUiStateManager.cpp">
       <Filter>Source Files\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\File\IndexGenerator.cpp">
+      <Filter>Source Files\File</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -277,11 +277,11 @@
     <QtMoc Include="Source\MVC\Views\FileSaveView.h">
       <Filter>Source Files\MVC\Views</Filter>
     </QtMoc>
-    <QtMoc Include="Source\File\FileSaveWorker.h">
-      <Filter>Source Files\File</Filter>
-    </QtMoc>
     <QtMoc Include="Source\Core\MainUiStateManager.h">
       <Filter>Source Files\Core</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\File\IndexGenerator.h">
+      <Filter>Source Files\File</Filter>
     </QtMoc>
   </ItemGroup>
   <ItemGroup>

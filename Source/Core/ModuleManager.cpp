@@ -647,6 +647,11 @@ void ModuleManager::handleModuleTabClosed(int index)
 
 void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
 {
+    if (packets.empty()) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("空包，忽略"));
+        return;
+    }
+
     // 将数据包转发到需要的模块
 
     // 数据分析模块
@@ -673,18 +678,44 @@ void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
         // m_waveformAnalysisController->processDataPacket(packet);
     }
 
-    // 文件保存模块
-#if 1
-    if (m_moduleInitialized[ModuleType::FILE_OPTIONS] &&
-        m_fileSaveController && m_fileSaveController->isSaving()) {
-        // 文件保存控制器中已经有处理数据包的方法
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("模块管理器: 数据包packet: %1").arg(packets.size()));
+    if (m_moduleInitialized[ModuleType::FILE_OPTIONS]) {
+        if (m_fileSaveController) {
+            if (m_fileSaveController->isSaving()) {
+#if 0
+                LOG_INFO(QString("保存状态：正在保存中，处理%1个数据包").arg(packets.size()));
+#endif
+                // 处理所有数据包
+                for (const auto& packet : packets) {
+                    m_fileSaveController->slot_FS_C_processDataPacket(packet);
+                }
+            }
+            else {
+                // 检查是否启用了自动保存
+                bool autoSave = m_fileSaveController->slot_FS_C_isAutoSaveEnabled();
+                if (autoSave) {
+                    LOG_INFO("自动保存已启用，启动保存");
 
-        for (const auto& packet : packets) {
-            m_fileSaveController->processDataPacket(packet);
+                    if (m_fileSaveController->slot_FS_C_startSaving()) {
+                        // 延迟100ms确保保存状态已更新
+                        QTimer::singleShot(100, [this, packets]() {
+                            for (const auto& packet : packets) {
+                                m_fileSaveController->slot_FS_C_processDataPacket(packet);
+                            }
+                            });
+                    }
+                }
+                else {
+                    LOG_INFO("自动保存未启用，数据包未保存");
+                }
+            }
+        }
+        else {
+            LOG_WARN("文件保存控制器未初始化");
         }
     }
-#endif
+    else {
+        LOG_WARN("文件保存模块未初始化");
+    }
 }
 
 bool ModuleManager::createChannelConfigModule()
@@ -839,24 +870,22 @@ bool ModuleManager::createFileSaveModule()
         }
 
         // 连接视图与控制器的信号
-        connect(m_fileSaveView.get(), &FileSaveView::startSaveRequested,
-            m_fileSaveController.get(), &FileSaveController::startSaving);
-        connect(m_fileSaveView.get(), &FileSaveView::stopSaveRequested,
-            m_fileSaveController.get(), &FileSaveController::stopSaving);
-#if 0
-        connect(m_fileSaveView.get(), &FileSaveView::saveParametersChanged,
-            m_fileSaveController.get(), &FileSaveController::onViewParametersChanged);
-#endif //TODO
+        connect(m_fileSaveView.get(), &FileSaveView::signal_FS_V_startSaveRequested,
+            m_fileSaveController.get(), &FileSaveController::slot_FS_C_startSaving);
+        connect(m_fileSaveView.get(), &FileSaveView::signal_FS_V_stopSaveRequested,
+            m_fileSaveController.get(), &FileSaveController::slot_FS_C_stopSaving);
+        connect(m_fileSaveView.get(), &FileSaveView::signal_FS_V_saveParametersChanged,
+            m_fileSaveController.get(), &FileSaveController::slot_FS_C_onViewParametersChanged);
 
         // 连接控制器到视图的信号
-        connect(m_fileSaveController.get(), &FileSaveController::saveStarted,
-            m_fileSaveView.get(), &FileSaveView::onSaveStarted);
-        connect(m_fileSaveController.get(), &FileSaveController::saveStopped,
-            m_fileSaveView.get(), &FileSaveView::onSaveStopped);
-        connect(m_fileSaveController.get(), &FileSaveController::saveCompleted,
-            m_fileSaveView.get(), &FileSaveView::onSaveCompleted);
-        connect(m_fileSaveController.get(), &FileSaveController::saveError,
-            m_fileSaveView.get(), &FileSaveView::onSaveError);
+        connect(m_fileSaveController.get(), &FileSaveController::signal_FS_C_saveStarted,
+            m_fileSaveView.get(), &FileSaveView::slot_FS_V_onSaveStarted);
+        connect(m_fileSaveController.get(), &FileSaveController::signal_FS_C_saveStopped,
+            m_fileSaveView.get(), &FileSaveView::slot_FS_V_onSaveStopped);
+        connect(m_fileSaveController.get(), &FileSaveController::signal_FS_C_saveCompleted,
+            m_fileSaveView.get(), &FileSaveView::slot_FS_V_onSaveCompleted);
+        connect(m_fileSaveController.get(), &FileSaveController::signal_FS_C_saveError,
+            m_fileSaveView.get(), &FileSaveView::slot_FS_V_onSaveError);
 
         // 标记为已初始化
         m_moduleInitialized[ModuleType::FILE_OPTIONS] = true;

@@ -13,17 +13,27 @@ FileSaveModel* FileSaveModel::getInstance()
 
 FileSaveModel::FileSaveModel()
     : QObject(nullptr)
+    , m_saveManager(FileSaveManager::instance())
     , m_status(SaveStatus::FS_IDLE)
-    , m_useAsyncWriter(false)
 {
-    // 设置默认值
-    resetToDefault();
-    LOG_INFO("文件保存模型已创建");
+    // 将FileSaveManager的信号连接到Model的信号
+    connect(&m_saveManager, &FileSaveManager::signal_FSM_saveStatusChanged,
+        this, &FileSaveModel::onSaveManagerStatusChanged);
+    connect(&m_saveManager, &FileSaveManager::signal_FSM_saveProgressUpdated,
+        this, &FileSaveModel::onSaveManagerProgressUpdated);
+    connect(&m_saveManager, &FileSaveManager::signal_FSM_saveCompleted,
+        this, &FileSaveModel::onSaveManagerCompleted);
+    connect(&m_saveManager, &FileSaveManager::signal_FSM_saveError,
+        this, &FileSaveModel::onSaveManagerError);
+
+    // 从Manager同步初始状态
+    syncFromManager();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存模型已创建"));
 }
 
 FileSaveModel::~FileSaveModel()
 {
-    LOG_INFO("文件保存模型已销毁");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存模型已销毁"));
 }
 
 SaveParameters FileSaveModel::getSaveParameters() const
@@ -34,13 +44,69 @@ SaveParameters FileSaveModel::getSaveParameters() const
 
 void FileSaveModel::setSaveParameters(const SaveParameters& parameters)
 {
-    {
-        QMutexLocker locker(&m_dataMutex);
-        m_parameters = parameters;
-    }
+    // 创建一个参数副本
+    SaveParameters modifiedParams = parameters;
 
-    emit parametersChanged(parameters);
-    LOG_INFO("文件保存参数已更新");
+    // 始终强制使用RAW格式
+    modifiedParams.format = FileFormat::RAW;
+
+    // 将修改后的参数传递给FileSaveManager
+    m_saveManager.setSaveParameters(modifiedParams);
+
+    // 同步状态
+    syncFromManager();
+
+    emit signal_FS_M_parametersChanged(modifiedParams);
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存参数已更新，已强制设置为RAW格式"));
+}
+
+bool FileSaveModel::startSaving()
+{
+    return m_saveManager.startSaving();
+}
+
+bool FileSaveModel::stopSaving()
+{
+    return m_saveManager.stopSaving();
+}
+
+void FileSaveModel::processDataPacket(const DataPacket& packet)
+{
+    m_saveManager.slot_FSM_processDataPacket(packet);
+}
+
+// 同步FileSaveManager的状态到Model
+void FileSaveModel::syncFromManager()
+{
+    m_parameters = m_saveManager.getSaveParameters();
+    SaveStatistics stats = m_saveManager.getStatistics();
+    updateStatistics(stats);
+    setStatus(stats.status);
+}
+
+// FileSaveManager信号处理函数
+void FileSaveModel::onSaveManagerStatusChanged(SaveStatus status)
+{
+    setStatus(status);
+}
+
+void FileSaveModel::onSaveManagerProgressUpdated(const SaveStatistics& stats)
+{
+    updateStatistics(stats);
+}
+
+void FileSaveModel::onSaveManagerCompleted(const QString& path, uint64_t totalBytes)
+{
+    // 更新状态并转发信号
+    setStatus(SaveStatus::FS_COMPLETED);
+    emit signal_FS_M_saveCompleted(path, totalBytes);
+}
+
+void FileSaveModel::onSaveManagerError(const QString& error)
+{
+    // 更新状态并转发信号
+    setStatus(SaveStatus::FS_ERROR);
+    emit signal_FS_M_saveError(error);
 }
 
 SaveStatus FileSaveModel::getStatus() const
@@ -53,14 +119,14 @@ void FileSaveModel::setStatus(SaveStatus status)
     SaveStatus oldStatus = m_status.exchange(status);
 
     if (oldStatus != status) {
-        emit statusChanged(status);
+        emit signal_FS_M_statusChanged(status);
 
-        LOG_INFO(QString("文件保存状态已更改: %1").arg(static_cast<int>(status)));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存状态已更改: %1").arg(static_cast<int>(status)));
 
         // 如果状态已完成或错误，发送对应信号
         if (status == SaveStatus::FS_COMPLETED) {
             SaveStatistics stats = getStatistics();
-            emit saveCompleted(getFullSavePath(), stats.totalBytes);
+            emit signal_FS_M_saveCompleted(getFullSavePath(), stats.totalBytes);
         }
     }
 }
@@ -78,7 +144,7 @@ void FileSaveModel::updateStatistics(const SaveStatistics& statistics)
         m_statistics = statistics;
     }
 
-    emit statisticsUpdated(statistics);
+    emit signal_FS_M_statisticsUpdated(statistics);
 }
 
 void FileSaveModel::resetStatistics()
@@ -88,7 +154,7 @@ void FileSaveModel::resetStatistics()
     statistics.lastUpdateTime = statistics.startTime;
 
     updateStatistics(statistics);
-    LOG_INFO("文件保存统计已重置");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存统计已重置"));
 }
 
 QString FileSaveModel::getFullSavePath() const
@@ -125,14 +191,14 @@ void FileSaveModel::setImageParameters(uint16_t width, uint16_t height, uint8_t 
     m_parameters.options["height"] = height;
     m_parameters.options["format"] = format;
 
-    LOG_INFO(QString("设置图像参数：宽度=%1，高度=%2，格式=0x%3")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置图像参数：宽度=%1，高度=%2，格式=0x%3")
         .arg(width).arg(height).arg(format, 2, 16, QChar('0')));
 }
 
 void FileSaveModel::setUseAsyncWriter(bool use)
 {
     m_useAsyncWriter = use;
-    LOG_INFO(QString("异步文件写入模式: %1").arg(use ? "已启用" : "已禁用"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("异步文件写入模式: %1").arg(use ? "已启用" : "已禁用"));
 }
 
 bool FileSaveModel::isUsingAsyncWriter() const
@@ -164,11 +230,11 @@ bool FileSaveModel::saveConfigToSettings()
         }
         settings.endGroup();
 
-        LOG_INFO("文件保存配置已保存到系统设置");
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存配置已保存到系统设置"));
         return true;
     }
     catch (const std::exception& e) {
-        LOG_ERROR(QString("保存配置异常: %1").arg(e.what()));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("保存配置异常: %1").arg(e.what()));
         return false;
     }
 }
@@ -199,11 +265,11 @@ bool FileSaveModel::loadConfigFromSettings()
         settings.endGroup();
 
         setSaveParameters(params);
-        LOG_INFO("文件保存配置已从系统设置加载");
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存配置已从系统设置加载"));
         return true;
     }
     catch (const std::exception& e) {
-        LOG_ERROR(QString("加载配置异常: %1").arg(e.what()));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("加载配置异常: %1").arg(e.what()));
         resetToDefault();
         return false;
     }
@@ -215,23 +281,31 @@ void FileSaveModel::resetToDefault()
 
     // 设置默认值
     params.basePath = QDir::homePath() + "/FX3Data";
-    params.filePrefix = "FX3_";
+    params.filePrefix = "capture";
+    // 强制使用RAW格式
     params.format = FileFormat::RAW;
     params.autoNaming = true;
-    params.createSubfolder = false;
-    params.appendTimestamp = false;
-    params.saveMetadata = false;
+    params.createSubfolder = true;  // 默认创建子文件夹
+    params.appendTimestamp = true;  // 默认添加时间戳
+    params.saveMetadata = true;     // 默认保存元数据
     params.compressionLevel = 0;
-    m_useAsyncWriter = false;
+    m_useAsyncWriter = true;        // 默认使用异步写入
 
     // 设置默认图像参数
     params.options["width"] = 1920;
     params.options["height"] = 1080;
     params.options["format"] = 0x39;  // RAW10
 
+    // 设置高级选项
+    params.options["max_file_size"] = static_cast<qulonglong>(100ULL * 1024 * 1024 * 1024); // 100GB 最大文件大小
+    params.options["auto_split_time"] = 300;  // 5分钟自动分割
+    params.options["buffer_size"] = 64 * 1024 * 1024;  // 64MB 缓冲区
+    params.options["auto_save"] = true;  // 默认启用自动保存
+    params.options["create_index"] = true;  // 创建索引文件
+
     setSaveParameters(params);
     resetStatistics();
     setStatus(SaveStatus::FS_IDLE);
 
-    LOG_INFO("文件保存模型已重置为默认值");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存模型已重置为默认值，使用RAW格式"));
 }

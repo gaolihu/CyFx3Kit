@@ -491,6 +491,15 @@ void FX3MainController::slot_FX3Main_C_handleStartTransfer()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理开始传输请求"));
 
+    if (m_moduleManager && !m_moduleManager->isModuleInitialized(ModuleManager::ModuleType::FILE_OPTIONS)) {
+        // 检查文件保存模块是否已初始化
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("初始化文件保存模块"));
+
+        // 使用现有的TAB管理机制显示模块
+        handleModuleDisplay(ModuleManager::ModuleType::FILE_OPTIONS);
+        return;
+    }
+
     if (m_mainModel->isClosing()) {
         LOG_INFO(LocalQTCompat::fromLocal8Bit("应用程序正在关闭，忽略开始请求"));
         return;

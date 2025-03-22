@@ -9,7 +9,7 @@
 #include <QPushButton>
 #include <QTextEdit>
 
-#define USE_LOCAL_TIMER
+// #define USE_LOCAL_TIMER
 
 MainUiStateManager::MainUiStateManager(Ui::FX3ToolMainWin& ui, QObject* parent)
     : QObject(parent)

@@ -1,18 +1,20 @@
+// Source/File/DataCacheManager.cpp
+
 #include "FileSaveManager.h"
 #include "Logger.h"
 
-FileCacheManager::FileCacheManager(size_t maxCacheSize)
+DataCacheManager::DataCacheManager(size_t maxCacheSize)
     : m_maxCacheSize(maxCacheSize)
 {
     // 预分配缓存空间以减少重新分配
     m_cache.reserve(static_cast<int>(maxCacheSize / 2));
 }
 
-FileCacheManager::~FileCacheManager() {
+DataCacheManager::~DataCacheManager() {
     clearCache();
 }
 
-void FileCacheManager::addToCache(const QByteArray& data) {
+void DataCacheManager::addToCache(const QByteArray& data) {
     if (data.isEmpty()) {
         return;
     }
@@ -43,24 +45,24 @@ void FileCacheManager::addToCache(const QByteArray& data) {
     }
 }
 
-QByteArray FileCacheManager::getCache() {
+QByteArray DataCacheManager::getCache() {
     std::lock_guard<std::mutex> lock(m_cacheMutex);
     return m_cache;
 }
 
-void FileCacheManager::clearCache() {
+void DataCacheManager::clearCache() {
     std::lock_guard<std::mutex> lock(m_cacheMutex);
     m_cache.clear();
     // 显式减少分配的内存
     m_cache.squeeze();
 }
 
-size_t FileCacheManager::getCurrentCacheSize() {
+size_t DataCacheManager::getCurrentCacheSize() {
     std::lock_guard<std::mutex> lock(m_cacheMutex);
     return static_cast<size_t>(m_cache.size());
 }
 
-void FileCacheManager::setMaxCacheSize(size_t maxSize) {
+void DataCacheManager::setMaxCacheSize(size_t maxSize) {
     std::lock_guard<std::mutex> lock(m_cacheMutex);
 
     if (maxSize == 0) {

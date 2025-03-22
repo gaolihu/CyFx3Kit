@@ -1,4 +1,4 @@
-// Source/MVC/Models/FileSaveManager.h
+// Source/File/FileSaveManager.h
 #pragma once
 
 #include <QObject>
@@ -62,11 +62,13 @@ struct SaveStatistics {
     uint64_t totalBytes;           // 已保存总字节数
     uint64_t estimatedTotalBytes;  // 预估总字节数
     uint64_t packetCount;          // 包计数
+    uint64_t currentFileBytes;     // 当前文件字节数
     uint64_t fileCount;            // 已保存文件数
     double saveRate;               // 保存速率 (MB/s)
     double progress;               // 保存进度 (%)
     QDateTime startTime;           // 开始时间
     QDateTime lastUpdateTime;      // 上次更新stamp时间
+    QDateTime currentFileStartTime;// 当前文件开始保存时间
     QString currentFileName;       // 当前文件名
     QString savePath;              // 保存路径
     SaveStatus status;             // 保存状态
@@ -147,10 +149,10 @@ private:
 };
 
 // 文件缓存管理器
-class FileCacheManager {
+class DataCacheManager {
 public:
-    FileCacheManager(size_t maxCacheSize = DEFAULT_CACHE_SIZE);
-    ~FileCacheManager();
+    DataCacheManager(size_t maxCacheSize = DEFAULT_CACHE_SIZE);
+    ~DataCacheManager();
 
     // 添加数据到缓存
     void addToCache(const QByteArray& data);
@@ -209,26 +211,32 @@ public:
     // 设置使用异步写入
     void setUseAsyncWriter(bool useAsync);
 
+    // 创建新文件
+    bool createNewFile(const DataPacket& packet);
+
+    // 判断是否应该分割文件
+    bool shouldSplitFile();
+
     std::unique_ptr<IFileWriter> m_fileWriter;
 
 public slots:
     // 处理数据包
-    void processDataPacket(const DataPacket& packet);
+    void slot_FSM_processDataPacket(const DataPacket& packet);
 
-    void processDataBatch(const DataPacketBatch& packets);
+    void slot_FSM_processDataBatch(const DataPacketBatch& packets);
 
 signals:
     // 保存状态变更信号
-    void saveStatusChanged(SaveStatus status);
+    void signal_FSM_saveStatusChanged(SaveStatus status);
 
     // 保存进度更新信号
-    void saveProgressUpdated(const SaveStatistics& stats);
+    void signal_FSM_saveProgressUpdated(const SaveStatistics& stats);
 
     // 保存完成信号
-    void saveCompleted(const QString& path, uint64_t totalBytes);
+    void signal_FSM_saveCompleted(const QString& path, uint64_t totalBytes);
 
     // 保存错误信号
-    void saveError(const QString& error);
+    void signal_FSM_saveError(const QString& error);
 
 private:
     FileSaveManager();
@@ -267,7 +275,7 @@ private:
     std::atomic<bool> m_useAsyncWriter;
 
     std::map<FileFormat, std::shared_ptr<IDataConverter>> m_converters;
-    std::unique_ptr<FileCacheManager> m_cacheManager;
+    std::unique_ptr<DataCacheManager> m_cacheManager;
 
     std::thread m_saveThread;
     std::queue<DataPacket> m_dataQueue;

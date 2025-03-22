@@ -7,13 +7,104 @@
     <x>0</x>
     <y>0</y>
     <width>700</width>
-    <height>747</height>
+    <height>930</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>文件保存设置</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_main">
+   <item>
+    <widget class="QGroupBox" name="advancedOptionsGroupBox">
+     <property name="title">
+      <string>高级选项</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_advanced">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_maxFileSize">
+        <item>
+         <widget class="QLabel" name="maxFileSizeLabel">
+          <property name="text">
+           <string>最大文件大小:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="maxFileSizeSpinBox">
+          <property name="minimum">
+           <number>100</number>
+          </property>
+          <property name="maximum">
+           <number>10000</number>
+          </property>
+          <property name="value">
+           <number>1024</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="mbLabel">
+          <property name="text">
+           <string>MB</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_autoSplitTime">
+        <item>
+         <widget class="QLabel" name="autoSplitTimeLabel">
+          <property name="text">
+           <string>文件自动分割时间:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="autoSplitTimeSpinBox">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>60</number>
+          </property>
+          <property name="value">
+           <number>5</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="minutesLabel">
+          <property name="text">
+           <string>分钟</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="createIndexCheckBox">
+        <property name="text">
+         <string>创建索引文件 (用于后续数据分析)</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="useAsyncWriterCheckBox">
+        <property name="text">
+         <string>使用异步写入 (提高性能)</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item>
     <widget class="QGroupBox" name="formatGroupBox">
      <property name="title">

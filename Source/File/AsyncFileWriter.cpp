@@ -1,3 +1,5 @@
+// Source/File/AsyncFileWriter.cpp
+
 #include "FileSaveManager.h"
 #include "Logger.h"
 
@@ -14,17 +16,59 @@ AsyncFileWriter::~AsyncFileWriter() {
 bool AsyncFileWriter::open(const QString& filename) {
     close(); // 确保之前的文件已关闭
 
-    m_file.setFileName(filename);
+    // 验证文件名并规范化路径
+    if (filename.isEmpty()) {
+        m_lastError = LocalQTCompat::fromLocal8Bit("文件名为空");
+        LOG_ERROR(m_lastError);
+        return false;
+    }
+
+    QString normalizedPath = QDir::cleanPath(filename);
+
+    // 确保目录存在
+    QFileInfo fileInfo(normalizedPath);
+    QDir dir = fileInfo.dir();
+    if (!dir.exists()) {
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("文件目录不存在，尝试创建: %1").arg(dir.path()));
+        if (!dir.mkpath(".")) {
+            m_lastError = LocalQTCompat::fromLocal8Bit("无法创建文件目录: %1").arg(dir.path());
+            LOG_ERROR(m_lastError);
+            return false;
+        }
+
+        // 验证目录是否真的创建成功
+        if (!dir.exists()) {
+            m_lastError = LocalQTCompat::fromLocal8Bit("目录创建失败: %1").arg(dir.path());
+            LOG_ERROR(m_lastError);
+            return false;
+        }
+
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("已创建文件目录: %1").arg(dir.path()));
+    }
+
+    m_file.setFileName(normalizedPath);
     m_isOpen = m_file.open(QIODevice::WriteOnly);
 
     if (!m_isOpen) {
         m_lastError = m_file.errorString();
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("打开文件失败: %1 - %2").arg(normalizedPath).arg(m_lastError));
         return false;
     }
 
     // 启动写入线程
     m_running = true;
-    m_writerThread = std::thread(&AsyncFileWriter::writerThreadFunc, this);
+    try {
+        m_writerThread = std::thread(&AsyncFileWriter::writerThreadFunc, this);
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("异步写入线程已启动，文件已打开: %1").arg(normalizedPath));
+    }
+    catch (const std::exception& e) {
+        m_lastError = LocalQTCompat::fromLocal8Bit("创建写入线程失败: %1").arg(e.what());
+        LOG_ERROR(m_lastError);
+        m_file.close();
+        m_isOpen = false;
+        m_running = false;
+        return false;
+    }
 
     return true;
 }
@@ -42,6 +86,15 @@ bool AsyncFileWriter::write(const QByteArray& data) {
     if (m_writeQueue.size() >= MAX_QUEUE_SIZE) {
         queueWasFull = true;
         LOG_WARN(LocalQTCompat::fromLocal8Bit("写入队列已满 (%1 个项目), 等待空间...").arg(MAX_QUEUE_SIZE));
+
+        // 添加条件等待，避免忙等
+        m_queueCondition.wait(lock, [this]() {
+            return m_writeQueue.size() < MAX_QUEUE_SIZE * 0.8 || !m_running;
+            });
+
+        if (!m_running) {
+            return false;
+        }
     }
 
     // 将数据添加到写入队列

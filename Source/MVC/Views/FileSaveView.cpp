@@ -5,6 +5,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QDir>
+#include <QSettings>
 
 FileSaveView::FileSaveView(QWidget* parent)
     : QWidget(parent)
@@ -63,22 +64,16 @@ void FileSaveView::prepareForShow()
     // 更新行范围的最大值
     ui->toLineSpinBox->setMaximum(totalLines.toInt());
 
-    // 根据图像格式自动选择相应的文件格式
-    switch (m_format) {
-    case 0x38: // RAW8
-    case 0x39: // RAW10
-    case 0x3A: // RAW12
-        ui->rawRadioButton->setChecked(true);
-        break;
-    default:
-        ui->csvRadioButton->setChecked(true);
-        break;
-    }
+    // 强制选择RAW格式并禁用其他选项
+    ui->rawRadioButton->setChecked(true);
+    ui->csvRadioButton->setEnabled(false);
+    ui->txtRadioButton->setEnabled(false);
+    ui->bmpRadioButton->setEnabled(false);
 
     updateUIState();
 }
 
-void FileSaveView::updateStatusDisplay(SaveStatus status)
+void FileSaveView::slot_FS_V_updateStatusDisplay(SaveStatus status)
 {
     switch (status) {
     case SaveStatus::FS_IDLE:
@@ -119,7 +114,7 @@ void FileSaveView::updateStatusDisplay(SaveStatus status)
     ui->displayOptionsGroupBox->setEnabled(!m_saving);
 }
 
-void FileSaveView::updateStatisticsDisplay(const SaveStatistics& stats)
+void FileSaveView::slot_FS_V_updateStatisticsDisplay(const SaveStatistics& stats)
 {
     // 更新进度条
     if (stats.progress > 0 && m_saving) {
@@ -147,19 +142,19 @@ void FileSaveView::updateStatisticsDisplay(const SaveStatistics& stats)
     ui->totalSizeLabel->setText(sizeText);
 }
 
-void FileSaveView::onSaveStarted()
+void FileSaveView::slot_FS_V_onSaveStarted()
 {
-    updateStatusDisplay(SaveStatus::FS_SAVING);
+    slot_FS_V_updateStatusDisplay(SaveStatus::FS_SAVING);
 }
 
-void FileSaveView::onSaveStopped()
+void FileSaveView::slot_FS_V_onSaveStopped()
 {
-    updateStatusDisplay(SaveStatus::FS_IDLE);
+    slot_FS_V_updateStatusDisplay(SaveStatus::FS_IDLE);
 }
 
-void FileSaveView::onSaveCompleted(const QString& path, uint64_t totalBytes)
+void FileSaveView::slot_FS_V_onSaveCompleted(const QString& path, uint64_t totalBytes)
 {
-    updateStatusDisplay(SaveStatus::FS_COMPLETED);
+    slot_FS_V_updateStatusDisplay(SaveStatus::FS_COMPLETED);
 
     QString message = LocalQTCompat::fromLocal8Bit("文件保存完成\n路径: %1\n总大小: %2 MB")
         .arg(path)
@@ -170,22 +165,22 @@ void FileSaveView::onSaveCompleted(const QString& path, uint64_t totalBytes)
         message);
 }
 
-void FileSaveView::onSaveError(const QString& error)
+void FileSaveView::slot_FS_V_onSaveError(const QString& error)
 {
-    updateStatusDisplay(SaveStatus::FS_ERROR);
+    slot_FS_V_updateStatusDisplay(SaveStatus::FS_ERROR);
 
     QMessageBox::critical(this,
         LocalQTCompat::fromLocal8Bit("保存错误"),
         error);
 }
 
-void FileSaveView::onSaveButtonClicked()
+void FileSaveView::slot_FS_V_onSaveButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("保存按钮点击"));
 
     if (m_saving) {
         // 如果正在保存，则停止保存
-        emit stopSaveRequested();
+        emit signal_FS_V_stopSaveRequested();
         return;
     }
 
@@ -199,13 +194,13 @@ void FileSaveView::onSaveButtonClicked()
 
     // 更新保存参数
     SaveParameters params = collectSaveParameters();
-    emit saveParametersChanged(params);
+    emit signal_FS_V_saveParametersChanged(params);
 
     // 请求开始保存
-    emit startSaveRequested();
+    emit signal_FS_V_startSaveRequested();
 }
 
-void FileSaveView::onCancelButtonClicked()
+void FileSaveView::slot_FS_V_onCancelButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("取消按钮点击"));
 
@@ -217,7 +212,7 @@ void FileSaveView::onCancelButtonClicked()
             QMessageBox::Yes | QMessageBox::No);
 
         if (reply == QMessageBox::Yes) {
-            emit stopSaveRequested();
+            emit signal_FS_V_stopSaveRequested();
         }
     }
 
@@ -225,23 +220,30 @@ void FileSaveView::onCancelButtonClicked()
     hide();
 }
 
-void FileSaveView::onBrowseFolderButtonClicked()
+
+void FileSaveView::slot_FS_V_onBrowseFolderButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("选择文件路径按钮点击"));
+
+    QSettings settings("FX3Tool", "FileSavePath");
+
+    QString lastPath = settings.value("LastSelectedPath", QCoreApplication::applicationDirPath()).toString();
+    QString defaultPath = ui->pathEdit->text().isEmpty() ? lastPath : ui->pathEdit->text();
 
     QString dir = QFileDialog::getExistingDirectory(
         this,
         LocalQTCompat::fromLocal8Bit("选择保存目录"),
-        ui->pathEdit->text().isEmpty() ? QDir::homePath() : ui->pathEdit->text(),
+        defaultPath,
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
     );
 
     if (!dir.isEmpty()) {
         ui->pathEdit->setText(dir);
+        settings.setValue("LastSelectedPath", dir);  // 保存当前选择的目录
     }
 }
 
-void FileSaveView::onSaveRangeRadioButtonToggled(bool checked)
+void FileSaveView::slot_FS_V_onSaveRangeRadioButtonToggled(bool checked)
 {
     ui->rangeFrame->setEnabled(checked);
     updateUIState();
@@ -255,12 +257,12 @@ void FileSaveView::setupUI()
 void FileSaveView::connectSignals()
 {
     // 连接按钮信号
-    connect(ui->saveButton, &QPushButton::clicked, this, &FileSaveView::onSaveButtonClicked);
-    connect(ui->cancelButton, &QPushButton::clicked, this, &FileSaveView::onCancelButtonClicked);
-    connect(ui->browseFolderButton, &QPushButton::clicked, this, &FileSaveView::onBrowseFolderButtonClicked);
+    connect(ui->saveButton, &QPushButton::clicked, this, &FileSaveView::slot_FS_V_onSaveButtonClicked);
+    connect(ui->cancelButton, &QPushButton::clicked, this, &FileSaveView::slot_FS_V_onCancelButtonClicked);
+    connect(ui->browseFolderButton, &QPushButton::clicked, this, &FileSaveView::slot_FS_V_onBrowseFolderButtonClicked);
 
     // 连接单选按钮信号
-    connect(ui->saveRangeRadioButton, &QRadioButton::toggled, this, &FileSaveView::onSaveRangeRadioButtonToggled);
+    connect(ui->saveRangeRadioButton, &QRadioButton::toggled, this, &FileSaveView::slot_FS_V_onSaveRangeRadioButtonToggled);
 
     // 连接复选框和其他控件信号以更新UI状态
     connect(ui->lineRangeCheckBox, &QCheckBox::toggled, this, &FileSaveView::updateUIState);
@@ -283,19 +285,8 @@ SaveParameters FileSaveView::collectSaveParameters()
         params.basePath = ui->pathEdit->text();
     }
 
-    // 更新文件格式
-    if (ui->csvRadioButton->isChecked()) {
-        params.format = FileFormat::CSV;
-    }
-    else if (ui->txtRadioButton->isChecked()) {
-        params.format = FileFormat::TEXT;
-    }
-    else if (ui->rawRadioButton->isChecked()) {
-        params.format = FileFormat::RAW;
-    }
-    else if (ui->bmpRadioButton->isChecked()) {
-        params.format = FileFormat::BMP;
-    }
+    // 强制使用RAW格式
+    params.format = FileFormat::RAW;
 
     // 更新文件前缀
     params.filePrefix = ui->prefixEdit->text();
@@ -306,34 +297,15 @@ SaveParameters FileSaveView::collectSaveParameters()
     params.options["format"] = m_format;
 
     // 更新其他选项
-    params.autoNaming = true;
+    params.autoNaming = true;  // 始终使用自动命名
     params.appendTimestamp = ui->appendTimestampCheckBox->isChecked();
     params.createSubfolder = ui->createSubfolderCheckBox->isChecked();
 
-    // 设置保存范围参数
-    if (ui->saveRangeRadioButton->isChecked()) {
-        if (ui->lineRangeCheckBox->isChecked()) {
-            params.options["from_line"] = ui->fromLineSpinBox->value();
-            params.options["to_line"] = ui->toLineSpinBox->value();
-        }
+    // 强制启用自动保存
+    params.options["auto_save"] = true;
 
-        if (ui->columnRangeCheckBox->isChecked()) {
-            params.options["from_column"] = ui->fromColumnSpinBox->value();
-            params.options["to_column"] = ui->toColumnSpinBox->value();
-        }
-    }
-    else if (ui->splitByLinesRadioButton->isChecked()) {
-        params.options["lines_per_file"] = ui->linesPerFileSpinBox->value();
-    }
-
-    // 每行最大显示字节数
-    if (ui->maxBytesPerLineCheckBox->isChecked()) {
-        params.options["bytes_per_line"] = ui->bytesPerLineComboBox->currentText().toInt();
-    }
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新文件保存参数：路径=%1，格式=%2")
-        .arg(params.basePath)
-        .arg(static_cast<int>(params.format)));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新文件保存参数：路径=%1，格式=RAW，自动保存设置：已启用")
+        .arg(params.basePath));
 
     return params;
 }
