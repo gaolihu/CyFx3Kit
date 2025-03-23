@@ -654,12 +654,26 @@ void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
 
     // 将数据包转发到需要的模块
 
-    // 数据分析模块
+    // 数据分析模块处理
     if (m_moduleInitialized[ModuleType::DATA_ANALYSIS] &&
         m_moduleVisibility[ModuleType::DATA_ANALYSIS] &&
         m_dataAnalysisController) {
-        // 假设控制器提供处理数据包的方法
-        // m_dataAnalysisController->processDataPacket(packet);
+
+        // 如果数据太多，考虑采样或过滤
+        if (packets.size() > 10000) {
+            std::vector<DataPacket> sampledPackets;
+            // 实现采样逻辑...
+            m_dataAnalysisController->processDataPackets(sampledPackets);
+        }
+        else {
+            m_dataAnalysisController->processDataPackets(packets);
+        }
+
+        // 如果文件保存活跃，添加索引引用
+        if (m_fileSaveController && m_fileSaveController->isSaving()) {
+            QString currentFile = m_fileSaveController->getCurrentFileName();
+            //m_dataAnalysisController->setDataSource(currentFile);
+        }
     }
 
     // 视频显示模块
@@ -766,6 +780,10 @@ bool ModuleManager::createDataAnalysisModule()
 
         // 初始化控制器
         m_dataAnalysisController->initialize();
+
+        // Connect file loading signal to controller
+        connect(m_dataAnalysisView.get(), &DataAnalysisView::signal_DA_V_loadDataFromFileRequested,
+            m_dataAnalysisController.get(), &DataAnalysisController::loadDataFromFile);
 
         // 标记为已初始化
         m_moduleInitialized[ModuleType::DATA_ANALYSIS] = true;

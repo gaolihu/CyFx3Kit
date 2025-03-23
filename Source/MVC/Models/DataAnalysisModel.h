@@ -4,10 +4,11 @@
 #include <QObject>
 #include <memory>
 #include <vector>
+#include "FeatureExtractor.h"
 
-/**
- * @brief 数据分析项结构
- */
+ /**
+  * @brief 数据分析项结构
+  */
 struct DataAnalysisItem {
     int index;                  ///< 数据索引
     QString timeStamp;          ///< 时间戳
@@ -16,11 +17,21 @@ struct DataAnalysisItem {
     QVector<double> dataPoints; ///< 数据点列表
     bool isValid;               ///< 是否有效
 
-    // 默认构造函数
+    /**
+     * @brief 默认构造函数
+     */
     DataAnalysisItem()
         : index(0), value(0.0), isValid(false) {}
 
-    // 构造函数
+    /**
+     * @brief 构造函数
+     * @param idx 索引
+     * @param ts 时间戳
+     * @param val 数据值
+     * @param desc 描述
+     * @param points 数据点列表
+     * @param valid 是否有效
+     */
     DataAnalysisItem(int idx, const QString& ts, double val, const QString& desc, const QVector<double>& points, bool valid = true)
         : index(idx), timeStamp(ts), value(val), description(desc), dataPoints(points), isValid(valid) {}
 };
@@ -36,7 +47,9 @@ struct StatisticsInfo {
     double stdDeviation;        ///< 标准差
     int count;                  ///< 数据点数量
 
-    // 默认构造函数
+    /**
+     * @brief 默认构造函数
+     */
     StatisticsInfo()
         : min(0.0), max(0.0), average(0.0), median(0.0), stdDeviation(0.0), count(0) {}
 };
@@ -44,7 +57,8 @@ struct StatisticsInfo {
 /**
  * @brief 数据分析模型类
  *
- * 负责存储和管理数据分析的数据
+ * 负责存储和管理数据分析的数据，提供数据访问和处理接口
+ * 采用单例模式实现
  */
 class DataAnalysisModel : public QObject
 {
@@ -53,7 +67,7 @@ class DataAnalysisModel : public QObject
 public:
     /**
      * @brief 获取单例实例
-     * @return 模型实例的共享指针
+     * @return 模型实例指针
      */
     static DataAnalysisModel* getInstance();
 
@@ -134,7 +148,7 @@ public:
     bool exportData(const QString& filePath, const QVector<int>& selectedIndices = QVector<int>());
 
     /**
-     * @brief 设置数据
+     * @brief 设置原始数据
      * @param data 原始数据
      * @param columns 列数
      * @param rows 行数
@@ -149,31 +163,71 @@ public:
      */
     QVector<int> filterData(const QString& filterExpression);
 
+    /**
+     * @brief 提取单个数据项的特征
+     * @param itemIndex 数据项索引
+     * @return 是否提取成功
+     */
+    bool extractFeatures(int itemIndex);
+
+    /**
+     * @brief 批量提取特征
+     * @param indices 数据项索引列表
+     * @return 是否提取成功
+     */
+    bool extractFeaturesBatch(const QVector<int>& indices);
+
+    /**
+     * @brief 获取数据项的特征
+     * @param itemIndex 数据项索引
+     * @return 特征映射
+     */
+    QMap<QString, QVariant> getFeatures(int itemIndex) const;
+
+    /**
+     * @brief 批量添加数据项
+     * @param items 数据项列表
+     */
+    void addDataItems(const std::vector<DataAnalysisItem>& items);
+
+    /**
+     * @brief 设置最大数据项数量
+     * @param maxItems 最大数量，0表示不限制
+     */
+    void setMaxDataItems(int maxItems);
+
 signals:
     /**
      * @brief 数据变更信号
      */
-    void dataChanged();
+    void signal_DA_M_dataChanged();
 
     /**
      * @brief 统计信息变更信号
      * @param stats 新的统计信息
      */
-    void statisticsChanged(const StatisticsInfo& stats);
+    void signal_DA_M_statisticsChanged(const StatisticsInfo& stats);
 
     /**
      * @brief 数据导入完成信号
      * @param success 是否成功
      * @param message 消息
      */
-    void importCompleted(bool success, const QString& message);
+    void signal_DA_M_importCompleted(bool success, const QString& message);
 
     /**
      * @brief 数据导出完成信号
      * @param success 是否成功
      * @param message 消息
      */
-    void exportCompleted(bool success, const QString& message);
+    void signal_DA_M_exportCompleted(bool success, const QString& message);
+
+    /**
+     * @brief 特征提取完成信号
+     * @param index 数据项索引
+     * @param features 提取的特征
+     */
+    void signal_DA_M_featuresExtracted(int index, const QMap<QString, QVariant>& features);
 
 private:
     /**
@@ -189,9 +243,12 @@ private:
     void sortData(int column, bool ascending);
 
 private:
-    std::vector<DataAnalysisItem> m_dataItems;            ///< 数据项列表
-    StatisticsInfo m_statistics;                          ///< 统计信息
-    QByteArray m_rawData;                                 ///< 原始数据
-    int m_columns;                                        ///< 列数
-    int m_rows;                                           ///< 行数
+    std::vector<DataAnalysisItem> m_dataItems;              ///< 数据项列表
+    StatisticsInfo m_statistics;                            ///< 统计信息
+    QByteArray m_rawData;                                   ///< 原始数据
+    int m_columns;                                          ///< 列数
+    int m_rows;                                             ///< 行数
+    int m_maxDataItems;                                     ///< 最大数据项数量限制
+    QMap<int, QMap<QString, QVariant>> m_extractedFeatures; ///< 特征存储（索引->特征）
+    FeatureExtractor& m_featureExtractor;                   ///< 特征提取器引用（单例）
 };

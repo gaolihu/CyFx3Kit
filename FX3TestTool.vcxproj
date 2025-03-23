@@ -42,7 +42,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
     <QtInstall>6.5.3_msvc2019_64</QtInstall>
-    <QtModules>core;gui;widgets;charts</QtModules>
+    <QtModules>core;gui;widgets;concurrent;charts</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
@@ -76,7 +76,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\Core;$(ProjectDir)Source\UI;$(ProjectDir)Source\File;$(ProjectDir)Source\Utils;$(ProjectDir)Source\MVC\Models;$(ProjectDir)Source\MVC\Controllers;$(ProjectDir)Source\MVC\Views;$(ProjectDir)resource;$(ProjectDir)cypress\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\Analysis;$(ProjectDir)Source\Core;$(ProjectDir)Source\UI;$(ProjectDir)Source\File;$(ProjectDir)Source\Utils;$(ProjectDir)Source\MVC\Models;$(ProjectDir)Source\MVC\Controllers;$(ProjectDir)Source\MVC\Views;$(ProjectDir)resource;$(ProjectDir)cypress\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <AdditionalOptions>/wd5105 %(AdditionalOptions)</AdditionalOptions>
@@ -114,6 +114,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Analysis\DataAnalysisInterface.cpp" />
+    <ClCompile Include="Source\Analysis\FeatureExtractor.cpp" />
     <ClCompile Include="Source\Core\AppStateMachine.cpp" />
     <ClCompile Include="Source\Core\CommandManager.cpp" />
     <ClCompile Include="Source\Core\DataAcquisition.cpp" />
@@ -122,6 +124,7 @@
     <ClCompile Include="Source\Core\MainUiStateManager.cpp" />
     <ClCompile Include="Source\Core\USBDevice.cpp" />
     <ClCompile Include="Source\File\AsyncFileWriter.cpp" />
+    <ClCompile Include="Source\File\DataAccessService.cpp" />
     <ClCompile Include="Source\File\DataCacheManager.cpp" />
     <ClCompile Include="Source\File\FileSaveManager.cpp" />
     <ClCompile Include="Source\File\IndexGenerator.cpp" />
@@ -147,6 +150,7 @@
     <ClCompile Include="Source\MVC\Models\WaveformConfigModel.cpp" />
     <ClCompile Include="Source\MVC\Views\ChannelSelectView.cpp" />
     <ClCompile Include="Source\MVC\Views\DataAnalysisView.cpp" />
+    <ClCompile Include="Source\MVC\Views\DataVisualization.cpp" />
     <ClCompile Include="Source\MVC\Views\DeviceView.cpp" />
     <ClCompile Include="Source\MVC\Views\FileSaveView.cpp" />
     <ClCompile Include="Source\MVC\Views\FX3MainView.cpp" />
@@ -166,6 +170,8 @@
     <QtMoc Include="Source\MVC\Controllers\WaveformAnalysisController.h" />
     <QtMoc Include="Source\MVC\Controllers\DataAnalysisController.h" />
     <QtMoc Include="Source\MVC\Controllers\FileSaveController.h" />
+    <QtMoc Include="Source\Analysis\FeatureExtractor.h" />
+    <QtMoc Include="Source\Analysis\DataAnalysisInterface.h" />
     <ClInclude Include="Source\Core\DataPacket.h" />
     <QtMoc Include="Source\MVC\Controllers\DeviceController.h" />
     <QtMoc Include="Source\MVC\Models\ChannelSelectModel.h" />
@@ -189,6 +195,8 @@
     <QtMoc Include="Source\MVC\Views\FileSaveView.h" />
     <QtMoc Include="Source\Core\MainUiStateManager.h" />
     <QtMoc Include="Source\File\IndexGenerator.h" />
+    <QtMoc Include="Source\File\DataAccessService.h" />
+    <QtMoc Include="Source\MVC\Views\DataVisualization.h" />
     <ClInclude Include="Source\MVC\Views\IDeviceView.h" />
     <QtMoc Include="Source\MVC\Views\UpdateDeviceView.h" />
     <QtMoc Include="Source\MVC\Views\VideoDisplayView.h" />

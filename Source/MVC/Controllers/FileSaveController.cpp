@@ -315,8 +315,30 @@ void FileSaveController::slot_FS_C_onModelStatusChanged(SaveStatus status)
 
 void FileSaveController::slot_FS_C_onModelStatisticsUpdated(const SaveStatistics& statistics)
 {
-    // 控制器可以在这里处理统计信息更新
-    // 例如，可以记录日志、更新内部状态等
+#if 0
+    // 记录关键统计信息
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("接收统计信息更新: 速率=%1 MB/s, 总大小=%2 MB, 文件数=%3")
+        .arg(statistics.saveRate, 0, 'f', 2)
+        .arg(statistics.totalBytes / (1024.0 * 1024.0), 0, 'f', 2)
+        .arg(statistics.fileCount));
+
+    // 更新内部状态
+    m_currentSaveRate = statistics.saveRate;
+    m_totalSavedBytes = statistics.totalBytes;
+
+    // 检查是否需要分析实时流数据
+    if (m_realTimeAnalysisEnabled && statistics.totalBytes > m_lastAnalyzedPosition) {
+        uint64_t newDataSize = statistics.totalBytes - m_lastAnalyzedPosition;
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("触发实时数据分析，新增数据: %1 KB")
+            .arg(newDataSize / 1024.0, 0, 'f', 2));
+
+        emit signal_FS_C_newDataAvailable(m_lastAnalyzedPosition, newDataSize);
+        m_lastAnalyzedPosition = statistics.totalBytes;
+    }
+
+    // 转发统计信息到视图层
+    emit signal_FS_C_statisticsUpdated(statistics);
+#endif
 }
 
 void FileSaveController::slot_FS_C_onModelSaveCompleted(const QString& path, uint64_t totalBytes)

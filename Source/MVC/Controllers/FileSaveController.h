@@ -60,6 +60,8 @@ public:
      */
     FileSaveView* createSaveView(QWidget* parent = nullptr);
 
+    QString getCurrentFileName() const { return m_model->getFullSavePath(); }
+
 public slots:
     /**
      * @brief 启动保存

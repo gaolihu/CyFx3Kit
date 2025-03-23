@@ -33,6 +33,9 @@
     <Filter Include="Source Files\Main">
       <UniqueIdentifier>{a5d4a9ba-5269-4432-ae70-857e7ecba14d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Analysis">
+      <UniqueIdentifier>{9ec45689-43c1-4d00-9f98-2dc439ef9d63}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Core\AppStateMachine.cpp">
@@ -164,6 +167,18 @@
     <ClCompile Include="Source\File\IndexGenerator.cpp">
       <Filter>Source Files\File</Filter>
     </ClCompile>
+    <ClCompile Include="Source\File\DataAccessService.cpp">
+      <Filter>Source Files\File</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Analysis\FeatureExtractor.cpp">
+      <Filter>Source Files\Analysis</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\MVC\Views\DataVisualization.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Analysis\DataAnalysisInterface.cpp">
+      <Filter>Source Files\Analysis</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Source\Core\AppStateMachine.h">
@@ -282,6 +297,18 @@
     </QtMoc>
     <QtMoc Include="Source\File\IndexGenerator.h">
       <Filter>Source Files\File</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\File\DataAccessService.h">
+      <Filter>Source Files\File</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\DataVisualization.h">
+      <Filter>Source Files\MVC\Views</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\Analysis\FeatureExtractor.h">
+      <Filter>Source Files\Analysis</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\Analysis\DataAnalysisInterface.h">
+      <Filter>Source Files\Analysis</Filter>
     </QtMoc>
   </ItemGroup>
   <ItemGroup>
