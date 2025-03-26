@@ -37,7 +37,7 @@
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
     <QtInstall>6.5.3_msvc2019_64</QtInstall>
-    <QtModules>core;gui;widgets;</QtModules>
+    <QtModules>core;gui;widgets;concurrent;charts</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
@@ -65,7 +65,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\Core;$(ProjectDir)Source\UI;$(ProjectDir)Source\File;$(ProjectDir)Source\Utils;$(ProjectDir)Source\MVC\Models;$(ProjectDir)Source\MVC\Controllers;$(ProjectDir)Source\MVC\Views;$(ProjectDir)resource;$(ProjectDir)cypress\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\Analysis;$(ProjectDir)Source\Core;$(ProjectDir)Source\UI;$(ProjectDir)Source\File;$(ProjectDir)Source\Utils;$(ProjectDir)Source\MVC\Models;$(ProjectDir)Source\MVC\Controllers;$(ProjectDir)Source\MVC\Views;$(ProjectDir)resource;$(ProjectDir)cypress\inc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalOptions>/wd5105 %(AdditionalOptions)</AdditionalOptions>
