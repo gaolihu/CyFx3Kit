@@ -4,7 +4,6 @@
 #include <QObject>
 #include <memory>
 #include <vector>
-#include "FeatureExtractor.h"
 
  /**
   * @brief 数据分析项结构
@@ -249,6 +248,4 @@ private:
     int m_columns;                                          ///< 列数
     int m_rows;                                             ///< 行数
     int m_maxDataItems;                                     ///< 最大数据项数量限制
-    QMap<int, QMap<QString, QVariant>> m_extractedFeatures; ///< 特征存储（索引->特征）
-    FeatureExtractor& m_featureExtractor;                   ///< 特征提取器引用（单例）
 };

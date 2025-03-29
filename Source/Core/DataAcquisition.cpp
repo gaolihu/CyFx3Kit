@@ -622,7 +622,7 @@ void DataAcquisitionManager::acquisitionThread()
 void DataAcquisitionManager::processingThread()
 {
     LOG_INFO("Processing thread started");
-
+// #define AQ_DBG
     try {
         while (m_running) {
             std::unique_lock<std::mutex> lock(m_mutex);

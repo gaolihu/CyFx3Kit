@@ -652,46 +652,6 @@ void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
         return;
     }
 
-    // 将数据包转发到需要的模块
-
-    // 数据分析模块处理
-    if (m_moduleInitialized[ModuleType::DATA_ANALYSIS] &&
-        m_moduleVisibility[ModuleType::DATA_ANALYSIS] &&
-        m_dataAnalysisController) {
-
-        // 如果数据太多，考虑采样或过滤
-        if (packets.size() > 10000) {
-            std::vector<DataPacket> sampledPackets;
-            // 实现采样逻辑...
-            m_dataAnalysisController->processDataPackets(sampledPackets);
-        }
-        else {
-            m_dataAnalysisController->processDataPackets(packets);
-        }
-
-        // 如果文件保存活跃，添加索引引用
-        if (m_fileSaveController && m_fileSaveController->isSaving()) {
-            QString currentFile = m_fileSaveController->getCurrentFileName();
-            //m_dataAnalysisController->setDataSource(currentFile);
-        }
-    }
-
-    // 视频显示模块
-    if (m_moduleInitialized[ModuleType::VIDEO_DISPLAY] &&
-        m_moduleVisibility[ModuleType::VIDEO_DISPLAY] &&
-        m_videoDisplayController) {
-        // 假设控制器提供处理数据包的方法
-        // m_videoDisplayController->processDataPacket(packet);
-    }
-
-    // 波形分析模块
-    if (m_moduleInitialized[ModuleType::WAVEFORM_ANALYSIS] &&
-        m_moduleVisibility[ModuleType::WAVEFORM_ANALYSIS] &&
-        m_waveformAnalysisController) {
-        // 假设控制器提供处理数据包的方法
-        // m_waveformAnalysisController->processDataPacket(packet);
-    }
-
     if (m_moduleInitialized[ModuleType::FILE_OPTIONS]) {
         if (m_fileSaveController) {
             if (m_fileSaveController->isSaving()) {
@@ -730,6 +690,30 @@ void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
     else {
         LOG_WARN("文件保存模块未初始化");
     }
+
+    // 数据分析模块处理
+    if (m_moduleInitialized[ModuleType::DATA_ANALYSIS] &&
+        m_moduleVisibility[ModuleType::DATA_ANALYSIS] &&
+        m_dataAnalysisController) {
+        m_dataAnalysisController->processDataPackets(packets, m_fileSaveController->getCurrentFileName());
+    }
+
+    // 视频显示模块
+    if (m_moduleInitialized[ModuleType::VIDEO_DISPLAY] &&
+        m_moduleVisibility[ModuleType::VIDEO_DISPLAY] &&
+        m_videoDisplayController) {
+        // 假设控制器提供处理数据包的方法
+        // m_videoDisplayController->processDataPacket(packet);
+    }
+
+    // 波形分析模块
+    if (m_moduleInitialized[ModuleType::WAVEFORM_ANALYSIS] &&
+        m_moduleVisibility[ModuleType::WAVEFORM_ANALYSIS] &&
+        m_waveformAnalysisController) {
+        // 假设控制器提供处理数据包的方法
+        // m_waveformAnalysisController->processDataPacket(packet);
+    }
+
 }
 
 bool ModuleManager::createChannelConfigModule()

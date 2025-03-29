@@ -12,7 +12,12 @@ DataAccessService& DataAccessService::getInstance()
 DataAccessService::DataAccessService(QObject* parent)
     : QObject(parent)
     , m_dataCache(10 * 1024 * 1024) // 默认10MB缓存
+    , m_readTimeout(5000) // 5秒超时
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("数据访问服务已初始化，缓存大小: 10MB"));
+
+    // 默认使用 IndexGenerator 实现
+    m_indexAccess = std::make_shared<IndexGeneratorAccess>();
 }
 
 DataAccessService::~DataAccessService()
@@ -30,6 +35,10 @@ DataAccessService::~DataAccessService()
 
 QByteArray DataAccessService::readPacketData(const PacketIndexEntry& entry)
 {
+    QElapsedTimer timer;
+    timer.start();
+    m_stats.totalReads++;
+
     try {
         // 生成缓存键
         QString cacheKey = generateCacheKey(entry.fileName, entry.fileOffset, entry.size);
@@ -40,58 +49,92 @@ QByteArray DataAccessService::readPacketData(const PacketIndexEntry& entry)
             QByteArray* cachedData = m_dataCache.object(cacheKey);
             if (cachedData) {
                 LOG_DEBUG(LocalQTCompat::fromLocal8Bit("从缓存读取数据: %1").arg(cacheKey));
+                m_stats.cacheHits++;
                 return *cachedData;
             }
+            m_stats.cacheMisses++;
+        }
+
+        // 检查文件是否可读
+        if (!isFileReadable(entry.fileName)) {
+            m_stats.readErrors++;
+            emit dataReadError(LocalQTCompat::fromLocal8Bit("文件不可读: %1").arg(entry.fileName));
+            return QByteArray();
         }
 
         // 打开文件
         QFile* file = getOrOpenFile(entry.fileName);
         if (!file) {
             LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开文件: %1").arg(entry.fileName));
+            m_stats.readErrors++;
             emit dataReadError(LocalQTCompat::fromLocal8Bit("无法打开文件: %1").arg(entry.fileName));
             return QByteArray();
         }
 
-        // 定位到偏移位置
-        {
+        // 增加超时和重试机制
+        int retryCount = 0;
+        const int MAX_RETRIES = 3;
+
+        while (retryCount < MAX_RETRIES) {
+            // 定位到偏移位置
             QMutexLocker locker(&m_fileMutex);
+
             if (!file->seek(entry.fileOffset)) {
                 LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法定位到文件偏移位置: %1 在 %2")
-                    .arg(entry.fileOffset)
-                    .arg(entry.fileName));
-                emit dataReadError(LocalQTCompat::fromLocal8Bit("无法定位到文件偏移位置"));
-                return QByteArray();
+                    .arg(entry.fileOffset).arg(entry.fileName));
+
+                // 检查是否超时
+                if (timer.elapsed() > m_readTimeout) {
+                    LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件操作超时"));
+                    break;
+                }
+
+                retryCount++;
+                LOG_WARN(LocalQTCompat::fromLocal8Bit("尝试重试 (%1/%2)").arg(retryCount).arg(MAX_RETRIES));
+                QThread::msleep(100); // 短暂延迟后重试
+                continue;
             }
 
             // 读取数据
             QByteArray data = file->read(entry.size);
-            if (data.size() != static_cast<int>(entry.size)) {
-                LOG_ERROR(LocalQTCompat::fromLocal8Bit("读取数据大小不匹配: 应为 %1 字节，实际读取 %2 字节")
-                    .arg(entry.size)
-                    .arg(data.size()));
-                emit dataReadError(LocalQTCompat::fromLocal8Bit("读取数据大小不匹配"));
-                return QByteArray();
+
+            // 检查是否超时或数据不完整
+            if (timer.elapsed() > m_readTimeout || data.size() != static_cast<int>(entry.size)) {
+                LOG_ERROR(LocalQTCompat::fromLocal8Bit("读取数据失败或超时: 应为 %1 字节，实际读取 %2 字节")
+                    .arg(entry.size).arg(data.size()));
+
+                retryCount++;
+                LOG_WARN(LocalQTCompat::fromLocal8Bit("尝试重试 (%1/%2)").arg(retryCount).arg(MAX_RETRIES));
+                QThread::msleep(100); // 短暂延迟后重试
+                continue;
             }
 
-            // 添加到缓存
+            // 成功读取数据，添加到缓存并返回
             {
                 QMutexLocker cacheLocker(&m_cacheMutex);
                 m_dataCache.insert(cacheKey, new QByteArray(data));
             }
 
             LOG_DEBUG(LocalQTCompat::fromLocal8Bit("从文件读取数据: %1 偏移 %2, 大小 %3 字节")
-                .arg(entry.fileName)
-                .arg(entry.fileOffset)
-                .arg(entry.size));
+                .arg(entry.fileName).arg(entry.fileOffset).arg(entry.size));
+
+            // 更新统计
+            m_stats.totalReadTime += timer.elapsed();
 
             // 发送信号
             emit dataReadComplete(entry.timestamp, data);
-
             return data;
         }
+
+        // 所有重试失败
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("读取数据失败，已达最大重试次数"));
+        m_stats.readErrors++;
+        emit dataReadError(LocalQTCompat::fromLocal8Bit("读取数据重试失败"));
+        return QByteArray();
     }
     catch (const std::exception& e) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("读取数据异常: %1").arg(e.what()));
+        m_stats.readErrors++;
         emit dataReadError(LocalQTCompat::fromLocal8Bit("读取数据异常: %1").arg(e.what()));
         return QByteArray();
     }
@@ -99,8 +142,15 @@ QByteArray DataAccessService::readPacketData(const PacketIndexEntry& entry)
 
 QByteArray DataAccessService::readPacketByTimestamp(uint64_t timestamp)
 {
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("开始读取数据包，时间戳: %1").arg(timestamp));
+
+    if (!m_indexAccess) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("未设置索引访问接口"));
+        return QByteArray();
+    }
+
     // 查找最接近的数据包
-    PacketIndexEntry entry = IndexGenerator::getInstance().findClosestPacket(timestamp);
+    PacketIndexEntry entry = m_indexAccess->findClosestPacket(timestamp);
 
     // 如果找到有效条目，读取数据
     if (!entry.fileName.isEmpty() && entry.size > 0) {
@@ -114,8 +164,23 @@ QByteArray DataAccessService::readPacketByTimestamp(uint64_t timestamp)
 bool DataAccessService::readPacketsInRange(uint64_t startTime, uint64_t endTime,
     std::function<void(const QByteArray&, const PacketIndexEntry&)> callback)
 {
-    // 获取时间范围内的所有数据包索引
-    QVector<PacketIndexEntry> entries = IndexGenerator::getInstance().getPacketsInRange(startTime, endTime);
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("读取时间范围内数据包: %1 - %2").arg(startTime).arg(endTime));
+
+    if (!m_indexAccess) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("未设置索引访问接口"));
+        return false;
+    }
+
+    // 获取所有索引条目
+    QVector<PacketIndexEntry> allEntries = m_indexAccess->getAllIndexEntries();
+
+    // 过滤时间范围内的条目
+    QVector<PacketIndexEntry> entries;
+    for (const auto& entry : allEntries) {
+        if (entry.timestamp >= startTime && entry.timestamp <= endTime) {
+            entries.append(entry);
+        }
+    }
 
     if (entries.isEmpty()) {
         LOG_WARN(LocalQTCompat::fromLocal8Bit("指定时间范围内没有数据包: %1 - %2")
@@ -181,11 +246,21 @@ bool DataAccessService::readPacketsInRange(uint64_t startTime, uint64_t endTime,
 
 QFuture<QVector<QByteArray>> DataAccessService::readPacketsInRangeAsync(uint64_t startTime, uint64_t endTime)
 {
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("异步读取时间范围内数据包: %1 - %2").arg(startTime).arg(endTime));
+
     return QtConcurrent::run([this, startTime, endTime]() {
         QVector<QByteArray> results;
 
-        // 获取时间范围内的所有数据包索引
-        QVector<PacketIndexEntry> entries = IndexGenerator::getInstance().getPacketsInRange(startTime, endTime);
+        // 获取时间范围内的所有数据包
+        QVector<PacketIndexEntry> allEntries = m_indexAccess->getAllIndexEntries();
+
+        // 过滤时间范围内的条目
+        QVector<PacketIndexEntry> entries;
+        for (const auto& entry : allEntries) {
+            if (entry.timestamp >= startTime && entry.timestamp <= endTime) {
+                entries.append(entry);
+            }
+        }
 
         // 读取每个数据包
         for (const PacketIndexEntry& entry : entries) {
@@ -199,29 +274,53 @@ QFuture<QVector<QByteArray>> DataAccessService::readPacketsInRangeAsync(uint64_t
         });
 }
 
-QVector<QByteArray> DataAccessService::getPacketsByFeature(const QString& featureName,
-    const QVariant& minValue,
-    const QVariant& maxValue)
+QFuture<QByteArray> DataAccessService::readPacketDataAsync(const PacketIndexEntry& entry)
 {
-    QVector<QByteArray> results;
+    LOG_DEBUG(LocalQTCompat::fromLocal8Bit("异步读取数据包: %1, 偏移 %2").arg(entry.fileName).arg(entry.fileOffset));
 
-    // 创建查询条件
-    IndexQuery query;
-    query.featureFilters << QString("%1>=%2").arg(featureName).arg(minValue.toString());
-    query.featureFilters << QString("%1<=%2").arg(featureName).arg(maxValue.toString());
+    return QtConcurrent::run([this, entry]() {
+        return readPacketData(entry);
+        });
+}
 
-    // 执行查询
-    QVector<PacketIndexEntry> entries = IndexGenerator::getInstance().queryIndex(query);
+void DataAccessService::checkAndCleanupUnusedFiles()
+{
+    QMutexLocker locker(&m_fileMutex);
+    QDateTime currentTime = QDateTime::currentDateTime();
 
-    // 读取每个数据包
-    for (const PacketIndexEntry& entry : entries) {
-        QByteArray data = readPacketData(entry);
-        if (!data.isEmpty()) {
-            results.append(data);
+    // 关闭超过5分钟未使用的文件
+    QStringList filesToRemove;
+    for (auto it = m_openFiles.begin(); it != m_openFiles.end(); ++it) {
+        if (it.value().lastAccess.secsTo(currentTime) > 300) { // 5分钟
+            if (it.value().file) {
+                it.value().file->close();
+                delete it.value().file;
+            }
+            filesToRemove.append(it.key());
         }
     }
 
-    return results;
+    // 从映射中移除
+    for (const QString& file : filesToRemove) {
+        m_openFiles.remove(file);
+        LOG_DEBUG(LocalQTCompat::fromLocal8Bit("关闭长时间未访问的文件: %1").arg(file));
+    }
+}
+
+bool DataAccessService::isFileReadable(const QString& filePath)
+{
+    QFileInfo fileInfo(filePath);
+    if (!fileInfo.exists()) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件不存在: %1").arg(filePath));
+        return false;
+    }
+
+    if (!fileInfo.isReadable()) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件不可读: %1").arg(filePath));
+        return false;
+    }
+
+    return true;
 }
 
 void DataAccessService::setCacheSize(int sizeInMB)

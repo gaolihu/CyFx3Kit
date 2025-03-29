@@ -2,27 +2,30 @@
 #pragma once
 
 #include <QObject>
+#include <QList>
+#include <QString>
+#include <QVector>
+#include <QMutex>
+#include <QThreadPool>
+#include <QFutureWatcher>
+#include <QtConcurrent>
+#include <QElapsedTimer>
+#include <QFileSystemWatcher>
 #include <memory>
 
 class DataAnalysisView;
 class DataAnalysisModel;
 namespace Ui { class DataAnalysisClass; }
-struct DataAnalysisItem;
-struct StatisticsInfo;
-class DataVisualization;
-struct DataVisualizationOptions;
 struct DataPacket;
 struct PacketIndexEntry;
 
 /**
  * @brief 数据分析控制器
  *
- * 处理数据分析界面的业务逻辑，包括：
- * - 表格数据展示和操作
- * - 数据导入导出
- * - 统计信息计算和显示
- * - 数据筛选和排序
- * - 可视化和分析
+ * 处理USB数据索引界面的业务逻辑，专注于：
+ * - 高速USB数据的捕获和解析
+ * - 特定头部模式的识别和索引
+ * - 索引数据的展示和导出
  */
 class DataAnalysisController : public QObject
 {
@@ -47,20 +50,26 @@ public:
     void initialize();
 
     /**
-     * @brief 加载数据
-     * 从模型加载数据并更新UI
+     * @brief 初始化表格
+     * 设置表格列和格式
+     */
+    void initializeTable();
+
+    /**
+     * @brief 加载索引数据
+     * 从IndexGenerator获取索引并更新UI
      */
     void loadData();
 
     /**
-     * @brief 导入数据
+     * @brief 导入数据文件
      * @param filePath 文件路径，若为空则弹出文件选择对话框
      * @return 是否导入成功
      */
     bool importData(const QString& filePath = QString());
 
     /**
-     * @brief 导出数据
+     * @brief 导出索引数据
      * @param filePath 文件路径，若为空则弹出文件选择对话框
      * @param selectedRowsOnly 是否只导出选中行
      * @return 是否导出成功
@@ -68,108 +77,28 @@ public:
     bool exportData(const QString& filePath = QString(), bool selectedRowsOnly = false);
 
     /**
-     * @brief 清除数据
+     * @brief 导出索引到CSV文件
+     * @param filePath 文件路径
+     * @param entries 索引条目列表
+     * @return 是否成功
+     */
+    bool exportToCsv(const QString& filePath, const QVector<PacketIndexEntry>& entries);
+
+    /**
+     * @brief 导出索引到JSON文件
+     * @param filePath 文件路径
+     * @param entries 索引条目列表
+     * @return 是否成功
+     */
+    bool exportToJson(const QString& filePath, const QVector<PacketIndexEntry>& entries);
+
+    /**
+     * @brief 清除索引数据
      */
     void clearData();
 
     /**
-     * @brief 筛选数据
-     * @param filterExpression 筛选表达式
-     */
-    void filterData(const QString& filterExpression);
-
-    /**
-     * @brief 分析选中的数据
-     * 提取特征并显示分析结果
-     */
-    void analyzeSelectedData();
-
-    /**
-     * @brief 可视化数据
-     * @param chartType 图表类型
-     */
-    void visualizeData(int chartType);
-
-    /**
-     * @brief 导出可视化图表
-     * @param filePath 文件保存路径，为空则弹出文件选择对话框
-     */
-    void exportVisualization(const QString& filePath = QString());
-
-    /**
-     * @brief 获取选中的行索引列表
-     * @return 选中的行索引列表
-     */
-    QList<int> getSelectedRows() const;
-
-    /**
-     * @brief 处理数据包
-     * @param packets 数据包列表
-     */
-    void processDataPackets(const std::vector<DataPacket>& packets);
-
-    /**
-     * @brief 转换数据包为分析项
-     * @param packet 数据包
-     * @return 分析项
-     */
-    DataAnalysisItem convertPacketToAnalysisItem(const DataPacket& packet);
-
-    /**
-     * @brief 启用/禁用自动特征提取
-     * @param enable 是否启用
-     * @param interval 提取间隔（数据项数量）
-     */
-    void enableAutoFeatureExtraction(bool enable, int interval = 10);
-
-    /**
-     * @brief 处理应用筛选
-     * @param filterText 筛选表达式
-     */
-    void handleFilter(const QString& filterText);
-
-    /**
-     * @brief 处理分析请求
-     * @param analyzerType 分析器类型索引
-     */
-    void handleAnalyzeRequest(int analyzerType);
-
-    /**
-     * @brief 处理可视化请求
-     * @param chartType 图表类型索引
-     */
-    void handleVisualizeRequest(int chartType);
-
-    /**
-     * @brief 提取特征并更新索引
-     * @param item 数据分析项
-     * @param fileName 文件名
-     */
-    void extractFeaturesAndIndex(const DataAnalysisItem& item, const QString& fileName);
-
-    /**
-     * @brief 从索引文件加载数据
-     * @param indexPath 索引文件路径
-     * @return 是否成功
-     */
-    bool loadDataFromIndex(const QString& indexPath);
-
-    /**
-     * @brief 将索引条目转换为数据分析项
-     * @param entry 索引条目
-     * @return 数据分析项
-     */
-    DataAnalysisItem convertIndexEntryToAnalysisItem(const PacketIndexEntry& entry);
-
-    /**
-     * @brief 导出分析结果
-     * @param filePath 文件路径
-     * @return 是否成功
-     */
-    bool exportAnalysisResults(const QString& filePath);
-
-    /**
-     * @brief 从文件加载数据
+     * @brief 从文件加载索引数据
      * @param filePath 文件路径
      * @return 是否成功
      */
@@ -191,39 +120,48 @@ public:
         return m_currentDataSource;
     }
 
+    /**
+     * @brief 处理原始数据流
+     * @param data 原始数据缓冲区
+     * @param size 缓冲区大小（字节）
+     * @param fileOffset 此缓冲区在文件中的起始偏移
+     * @param fileName 被处理的文件名
+     */
+    void processRawData(const uint8_t* data, size_t size, uint64_t fileOffset = 0, const QString& fileName = QString());
+
+    /**
+     * @brief 处理数据包集合
+     * @param packets 数据包列表
+     * @param filePath 保存索引文件路径
+     */
+    void processDataPackets(const std::vector<DataPacket>& packets, const QString& filePath);
+
+    /**
+     * @brief 更新索引表格
+     * @param entries 索引条目列表
+     */
+    void updateIndexTable(const QVector<PacketIndexEntry>& entries);
+
+    /**
+     * @brief 配置索引会话
+     * @param sessionId 会话标识符
+     * @param basePath 基本路径
+     */
+    void configureIndexing(const QString& sessionId, const QString& basePath);
+
+    /**
+     * @brief 设置最大批处理大小
+     * @param maxBatchSize 最大处理包数量
+     */
+    void setMaxBatchSize(int maxBatchSize);
+
+    /**
+     * @brief 是否正在处理数据
+     * @return 是否处理中
+     */
+    bool isProcessing() const;
+
 public slots:
-    /**
-     * @brief 处理视频预览按钮点击
-     */
-    void slot_DA_C_onVideoPreviewClicked();
-
-    /**
-     * @brief 处理保存数据按钮点击
-     */
-    void slot_DA_C_onSaveDataClicked();
-
-    /**
-     * @brief 处理导入数据按钮点击
-     */
-    void slot_DA_C_onImportDataClicked();
-
-    /**
-     * @brief 处理导出数据按钮点击
-     */
-    void slot_DA_C_onExportDataClicked();
-
-    /**
-     * @brief 处理表格选择变化
-     * @param selectedRows 选中的行索引列表
-     */
-    void slot_DA_C_onSelectionChanged(const QList<int>& selectedRows);
-
-    /**
-     * @brief 处理统计信息变化
-     * @param stats 新的统计信息
-     */
-    void slot_DA_C_onStatisticsChanged(const StatisticsInfo& stats);
-
     /**
      * @brief 处理数据变化
      */
@@ -237,16 +175,25 @@ public slots:
     void slot_DA_C_onImportCompleted(bool success, const QString& message);
 
     /**
-     * @brief 处理导出完成
-     * @param success 是否成功
-     * @param message 消息
+     * @brief 处理导入数据按钮点击
      */
-    void slot_DA_C_onExportCompleted(bool success, const QString& message);
+    void slot_DA_C_onImportDataClicked();
+
+    /**
+     * @brief 处理导出数据按钮点击
+     */
+    void slot_DA_C_onExportDataClicked();
 
     /**
      * @brief 处理清除数据按钮点击
      */
     void slot_DA_C_onClearDataClicked();
+
+    /**
+     * @brief 处理表格选择变化
+     * @param selectedRows 选中的行索引列表
+     */
+    void slot_DA_C_onSelectionChanged(const QList<int>& selectedRows);
 
     /**
      * @brief 处理从文件加载数据请求
@@ -255,41 +202,32 @@ public slots:
     void slot_DA_C_onLoadDataFromFileRequested(const QString& filePath);
 
     /**
-     * @brief 处理特征提取完成
-     * @param index 数据项索引
-     * @param features 提取的特征
+     * @brief 处理索引条目添加
+     * @param entry 添加的索引条目
      */
-    void slot_DA_C_onFeaturesExtracted(int index, const QMap<QString, QVariant>& features);
+    void slot_DA_C_onIndexEntryAdded(const PacketIndexEntry& entry);
 
     /**
-     * @brief 处理实时更新状态变化
-     * @param enabled 是否启用
+     * @brief 处理索引更新
+     * @param count 索引条目数量
      */
-    void slot_DA_C_onRealTimeUpdateToggled(bool enabled);
+    void slot_DA_C_onIndexUpdated(int count);
 
     /**
-     * @brief 处理更新间隔变化
-     * @param interval 更新间隔（毫秒）
+     * @brief 异步处理完成槽
      */
-    void slot_DA_C_onUpdateIntervalChanged(int interval);
+    void slot_DA_C_onProcessingFinished();
 
     /**
-     * @brief 处理分析按钮点击
-     * @param analyzerType 分析器类型索引
+     * @brief 处理索引文件变化
+     * @param path 变化的文件路径
      */
-    void slot_DA_C_onAnalyzeButtonClicked(int analyzerType);
+    void slot_DA_C_onIndexFileChanged(const QString& path);
 
     /**
-     * @brief 处理可视化按钮点击
-     * @param chartType 图表类型索引
+     * @brief 处理批量数据加载完成
      */
-    void slot_DA_C_onVisualizeButtonClicked(int chartType);
-
-    /**
-     * @brief 处理应用筛选按钮点击
-     * @param filterText 筛选文本
-     */
-    void slot_DA_C_onApplyFilterClicked(const QString& filterText);
+    void slot_DA_C_onBatchLoadFinished();
 
 private:
     /**
@@ -298,44 +236,42 @@ private:
     void connectSignals();
 
     /**
-     * @brief 更新表格
-     * @param items 数据项列表
+     * @brief 分批加载索引数据
+     * @param entries 索引条目
+     * @param batchSize 批量大小
      */
-    void updateTable(const std::vector<DataAnalysisItem>& items);
+    void loadDataBatched(const QVector<PacketIndexEntry>& entries, int batchSize = 1000);
 
     /**
-     * @brief 更新表格行
-     * @param row 行索引
-     * @param item 数据项
+     * @brief 优化表格更新
+     * @param entries 索引条目
+     * @param startRow 起始行
+     * @param count 数量
      */
-    void updateTableRow(int row, const DataAnalysisItem& item);
-
-    /**
-     * @brief 从数据分析项创建数据包
-     * @param item 数据分析项
-     * @return 数据包
-     */
-    DataPacket createDataPacketFromItem(const DataAnalysisItem& item) const;
-
-    /**
-     * @brief 序列化特征映射为字符串
-     * @param features 特征映射
-     * @return 序列化后的字符串
-     */
-    QString serializeFeatures(const QMap<QString, QVariant>& features) const;
+    void optimizedTableUpdate(const QVector<PacketIndexEntry>& entries, int startRow, int count);
 
 private:
-    DataAnalysisView* m_view;                           ///< 视图对象
-    Ui::DataAnalysisClass* m_ui;                        ///< UI对象
-    DataAnalysisModel* m_model;                         ///< 模型对象（单例）
+    DataAnalysisView* m_view;                     ///< 视图对象
+    Ui::DataAnalysisClass* m_ui;                  ///< UI对象
+    DataAnalysisModel* m_model;                   ///< 模型对象（单例）
 
-    bool m_autoExtractFeatures;                         ///< 是否自动提取特征
-    int m_featureExtractInterval;                       ///< 特征提取间隔（数据项数量）
-    size_t m_dataCounter;                               ///< 数据计数器
-    QString m_currentDataSource;                        ///< 当前数据源
+    size_t m_dataCounter;                         ///< 数据计数器
+    QString m_currentDataSource;                  ///< 当前数据源
+    QString m_sessionBasePath;                    ///< 会话基本路径
+    QString m_sessionId;                          ///< 会话ID
 
-    QList<int> m_selectedRows;                          ///< 选中的行列表
-    bool m_isUpdatingTable;                             ///< 表格更新中标志
-    bool m_isInitialized;                               ///< 初始化标志
-    std::unique_ptr<DataVisualization> m_visualization; ///< 可视化组件
+    QList<int> m_selectedRows;                    ///< 选中的行列表
+    bool m_isUpdatingTable;                       ///< 表格更新中标志
+    bool m_isInitialized;                         ///< 初始化标志
+
+    QFutureWatcher<int> m_processWatcher;         ///< 异步处理监视器
+    QFutureWatcher<void> m_loadWatcher;           ///< 加载数据监视器
+    QFileSystemWatcher m_fileWatcher;             ///< 文件监视器
+    QElapsedTimer m_performanceTimer;             ///< 性能计时器
+    QVector<PacketIndexEntry> m_bufferedEntries;  ///< 缓冲的条目
+    int m_maxBatchSize;                           ///< 最大批处理大小
+    bool m_processingData;                        ///< 数据处理中标志
+    int m_batchLoadPosition;                      ///< 批量加载位置
+    QVector<PacketIndexEntry> m_entriesToLoad;    ///< 待加载条目
+    QMutex m_processMutex;                        ///< 处理互斥锁
 };

@@ -1,7 +1,6 @@
 ﻿// Source/MVC/Models/DataAnalysisModel.cpp
 
 #include "DataAnalysisModel.h"
-#include "FeatureExtractor.h"
 #include "Logger.h"
 #include <QFile>
 #include <QTextStream>
@@ -25,7 +24,6 @@ DataAnalysisModel::DataAnalysisModel()
     , m_columns(0)
     , m_rows(0)
     , m_maxDataItems(100000)
-    , m_featureExtractor(FeatureExtractor::getInstance())
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("数据分析模型已创建"));
 }
@@ -580,75 +578,6 @@ void DataAnalysisModel::sortData(int column, bool ascending)
     emit signal_DA_M_dataChanged();
 }
 
-bool DataAnalysisModel::extractFeatures(int index)
-{
-    if (index < 0 || index >= static_cast<int>(m_dataItems.size())) {
-        LOG_ERROR(QString(LocalQTCompat::fromLocal8Bit("提取特征失败：索引 %1 超出范围")).arg(index));
-        return false;
-    }
-
-    DataAnalysisItem& item = m_dataItems[index];
-
-    // 将数据转换为二进制格式供特征提取器使用
-    QByteArray rawData;
-    QDataStream stream(&rawData, QIODevice::WriteOnly);
-
-    // 写入原始值
-    stream << item.value;
-
-    // 写入所有数据点
-    for (const auto& point : item.dataPoints) {
-        stream << point;
-    }
-
-    // 调用特征提取器
-    QMap<QString, QVariant> features =
-        m_featureExtractor.extractFeaturesFromRaw(rawData);
-
-    if (features.isEmpty()) {
-        LOG_WARN(QString(LocalQTCompat::fromLocal8Bit("项目 %1 特征提取结果为空")).arg(index));
-        return false;
-    }
-
-    // 存储特征结果
-    m_extractedFeatures[index] = features;
-
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("已提取项目 %1 的 %2 个特征")).arg(index).arg(features.size()));
-
-    // 发出信号通知特征已提取
-    emit signal_DA_M_featuresExtracted(index, features);
-
-    return true;
-}
-
-bool DataAnalysisModel::extractFeaturesBatch(const QVector<int>& indices)
-{
-    if (indices.isEmpty()) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("批量提取特征失败：索引列表为空"));
-        return false;
-    }
-
-    int successCount = 0;
-
-    for (int index : indices) {
-        if (extractFeatures(index)) {
-            successCount++;
-        }
-    }
-
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("批量提取特征完成：成功 %1/%2")).arg(successCount).arg(indices.size()));
-
-    return successCount > 0;
-}
-
-QMap<QString, QVariant> DataAnalysisModel::getFeatures(int index) const
-{
-    if (!m_extractedFeatures.contains(index)) {
-        return QMap<QString, QVariant>();
-    }
-
-    return m_extractedFeatures[index];
-}
 
 void DataAnalysisModel::addDataItems(const std::vector<DataAnalysisItem>& items)
 {

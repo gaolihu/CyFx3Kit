@@ -1,9 +1,7 @@
 ﻿// Source/MVC/Controllers/DataAnalysisController.cpp
 
 #include "DataAnalysisController.h"
-#include "DataAnalysisInterface.h"
 #include "DataAnalysisView.h"
-#include "DataVisualization.h"
 #include "ui_DataAnalysis.h"
 #include "DataAnalysisModel.h"
 #include "IndexGenerator.h"
@@ -14,17 +12,27 @@
 #include <QMessageBox>
 #include <QTableWidgetItem>
 #include <QDateTime>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QStandardPaths>
+#include <QDir>
+#include <QThread>
+#include <QCoreApplication>
+#include <QMetaObject>
+#include <QApplication>
 
 DataAnalysisController::DataAnalysisController(DataAnalysisView* view)
     : QObject(view)
     , m_view(view)
     , m_ui(nullptr)
     , m_model(nullptr)
-    , m_autoExtractFeatures(false)
-    , m_featureExtractInterval(10)
     , m_dataCounter(0)
     , m_isUpdatingTable(false)
     , m_isInitialized(false)
+    , m_maxBatchSize(500)
+    , m_processingData(false)
+    , m_batchLoadPosition(0)
 {
     // 获取UI对象
     if (m_view) {
@@ -33,12 +41,34 @@ DataAnalysisController::DataAnalysisController(DataAnalysisView* view)
 
     // 获取模型实例（单例模式）
     m_model = DataAnalysisModel::getInstance();
+
+    // 连接异步处理完成信号
+    connect(&m_processWatcher, &QFutureWatcher<int>::finished,
+        this, &DataAnalysisController::slot_DA_C_onProcessingFinished);
+
+    // 连接批量加载完成信号
+    connect(&m_loadWatcher, &QFutureWatcher<void>::finished,
+        this, &DataAnalysisController::slot_DA_C_onBatchLoadFinished);
+
+    // 连接文件监视器
+    connect(&m_fileWatcher, &QFileSystemWatcher::fileChanged,
+        this, &DataAnalysisController::slot_DA_C_onIndexFileChanged);
+
+    // 启动性能计时器
+    m_performanceTimer.start();
 }
 
 DataAnalysisController::~DataAnalysisController()
 {
-    // 不需要释放m_model，因为它是单例
-    // 不需要释放m_ui和m_view，因为它们由外部管理
+    // 等待任何未完成的异步操作
+    if (m_processWatcher.isRunning()) {
+        m_processWatcher.waitForFinished();
+    }
+
+    if (m_loadWatcher.isRunning()) {
+        m_loadWatcher.waitForFinished();
+    }
+
     LOG_INFO(LocalQTCompat::fromLocal8Bit("数据分析控制器已销毁"));
 }
 
@@ -51,8 +81,8 @@ void DataAnalysisController::initialize()
     // 连接信号与槽
     connectSignals();
 
-    // 加载数据
-    loadData();
+    // 初始化表格
+    initializeTable();
 
     m_isInitialized = true;
     LOG_INFO(LocalQTCompat::fromLocal8Bit("数据分析控制器已初始化"));
@@ -67,20 +97,10 @@ void DataAnalysisController::connectSignals()
     // 连接模型信号到控制器槽
     connect(m_model, &DataAnalysisModel::signal_DA_M_dataChanged,
         this, &DataAnalysisController::slot_DA_C_onDataChanged);
-    connect(m_model, &DataAnalysisModel::signal_DA_M_statisticsChanged,
-        this, &DataAnalysisController::slot_DA_C_onStatisticsChanged);
     connect(m_model, &DataAnalysisModel::signal_DA_M_importCompleted,
         this, &DataAnalysisController::slot_DA_C_onImportCompleted);
-    connect(m_model, &DataAnalysisModel::signal_DA_M_exportCompleted,
-        this, &DataAnalysisController::slot_DA_C_onExportCompleted);
-    connect(m_model, &DataAnalysisModel::signal_DA_M_featuresExtracted,
-        this, &DataAnalysisController::slot_DA_C_onFeaturesExtracted);
 
     // 连接视图信号到控制器槽
-    connect(m_view, &DataAnalysisView::signal_DA_V_videoPreviewClicked,
-        this, &DataAnalysisController::slot_DA_C_onVideoPreviewClicked);
-    connect(m_view, &DataAnalysisView::signal_DA_V_saveDataClicked,
-        this, &DataAnalysisController::slot_DA_C_onSaveDataClicked);
     connect(m_view, &DataAnalysisView::signal_DA_V_importDataClicked,
         this, &DataAnalysisController::slot_DA_C_onImportDataClicked);
     connect(m_view, &DataAnalysisView::signal_DA_V_exportDataClicked,
@@ -92,51 +112,110 @@ void DataAnalysisController::connectSignals()
     connect(m_view, &DataAnalysisView::signal_DA_V_loadDataFromFileRequested,
         this, &DataAnalysisController::slot_DA_C_onLoadDataFromFileRequested);
 
-    // 连接数据变更信号到视图的实时图表更新
-    connect(m_model, &DataAnalysisModel::signal_DA_M_dataChanged,
-        m_view, &DataAnalysisView::slot_DA_V_updateRealtimeChart);
+    // 连接索引生成器信号
+    connect(&IndexGenerator::getInstance(), &IndexGenerator::indexEntryAdded,
+        this, &DataAnalysisController::slot_DA_C_onIndexEntryAdded, Qt::QueuedConnection);
+    connect(&IndexGenerator::getInstance(), &IndexGenerator::indexUpdated,
+        this, &DataAnalysisController::slot_DA_C_onIndexUpdated, Qt::QueuedConnection);
+}
 
-    // 连接新增的视图信号到控制器槽
-    connect(m_view, &DataAnalysisView::signal_DA_V_realTimeUpdateToggled,
-        this, &DataAnalysisController::slot_DA_C_onRealTimeUpdateToggled);
-    connect(m_view, &DataAnalysisView::signal_DA_V_updateIntervalChanged,
-        this, &DataAnalysisController::slot_DA_C_onUpdateIntervalChanged);
-    connect(m_view, &DataAnalysisView::signal_DA_V_analyzeButtonClicked,
-        this, &DataAnalysisController::slot_DA_C_onAnalyzeButtonClicked);
-    connect(m_view, &DataAnalysisView::signal_DA_V_visualizeButtonClicked,
-        this, &DataAnalysisController::slot_DA_C_onVisualizeButtonClicked);
-    connect(m_view, &DataAnalysisView::signal_DA_V_applyFilterClicked,
-        this, &DataAnalysisController::slot_DA_C_onApplyFilterClicked);
-    connect(m_view, &DataAnalysisView::signal_DA_V_exportChartClicked,
-        this, &DataAnalysisController::exportVisualization);
+void DataAnalysisController::initializeTable()
+{
+    if (!m_ui || !m_ui->tableWidget) {
+        return;
+    }
+
+    QTableWidget* table = m_ui->tableWidget;
+
+    // 设置列标题
+    QStringList headers = {
+        LocalQTCompat::fromLocal8Bit("索引ID"),
+        LocalQTCompat::fromLocal8Bit("时间戳"),
+        LocalQTCompat::fromLocal8Bit("文件偏移"),
+        LocalQTCompat::fromLocal8Bit("大小(字节)"),
+        LocalQTCompat::fromLocal8Bit("文件名"),
+        LocalQTCompat::fromLocal8Bit("批次ID"),
+        LocalQTCompat::fromLocal8Bit("包序号")
+    };
+    table->setColumnCount(headers.size());
+    table->setHorizontalHeaderLabels(headers);
+
+    // 设置列宽
+    table->setColumnWidth(0, 60);  // 索引ID
+    table->setColumnWidth(1, 150); // 时间戳
+    table->setColumnWidth(2, 120); // 文件偏移
+    table->setColumnWidth(3, 80);  // 大小
+    table->setColumnWidth(4, 200); // 文件名
+    table->setColumnWidth(5, 60);  // 批次ID
+    table->setColumnWidth(6, 60);  // 包序号
+
+    // 设置选择模式
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->setSelectionMode(QAbstractItemView::ExtendedSelection);
+
+    // 设置交替行颜色
+    table->setAlternatingRowColors(true);
 }
 
 void DataAnalysisController::loadData()
 {
-    if (!m_model || !m_view) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("加载数据失败：模型或视图对象为空"));
+    if (!m_model || !m_view || !m_ui || !m_ui->tableWidget) {
         return;
     }
 
-    // 获取模型数据
-    const std::vector<DataAnalysisItem>& items = m_model->getDataItems();
+    // 避免在处理中重复加载
+    if (m_loadWatcher.isRunning()) {
+        return;
+    }
 
-    // 更新表格
-    updateTable(items);
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始加载索引数据"));
 
-    // 更新统计信息
-    slot_DA_C_onStatisticsChanged(m_model->getStatistics());
+    // 更新状态栏，显示正在加载
+    if (m_view) {
+        m_view->slot_DA_V_updateStatusBar(
+            LocalQTCompat::fromLocal8Bit("正在加载索引数据..."),
+            0
+        );
+    }
 
-    // 更新UI状态
-    m_view->slot_DA_V_updateUIState(!items.empty());
+    // 异步获取索引条目
+    QFuture<void> future = QtConcurrent::run([this]() {
+        try {
+            // 获取所有索引条目
+            QVector<PacketIndexEntry> entries = IndexGenerator::getInstance().getAllIndexEntries();
 
-    // 更新状态栏
-    m_view->slot_DA_V_updateStatusBar(
-        LocalQTCompat::fromLocal8Bit("已加载数据"),
-        static_cast<int>(items.size())
-    );
+            // 在UI线程中更新表格
+            QMetaObject::invokeMethod(this, [this, entries]() {
+                // 使用分批加载机制
+                loadDataBatched(entries, m_maxBatchSize);
 
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("已加载 %1 条数据")).arg(items.size()));
+                if (m_view) {
+                    m_view->slot_DA_V_updateStatusBar(
+                        LocalQTCompat::fromLocal8Bit("索引数据加载中..."),
+                        entries.size()
+                    );
+                }
+
+                LOG_INFO(LocalQTCompat::fromLocal8Bit("已请求加载 %1 条索引数据").arg(entries.size()));
+                }, Qt::QueuedConnection);
+        }
+        catch (const std::exception& e) {
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("加载索引数据时发生异常: %1").arg(e.what()));
+
+            // 在UI线程中显示错误
+            QMetaObject::invokeMethod(this, [this, e]() {
+                if (m_view) {
+                    m_view->slot_DA_V_showMessageDialog(
+                        LocalQTCompat::fromLocal8Bit("加载错误"),
+                        LocalQTCompat::fromLocal8Bit("加载索引数据失败: %1").arg(e.what()),
+                        true
+                    );
+                }
+                }, Qt::QueuedConnection);
+        }
+        });
+
+    m_loadWatcher.setFuture(future);
 }
 
 bool DataAnalysisController::importData(const QString& filePath)
@@ -153,24 +232,143 @@ bool DataAnalysisController::importData(const QString& filePath)
         selectedFilePath = QFileDialog::getOpenFileName(m_view,
             LocalQTCompat::fromLocal8Bit("选择数据文件"),
             QString(),
-            LocalQTCompat::fromLocal8Bit("CSV文件 (*.csv);;JSON文件 (*.json);;所有文件 (*.*)"));
+            LocalQTCompat::fromLocal8Bit("二进制文件 (*.bin *.raw);;所有文件 (*.*)"));
 
         if (selectedFilePath.isEmpty()) {
             return false; // 用户取消了选择
         }
     }
 
-    // 设置当前数据源
-    setDataSource(selectedFilePath);
+    // 设置当前数据源，使用会话ID+文件名以确保索引关联
+    QString fileName = QFileInfo(selectedFilePath).fileName();
+    if (!m_sessionId.isEmpty()) {
+        setDataSource(m_sessionId + "_" + fileName);
+    }
+    else {
+        setDataSource(selectedFilePath);
+    }
 
-    // 导入数据
-    return m_model->importData(selectedFilePath);
+    // 打开索引文件 - 使用会话索引或文件特定索引
+    QString indexPath;
+    if (!m_sessionId.isEmpty() && !m_sessionBasePath.isEmpty()) {
+        // 配置IndexGenerator
+        IndexGenerator::getInstance().setSessionId(m_sessionId);
+        IndexGenerator::getInstance().setBasePath(m_sessionBasePath);
+
+        indexPath = QString("%1/%2.idx").arg(m_sessionBasePath).arg(m_sessionId);
+    }
+    else {
+        indexPath = selectedFilePath + ".idx";
+    }
+
+    if (!IndexGenerator::getInstance().open(indexPath)) {
+        if (m_view) {
+            m_view->slot_DA_V_showMessageDialog(
+                LocalQTCompat::fromLocal8Bit("索引创建失败"),
+                LocalQTCompat::fromLocal8Bit("无法创建索引文件"),
+                true
+            );
+        }
+        return false;
+    }
+
+    // 打开并读取数据文件
+    QFile file(selectedFilePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开数据文件: %1 - %2")
+            .arg(selectedFilePath).arg(file.errorString()));
+
+        if (m_view) {
+            m_view->slot_DA_V_showMessageDialog(
+                LocalQTCompat::fromLocal8Bit("文件打开失败"),
+                LocalQTCompat::fromLocal8Bit("无法打开数据文件: %1").arg(file.errorString()),
+                true
+            );
+        }
+        return false;
+    }
+
+    if (m_view) {
+        m_view->slot_DA_V_showProgressDialog(
+            LocalQTCompat::fromLocal8Bit("正在解析数据"),
+            LocalQTCompat::fromLocal8Bit("正在读取和索引数据..."),
+            0, 100
+        );
+    }
+
+    // 获取文件总大小用于进度计算
+    qint64 fileSize = file.size();
+
+    // 标记异步处理开始
+    m_processingData = true;
+    m_performanceTimer.restart();
+
+    // 创建异步处理任务
+    QFuture<int> future = QtConcurrent::run([this, selectedFilePath, fileSize]() -> int {
+        // 重新打开文件（在新线程中）
+        QFile threadFile(selectedFilePath);
+        if (!threadFile.open(QIODevice::ReadOnly)) {
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("线程中无法打开数据文件: %1").arg(threadFile.errorString()));
+            return 0;
+        }
+
+        // 使用更大的缓冲区提高性能
+        constexpr qint64 THREAD_BUFFER_SIZE = 4 * 1024 * 1024; // 4MB缓冲区
+        QByteArray buffer;
+        qint64 totalRead = 0;
+        int totalPackets = 0;
+        QString fileName = QFileInfo(selectedFilePath).fileName();
+
+        // 读取并处理数据块
+        while (!threadFile.atEnd()) {
+            buffer = threadFile.read(THREAD_BUFFER_SIZE);
+            if (buffer.isEmpty()) {
+                break;
+            }
+
+            // 使用IndexGenerator的parseDataStream方法分析和索引数据
+            int packetsFound = IndexGenerator::getInstance().parseDataStream(
+                reinterpret_cast<const uint8_t*>(buffer.constData()),
+                buffer.size(),
+                totalRead,
+                fileName
+            );
+
+            totalPackets += packetsFound;
+            totalRead += buffer.size();
+
+            // 更新进度
+            if (fileSize > 0) {
+                int progress = static_cast<int>((totalRead * 100) / fileSize);
+
+                // 使用Qt元对象系统在UI线程中更新进度
+                QMetaObject::invokeMethod(this, [this, progress]() {
+                    if (m_view) {
+                        m_view->slot_DA_V_updateProgressDialog(progress);
+                    }
+                    }, Qt::QueuedConnection);
+            }
+        }
+
+        threadFile.close();
+
+        // 强制保存索引
+        IndexGenerator::getInstance().saveIndex(true);
+
+        return totalPackets;
+        });
+
+    // 设置监视器
+    m_processWatcher.setFuture(future);
+
+    // 注意：导入操作将在后台继续进行，完成后会调用slot_DA_C_onProcessingFinished
+
+    return true;
 }
 
 bool DataAnalysisController::exportData(const QString& filePath, bool selectedRowsOnly)
 {
-    if (!m_model) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("导出数据失败：模型对象为空"));
+    if (!m_ui || !m_ui->tableWidget) {
         return false;
     }
 
@@ -179,7 +377,7 @@ bool DataAnalysisController::exportData(const QString& filePath, bool selectedRo
     // 如果未提供文件路径，弹出文件保存对话框
     if (selectedFilePath.isEmpty() && m_view) {
         selectedFilePath = QFileDialog::getSaveFileName(m_view,
-            LocalQTCompat::fromLocal8Bit("保存数据文件"),
+            LocalQTCompat::fromLocal8Bit("导出索引"),
             QString(),
             LocalQTCompat::fromLocal8Bit("CSV文件 (*.csv);;JSON文件 (*.json);;所有文件 (*.*)"));
 
@@ -188,21 +386,153 @@ bool DataAnalysisController::exportData(const QString& filePath, bool selectedRo
         }
     }
 
-    // 获取选中的行索引
-    QVector<int> selectedIndices;
+    // 获取索引条目
+    QVector<PacketIndexEntry> entries;
+
     if (selectedRowsOnly && !m_selectedRows.isEmpty()) {
+        // 只导出选中的行
+        QVector<PacketIndexEntry> allEntries = IndexGenerator::getInstance().getAllIndexEntries();
         for (int row : m_selectedRows) {
-            selectedIndices.append(row);
+            if (row >= 0 && row < allEntries.size()) {
+                entries.append(allEntries[row]);
+            }
         }
     }
+    else {
+        // 导出所有条目
+        entries = IndexGenerator::getInstance().getAllIndexEntries();
+    }
 
-    // 导出数据
-    return m_model->exportData(selectedFilePath, selectedIndices);
+    if (entries.isEmpty()) {
+        if (m_view) {
+            m_view->slot_DA_V_showMessageDialog(
+                LocalQTCompat::fromLocal8Bit("导出失败"),
+                LocalQTCompat::fromLocal8Bit("没有可用的索引数据"),
+                true
+            );
+        }
+        return false;
+    }
+
+    // 根据文件扩展名选择导出格式
+    QFileInfo fileInfo(selectedFilePath);
+    QString extension = fileInfo.suffix().toLower();
+
+    bool success = false;
+
+    if (extension == "csv") {
+        success = exportToCsv(selectedFilePath, entries);
+    }
+    else if (extension == "json") {
+        success = exportToJson(selectedFilePath, entries);
+    }
+    else {
+        // 默认使用CSV格式
+        if (!selectedFilePath.endsWith(".csv")) {
+            selectedFilePath += ".csv";
+        }
+        success = exportToCsv(selectedFilePath, entries);
+    }
+
+    if (success && m_view) {
+        m_view->slot_DA_V_showMessageDialog(
+            LocalQTCompat::fromLocal8Bit("导出成功"),
+            LocalQTCompat::fromLocal8Bit("已成功导出 %1 条索引数据至 %2")
+            .arg(entries.size()).arg(selectedFilePath)
+        );
+    }
+
+    return success;
+}
+
+bool DataAnalysisController::exportToCsv(const QString& filePath, const QVector<PacketIndexEntry>& entries)
+{
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开文件进行导出: %1").arg(filePath));
+        if (m_view) {
+            m_view->slot_DA_V_showMessageDialog(
+                LocalQTCompat::fromLocal8Bit("导出失败"),
+                LocalQTCompat::fromLocal8Bit("无法打开文件: %1").arg(file.errorString()),
+                true
+            );
+        }
+        return false;
+    }
+
+    QTextStream out(&file);
+
+    // 写入CSV头
+    out << "索引ID,时间戳,文件偏移,大小,文件名,批次ID,包序号\n";
+
+    // 写入数据
+    for (int i = 0; i < entries.size(); ++i) {
+        const PacketIndexEntry& entry = entries[i];
+        QString timeStr = QDateTime::fromMSecsSinceEpoch(entry.timestamp / 1000000).toString("yyyy-MM-dd hh:mm:ss.zzz");
+
+        out << i << ","
+            << timeStr << ","
+            << entry.fileOffset << ","
+            << entry.size << ","
+            << entry.fileName << ","
+            << entry.batchId << ","
+            << entry.packetIndex << "\n";
+    }
+
+    file.close();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("已导出 %1 条索引到CSV文件: %2").arg(entries.size()).arg(filePath));
+    return true;
+}
+
+bool DataAnalysisController::exportToJson(const QString& filePath, const QVector<PacketIndexEntry>& entries)
+{
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开文件进行导出: %1").arg(filePath));
+        if (m_view) {
+            m_view->slot_DA_V_showMessageDialog(
+                LocalQTCompat::fromLocal8Bit("导出失败"),
+                LocalQTCompat::fromLocal8Bit("无法打开文件: %1").arg(file.errorString()),
+                true
+            );
+        }
+        return false;
+    }
+
+    QJsonArray entriesArray;
+
+    for (int i = 0; i < entries.size(); ++i) {
+        const PacketIndexEntry& entry = entries[i];
+        QString timeStr = QDateTime::fromMSecsSinceEpoch(entry.timestamp / 1000000).toString("yyyy-MM-dd hh:mm:ss.zzz");
+
+        QJsonObject entryObj;
+        entryObj["id"] = i;
+        entryObj["timestamp"] = timeStr;
+        entryObj["fileOffset"] = QString::number(entry.fileOffset); // 使用字符串避免大整数精度问题
+        entryObj["size"] = static_cast<int>(entry.size);
+        entryObj["fileName"] = entry.fileName;
+        entryObj["batchId"] = static_cast<int>(entry.batchId);
+        entryObj["packetIndex"] = static_cast<int>(entry.packetIndex);
+
+        entriesArray.append(entryObj);
+    }
+
+    QJsonObject rootObj;
+    rootObj["version"] = "1.0";
+    rootObj["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    rootObj["entries"] = entriesArray;
+
+    QJsonDocument doc(rootObj);
+    file.write(doc.toJson(QJsonDocument::Compact));
+    file.close();
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("已导出 %1 条索引到JSON文件: %2").arg(entries.size()).arg(filePath));
+    return true;
 }
 
 void DataAnalysisController::clearData()
 {
-    if (!m_model) {
+    if (!m_ui || !m_ui->tableWidget) {
         return;
     }
 
@@ -210,7 +540,7 @@ void DataAnalysisController::clearData()
     if (m_view) {
         QMessageBox::StandardButton result = QMessageBox::question(m_view,
             LocalQTCompat::fromLocal8Bit("确认清除"),
-            LocalQTCompat::fromLocal8Bit("确定要清除所有数据吗？"),
+            LocalQTCompat::fromLocal8Bit("确定要清除所有索引数据吗？"),
             QMessageBox::Yes | QMessageBox::No,
             QMessageBox::No);
 
@@ -219,40 +549,400 @@ void DataAnalysisController::clearData()
         }
     }
 
-    // 清除模型数据
-    m_model->clearDataItems();
-
-    // 清除视图表格
-    if (m_view) {
-        m_view->slot_DA_V_clearDataTable();
-        m_view->slot_DA_V_updateUIState(false);
+    // 等待任何异步操作完成
+    if (m_processWatcher.isRunning()) {
+        m_processWatcher.waitForFinished();
     }
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("数据已清除"));
-}
+    if (m_loadWatcher.isRunning()) {
+        m_loadWatcher.waitForFinished();
+    }
 
-void DataAnalysisController::filterData(const QString& filterExpression)
-{
-    handleFilter(filterExpression);
+    // 清除索引数据
+    IndexGenerator::getInstance().clearIndex();
+
+    // 清除表格
+    m_ui->tableWidget->setRowCount(0);
+
+    // 清除加载缓存
+    m_entriesToLoad.clear();
+    m_batchLoadPosition = 0;
+
+    // 更新UI状态
+    if (m_view) {
+        m_view->slot_DA_V_updateUIState(false);
+        m_view->slot_DA_V_updateStatusBar(LocalQTCompat::fromLocal8Bit("索引数据已清除"), 0);
+    }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("索引数据已清除"));
 }
 
 bool DataAnalysisController::loadDataFromFile(const QString& filePath)
 {
-    if (!m_model) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("加载文件失败：模型对象为空"));
+    if (filePath.isEmpty()) {
         return false;
     }
 
-    // 设置当前数据源
-    setDataSource(filePath);
+    // 如果是索引文件，直接加载
+    if (filePath.endsWith(".idx") || filePath.endsWith(".json")) {
+        QString basePath = filePath;
+        if (filePath.endsWith(".json")) {
+            basePath = filePath.left(filePath.length() - 5); // 移除".json"
+        }
+        else if (filePath.endsWith(".idx")) {
+            basePath = filePath.left(filePath.length() - 4); // 移除".idx"
+        }
 
-    // 使用importData处理各种格式
-    return m_model->importData(filePath);
+        // 如果已有会话索引，先保存它
+        if (!m_sessionId.isEmpty() && IndexGenerator::getInstance().isOpen()) {
+            IndexGenerator::getInstance().saveIndex(true);
+            IndexGenerator::getInstance().close();
+        }
+
+        bool success = IndexGenerator::getInstance().loadIndex(basePath);
+
+        if (success) {
+            // 更新当前数据源
+            setDataSource(QFileInfo(basePath).fileName());
+
+            // 如果已设置会话ID，更新监视路径
+            if (!m_sessionId.isEmpty() && !m_sessionBasePath.isEmpty()) {
+                // 移除旧的监视路径
+                QStringList paths = m_fileWatcher.files();
+                if (!paths.isEmpty()) {
+                    m_fileWatcher.removePaths(paths);
+                }
+
+                // 添加新的监视路径
+                QString indexPath = basePath + ".idx";
+                QString jsonPath = basePath + ".json";
+
+                if (QFile::exists(indexPath)) {
+                    m_fileWatcher.addPath(indexPath);
+                }
+                if (QFile::exists(jsonPath)) {
+                    m_fileWatcher.addPath(jsonPath);
+                }
+            }
+
+            // 加载索引数据到表格
+            loadData();
+            return true;
+        }
+        else if (m_view) {
+            m_view->slot_DA_V_showMessageDialog(
+                LocalQTCompat::fromLocal8Bit("加载失败"),
+                LocalQTCompat::fromLocal8Bit("无法加载索引文件"),
+                true
+            );
+        }
+        return false;
+    }
+    else {
+        // 否则作为数据文件处理
+        return importData(filePath);
+    }
 }
 
-void DataAnalysisController::updateTable(const std::vector<DataAnalysisItem>& items)
+void DataAnalysisController::processRawData(const uint8_t* data, size_t size, uint64_t fileOffset, const QString& fileName)
+{
+    if (!data || size == 0) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("处理原始数据失败：无效数据"));
+        return;
+    }
+
+    // 设置当前数据源
+    QString sourceFileName = fileName;
+    if (sourceFileName.isEmpty()) {
+        sourceFileName = m_currentDataSource.isEmpty() ? m_sessionId : m_currentDataSource;
+    }
+
+    // 避免在UI线程中直接处理大量数据
+    QMutexLocker locker(&m_processMutex);
+
+    // 如果已有处理任务在运行，等待其完成
+    if (m_processingData) {
+        m_processWatcher.waitForFinished();
+    }
+
+    m_processingData = true;
+    m_performanceTimer.restart();
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始异步处理原始数据：%1 字节，文件：%2").arg(size).arg(sourceFileName));
+
+    // 拷贝数据（因为原始指针在异步处理完成前可能已经无效）
+    std::vector<uint8_t> dataCopy(data, data + size);
+
+    // 异步处理数据
+    QFuture<int> future = QtConcurrent::run([this, dataCopy, fileOffset, sourceFileName]() -> int {
+        try {
+            // 确保索引文件已打开
+            if (!m_sessionId.isEmpty() && !m_sessionBasePath.isEmpty()) {
+                IndexGenerator::getInstance().setSessionId(m_sessionId);
+                IndexGenerator::getInstance().setBasePath(m_sessionBasePath);
+            }
+
+            // 使用IndexGenerator的parseDataStream方法分析和索引数据流
+            int packetsFound = IndexGenerator::getInstance().parseDataStream(
+                dataCopy.data(), dataCopy.size(), fileOffset, sourceFileName
+            );
+
+            // 强制保存索引 - 只在找到数据包时保存
+            if (packetsFound > 0) {
+                IndexGenerator::getInstance().saveIndex(true);
+            }
+
+            LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("从原始数据中解析并索引了 %1 个数据包")).arg(packetsFound));
+            return packetsFound;
+        }
+        catch (const std::exception& e) {
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("处理原始数据时发生异常: %1").arg(e.what()));
+            return 0;
+        }
+        });
+
+    m_processWatcher.setFuture(future);
+}
+
+void DataAnalysisController::processDataPackets(const std::vector<DataPacket>& packets, const QString& filePath)
+{
+    if (packets.empty()) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("处理数据包失败：无数据包"));
+        return;
+    }
+
+    QMutexLocker locker(&m_processMutex);
+
+    // 如果已有处理任务在运行，等待其完成
+    if (m_processingData) {
+        m_processWatcher.waitForFinished();
+    }
+
+    m_processingData = true;
+
+    // 解析文件路径以获取更合理的会话ID
+    QFileInfo fileInfo(filePath);
+    QString fileName = fileInfo.fileName();
+
+    // 生成有意义的会话ID
+    QString sessionId;
+    if (!m_sessionId.isEmpty()) {
+        // 优先使用已设置的会话ID
+        sessionId = m_sessionId;
+    }
+    else {
+        // 创建基于时间的会话ID
+        sessionId = QString("session_%1").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"));
+    }
+
+    // 更新成员变量
+    m_sessionId = sessionId;
+
+    // 设置数据源
+    setDataSource(fileName.isEmpty() ? sessionId : fileName);
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("处理 %1 个数据包，会话：%2，源文件：%3").arg(packets.size()).arg(sessionId).arg(filePath));
+
+    // 拷贝数据包和会话信息到局部变量，以便在异步任务中使用
+    std::vector<DataPacket> packetsCopy = packets;
+    QString sessionIdCopy = sessionId;
+    QString basePathCopy = filePath;
+    QString sourceFileName = fileName.isEmpty() ? sessionId : fileName;
+
+    // 异步处理数据
+    QFuture<int> future = QtConcurrent::run([this, packetsCopy, sessionIdCopy, basePathCopy, sourceFileName]() -> int {
+        try {
+            // 将多个数据包合并为一个连续的数据缓冲区
+            size_t totalSize = 0;
+            for (const auto& packet : packetsCopy) {
+                totalSize += packet.getSize();
+            }
+
+            if (totalSize == 0) {
+                LOG_ERROR(LocalQTCompat::fromLocal8Bit("无效的数据包：总大小为0"));
+                return 0;
+            }
+
+            // 创建连续的数据缓冲区
+            std::vector<uint8_t> combinedData;
+            combinedData.reserve(totalSize);
+
+            // 构建完整的缓冲区 - 修复的部分
+            for (const auto& packet : packetsCopy) {
+                if (packet.data && !packet.data->empty()) {
+                    // 正确访问共享指针中的vector数据
+                    combinedData.insert(combinedData.end(),
+                        packet.data->begin(),
+                        packet.data->end());
+                }
+            }
+
+            IndexGenerator::getInstance().setBasePath(basePathCopy);
+            IndexGenerator::getInstance().setSessionId(sessionIdCopy);
+
+            // 使用IndexGenerator的parseDataStream进行数据分析和索引
+            int packetsFound = IndexGenerator::getInstance().parseDataStream(
+                combinedData.data(), combinedData.size(), 0, sourceFileName
+            );
+
+            // 强制保存索引 - 只在找到数据包时保存
+            if (packetsFound > 0) {
+                IndexGenerator::getInstance().saveIndex(true);
+            }
+
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("从数据包中解析并索引了 %1 个数据包").arg(packetsFound));
+            return packetsFound;
+        }
+        catch (const std::exception& e) {
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("处理数据包时发生异常: %1").arg(e.what()));
+            return 0;
+        }
+        });
+
+    m_processWatcher.setFuture(future);
+}
+
+void DataAnalysisController::updateIndexTable(const QVector<PacketIndexEntry>& entries)
+{
+    if (!m_ui || !m_ui->tableWidget || entries.isEmpty()) {
+        return;
+    }
+
+    // 使用优化的批量加载方法
+    loadDataBatched(entries, m_maxBatchSize);
+}
+
+void DataAnalysisController::configureIndexing(const QString& sessionId, const QString& basePath)
+{
+    // 等待任何正在进行的处理完成
+    if (m_processWatcher.isRunning()) {
+        m_processWatcher.waitForFinished();
+    }
+
+    if (m_loadWatcher.isRunning()) {
+        m_loadWatcher.waitForFinished();
+    }
+
+    // 保存会话信息
+    m_sessionId = sessionId;
+    m_sessionBasePath = basePath;
+
+    // 确保目录存在
+    QDir dir(basePath);
+    if (!dir.exists() && !dir.mkpath(".")) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法创建索引基本目录: %1").arg(basePath));
+        return;
+    }
+
+    // 配置IndexGenerator
+    IndexGenerator::getInstance().setSessionId(sessionId);
+    IndexGenerator::getInstance().setBasePath(basePath);
+
+    // 构造索引文件路径
+    QString indexPath = QString("%1/%2.idx").arg(basePath).arg(sessionId);
+    QString jsonPath = QString("%1/%2.idx.json").arg(basePath).arg(sessionId);
+
+    // 监视索引文件变化
+    QStringList paths = m_fileWatcher.files();
+    if (!paths.isEmpty()) {
+        m_fileWatcher.removePaths(paths);
+    }
+
+    if (QFile::exists(indexPath)) {
+        m_fileWatcher.addPath(indexPath);
+    }
+    if (QFile::exists(jsonPath)) {
+        m_fileWatcher.addPath(jsonPath);
+    }
+
+    // 设置当前数据源为会话ID
+    setDataSource(sessionId);
+
+    // 加载索引数据
+    loadData();
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("已配置索引会话 - ID: %1, 路径: %2").arg(sessionId).arg(basePath));
+}
+
+void DataAnalysisController::setMaxBatchSize(int maxBatchSize)
+{
+    m_maxBatchSize = qMax(100, maxBatchSize);  // 确保最小批量大小为100
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置最大批处理大小为: %1").arg(m_maxBatchSize));
+}
+
+bool DataAnalysisController::isProcessing() const
+{
+    return m_processingData || m_loadWatcher.isRunning();
+}
+
+void DataAnalysisController::loadDataBatched(const QVector<PacketIndexEntry>& entries, int batchSize)
 {
     if (!m_ui || !m_ui->tableWidget) {
+        return;
+    }
+
+    // 避免在加载过程中重复加载
+    if (m_loadWatcher.isRunning()) {
+        m_loadWatcher.waitForFinished();
+    }
+
+    // 重置加载状态
+    m_entriesToLoad = entries;
+    m_batchLoadPosition = 0;
+
+    // 准备表格
+    QTableWidget* table = m_ui->tableWidget;
+    table->setUpdatesEnabled(false);  // 暂停更新提高性能
+    table->clearContents();
+    table->setRowCount(entries.size());
+
+    // 显示进度对话框（只有大量数据时才显示）
+    if (m_view && entries.size() > 1000) {
+        m_view->slot_DA_V_showProgressDialog(
+            LocalQTCompat::fromLocal8Bit("加载数据"),
+            LocalQTCompat::fromLocal8Bit("正在加载索引数据..."),
+            0, 100
+        );
+    }
+
+    // 确定第一批大小
+    int firstBatchSize = qMin(batchSize, entries.size());
+    m_batchLoadPosition = firstBatchSize;
+
+    // 启动性能计时
+    m_performanceTimer.restart();
+
+    // 异步加载第一批
+    QFuture<void> future = QtConcurrent::run([this, firstBatchSize]() {
+        // 获取第一批的条目
+        QVector<PacketIndexEntry> firstBatch;
+        for (int i = 0; i < firstBatchSize && i < m_entriesToLoad.size(); ++i) {
+            firstBatch.append(m_entriesToLoad[i]);
+        }
+
+        // 在UI线程中更新表格
+        QMetaObject::invokeMethod(this, [this, firstBatch]() {
+            optimizedTableUpdate(firstBatch, 0, firstBatch.size());
+
+            // 更新进度
+            if (m_view && !m_entriesToLoad.isEmpty()) {
+                int progress = (m_batchLoadPosition * 100) / m_entriesToLoad.size();
+                m_view->slot_DA_V_updateProgressDialog(progress);
+            }
+
+            // 如果只有一批数据，直接完成
+            if (m_batchLoadPosition >= m_entriesToLoad.size()) {
+                slot_DA_C_onBatchLoadFinished();
+            }
+            }, Qt::QueuedConnection);
+        });
+
+    m_loadWatcher.setFuture(future);
+}
+
+void DataAnalysisController::optimizedTableUpdate(const QVector<PacketIndexEntry>& entries, int startRow, int count)
+{
+    if (!m_ui || !m_ui->tableWidget || entries.isEmpty() || count <= 0) {
         return;
     }
 
@@ -260,866 +950,112 @@ void DataAnalysisController::updateTable(const std::vector<DataAnalysisItem>& it
 
     QTableWidget* table = m_ui->tableWidget;
 
-    // 停止表格刷新以提高性能
-    table->setUpdatesEnabled(false);
+    for (int i = 0; i < count && (i < entries.size()); ++i) {
+        int row = startRow + i;
+        if (row >= table->rowCount()) {
+            continue; // 防止越界
+        }
 
-    // 清除当前表格内容
-    table->clearContents();
-    table->setRowCount(static_cast<int>(items.size()));
+        const PacketIndexEntry& entry = entries[i];
 
-    // 填充表格数据
-    for (size_t i = 0; i < items.size(); ++i) {
-        updateTableRow(static_cast<int>(i), items[i]);
+        // 索引ID
+        QTableWidgetItem* idItem = new QTableWidgetItem(QString::number(row));
+        idItem->setTextAlignment(Qt::AlignCenter);
+        table->setItem(row, 0, idItem);
+
+        // 时间戳
+        QString timeStr = QDateTime::fromMSecsSinceEpoch(entry.timestamp / 1000000).toString("yyyy-MM-dd hh:mm:ss.zzz");
+        QTableWidgetItem* timestampItem = new QTableWidgetItem(timeStr);
+        table->setItem(row, 1, timestampItem);
+
+        // 文件偏移
+        QTableWidgetItem* offsetItem = new QTableWidgetItem(QString("0x%1").arg(entry.fileOffset, 8, 16, QChar('0')));
+        offsetItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        table->setItem(row, 2, offsetItem);
+
+        // 大小
+        QTableWidgetItem* sizeItem = new QTableWidgetItem(QString::number(entry.size));
+        sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        table->setItem(row, 3, sizeItem);
+
+        // 文件名
+        QTableWidgetItem* fileNameItem = new QTableWidgetItem(entry.fileName);
+        table->setItem(row, 4, fileNameItem);
+
+        // 批次ID
+        QTableWidgetItem* batchItem = new QTableWidgetItem(QString::number(entry.batchId));
+        batchItem->setTextAlignment(Qt::AlignCenter);
+        table->setItem(row, 5, batchItem);
+
+        // 包序号
+        QTableWidgetItem* packetIndexItem = new QTableWidgetItem(QString::number(entry.packetIndex));
+        packetIndexItem->setTextAlignment(Qt::AlignCenter);
+        table->setItem(row, 6, packetIndexItem);
     }
 
-    // 恢复表格刷新
-    table->setUpdatesEnabled(true);
+    // 处理完后重新启用UI更新
+    if (startRow + count >= table->rowCount() || count >= entries.size()) {
+        table->setUpdatesEnabled(true);
+    }
 
     m_isUpdatingTable = false;
-
-    // 更新UI状态
-    if (m_view) {
-        m_view->slot_DA_V_updateUIState(!items.empty());
-    }
 }
 
-void DataAnalysisController::updateTableRow(int row, const DataAnalysisItem& item)
+void DataAnalysisController::slot_DA_C_onBatchLoadFinished()
 {
-    if (!m_ui || !m_ui->tableWidget || row < 0) {
-        return;
-    }
+    // 检查是否有更多数据需要加载
+    if (m_batchLoadPosition < m_entriesToLoad.size()) {
+        // 确定下一批大小
+        int remainingItems = m_entriesToLoad.size() - m_batchLoadPosition;
+        int batchSize = qMin(m_maxBatchSize, remainingItems);
 
-    QTableWidget* table = m_ui->tableWidget;
-
-    // 检查行索引有效性
-    if (row >= table->rowCount()) {
-        return;
-    }
-
-    // 序号列
-    QTableWidgetItem* indexItem = new QTableWidgetItem(QString::number(item.index));
-    indexItem->setTextAlignment(Qt::AlignCenter);
-    table->setItem(row, 0, indexItem);
-
-    // 时间戳列
-    QTableWidgetItem* timestampItem = new QTableWidgetItem(item.timeStamp);
-    table->setItem(row, 1, timestampItem);
-
-    // 数值列
-    QTableWidgetItem* valueItem = new QTableWidgetItem(QString::number(item.value, 'f', 2));
-    valueItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    table->setItem(row, 2, valueItem);
-
-    // 描述列
-    QTableWidgetItem* descriptionItem = new QTableWidgetItem(item.description);
-    table->setItem(row, 3, descriptionItem);
-
-    // 数据点列（最多显示8个数据点）
-    for (int i = 0; i < item.dataPoints.size() && i < 8; ++i) {
-        QTableWidgetItem* pointItem = new QTableWidgetItem(
-            QString::number(item.dataPoints[i], 'f', 2));
-        pointItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        table->setItem(row, 4 + i, pointItem);
-    }
-
-    // 根据数据有效性设置行的样式
-    if (!item.isValid) {
-        for (int col = 0; col < table->columnCount(); ++col) {
-            QTableWidgetItem* currentItem = table->item(row, col);
-            if (currentItem) {
-                currentItem->setForeground(QBrush(Qt::gray));
-                QFont font = currentItem->font();
-                font.setItalic(true);
-                currentItem->setFont(font);
-            }
-        }
-    }
-}
-
-DataPacket DataAnalysisController::createDataPacketFromItem(const DataAnalysisItem& item) const
-{
-    // 创建数据包
-    DataPacket packet;
-
-    // 转换QVector到std::vector
-    std::vector<uint8_t> data;
-    for (const double& point : item.dataPoints) {
-        // 简单转换 - 实际代码中需要适当的类型转换
-        data.push_back(static_cast<uint8_t>(point));
-    }
-
-    // 设置数据包数据 (TODO: 需要实现setData方法)
-    // packet.setData(data.data(), data.size());
-
-    // 解析时间戳
-    QDateTime dt = QDateTime::fromString(item.timeStamp, "yyyy-MM-dd hh:mm:ss.zzz");
-    packet.timestamp = dt.toMSecsSinceEpoch() * 1000000; // 转换为纳秒
-
-    // 设置其他字段
-    packet.batchId = item.index / 100; // 示例映射
-
-    return packet;
-}
-
-QString DataAnalysisController::serializeFeatures(const QMap<QString, QVariant>& features) const
-{
-    QStringList featureStrings;
-
-    for (auto it = features.constBegin(); it != features.constEnd(); ++it) {
-        QString valueStr;
-
-        if (it.value().canConvert<double>()) {
-            valueStr = QString::number(it.value().toDouble(), 'f', 4);
-        }
-        else if (it.value().canConvert<int>()) {
-            valueStr = QString::number(it.value().toInt());
-        }
-        else if (it.value().canConvert<bool>()) {
-            valueStr = it.value().toBool() ? "true" : "false";
-        }
-        else if (it.value().canConvert<QVariantList>()) {
-            QStringList valueList;
-            QVariantList list = it.value().toList();
-            for (const QVariant& v : list) {
-                valueList.append(v.toString());
-            }
-            valueStr = "[" + valueList.join(",") + "]";
-        }
-        else {
-            valueStr = it.value().toString();
+        // 准备下一批数据
+        QVector<PacketIndexEntry> batchEntries;
+        for (int i = 0; i < batchSize && (m_batchLoadPosition + i) < m_entriesToLoad.size(); ++i) {
+            batchEntries.append(m_entriesToLoad[m_batchLoadPosition + i]);
         }
 
-        featureStrings.append(it.key() + ":" + valueStr);
-    }
+        int startRow = m_batchLoadPosition;
+        m_batchLoadPosition += batchSize;
 
-    return featureStrings.join(";");
-}
+        // 异步加载下一批
+        QFuture<void> future = QtConcurrent::run([this, batchEntries, startRow]() {
+            // 在UI线程中更新表格
+            QMetaObject::invokeMethod(this, [this, batchEntries, startRow]() {
+                optimizedTableUpdate(batchEntries, startRow, batchEntries.size());
 
-QList<int> DataAnalysisController::getSelectedRows() const
-{
-    QList<int> selectedRows;
-
-    if (!m_ui || !m_ui->tableWidget) {
-        return selectedRows;
-    }
-
-    // 获取选中的行
-    QList<QTableWidgetItem*> selectedItems = m_ui->tableWidget->selectedItems();
-    for (QTableWidgetItem* item : selectedItems) {
-        int row = item->row();
-        if (!selectedRows.contains(row)) {
-            selectedRows.append(row);
-        }
-    }
-
-    return selectedRows;
-}
-
-void DataAnalysisController::processDataPackets(const std::vector<DataPacket>& packets)
-{
-    if (!m_model) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("处理数据包失败：模型对象为空"));
-        return;
-    }
-
-    std::vector<DataAnalysisItem> items;
-    for (const auto& packet : packets) {
-        DataAnalysisItem item = convertPacketToAnalysisItem(packet);
-
-        // 如果启用了自动特征提取
-        if (m_autoExtractFeatures) {
-            // 提取特征
-            QMap<QString, QVariant> features =
-                FeatureExtractor::getInstance().extractFeatures(packet);
-
-            // 存储特征
-            m_model->getFeatures(item.index) = features;
-
-            // 如果有活动的数据源，更新索引
-            if (!m_currentDataSource.isEmpty()) {
-                // 添加到索引（暂时估计偏移量为0）
-                int indexId = IndexGenerator::getInstance().addPacketIndex(
-                    packet, 0, m_currentDataSource);
-
-                // 添加提取的特征到索引
-                for (auto it = features.constBegin(); it != features.constEnd(); ++it) {
-                    IndexGenerator::getInstance().addFeature(indexId, it.key(), it.value());
+                // 更新进度
+                if (m_view && !m_entriesToLoad.isEmpty()) {
+                    int progress = (m_batchLoadPosition * 100) / m_entriesToLoad.size();
+                    m_view->slot_DA_V_updateProgressDialog(progress);
                 }
-            }
-        }
-
-        items.push_back(item);
-    }
-
-    // 批量添加项目到模型
-    if (!items.empty()) {
-        m_model->addDataItems(items);
-    }
-}
-
-DataAnalysisItem DataAnalysisController::convertPacketToAnalysisItem(const DataPacket& packet)
-{
-    // 创建时间戳
-    QString timeStamp = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz");
-
-    // 获取数据包的第一个字节作为主值（示例）
-    double value = 0.0;
-    if (packet.getSize() > 0) {
-        value = static_cast<double>(packet.getData()[0]);
-    }
-
-    // 创建描述
-    QString description = QString(LocalQTCompat::fromLocal8Bit("数据包大小: %1 B, 批次: %2/%3"))
-        .arg(packet.getSize())
-        .arg(packet.batchId)
-        .arg(packet.packetsInBatch);
-
-    // 提取数据点（示例：取前8个字节作为数据点）
-    QVector<double> dataPoints;
-    const size_t maxPoints = std::min(packet.getSize(), static_cast<size_t>(8));
-    for (size_t i = 0; i < maxPoints; ++i) {
-        dataPoints.append(static_cast<double>(packet.getData()[i]));
-    }
-
-    // 创建分析项
-    static int itemIndex = 0;
-    return DataAnalysisItem(itemIndex++, timeStamp, value, description, dataPoints);
-}
-
-void DataAnalysisController::enableAutoFeatureExtraction(bool enable, int interval)
-{
-    m_autoExtractFeatures = enable;
-
-    if (interval > 0) {
-        m_featureExtractInterval = interval;
-    }
-
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("自动特征提取: %1, 间隔: %2项"))
-        .arg(enable ? LocalQTCompat::fromLocal8Bit("启用") : LocalQTCompat::fromLocal8Bit("禁用"))
-        .arg(m_featureExtractInterval));
-}
-
-void DataAnalysisController::handleFilter(const QString& filterText)
-{
-    if (!m_model) {
-        return;
-    }
-
-    if (filterText.isEmpty()) {
-        // 如果过滤条件为空，显示所有数据
-        loadData();
-        if (m_view) {
-            m_view->slot_DA_V_updateStatusBar(
-                LocalQTCompat::fromLocal8Bit("显示所有数据"),
-                m_model->getDataItemCount()
-            );
-        }
-        return;
-    }
-
-    // 应用过滤
-    QVector<int> filteredIndices = m_model->filterData(filterText);
-
-    if (filteredIndices.isEmpty()) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("过滤结果"),
-                LocalQTCompat::fromLocal8Bit("没有找到匹配的数据")
-            );
-            m_view->slot_DA_V_updateStatusBar(
-                LocalQTCompat::fromLocal8Bit("过滤：无匹配数据"),
-                0
-            );
-        }
-        return;
-    }
-
-    // 获取所有数据项
-    const std::vector<DataAnalysisItem>& allItems = m_model->getDataItems();
-
-    // 创建过滤后的项目列表
-    std::vector<DataAnalysisItem> filteredItems;
-    for (int index : filteredIndices) {
-        if (index >= 0 && index < static_cast<int>(allItems.size())) {
-            filteredItems.push_back(allItems[index]);
-        }
-    }
-
-    // 更新表格显示
-    updateTable(filteredItems);
-
-    if (m_view) {
-        m_view->slot_DA_V_updateStatusBar(
-            QString(LocalQTCompat::fromLocal8Bit("过滤：找到 %1 条匹配数据")).arg(filteredItems.size()),
-            static_cast<int>(filteredItems.size())
-        );
-    }
-
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("过滤得到 %1 条匹配数据")).arg(filteredItems.size()));
-}
-
-void DataAnalysisController::handleAnalyzeRequest(int analyzerType)
-{
-    QList<int> selectedRows = getSelectedRows();
-    if (selectedRows.isEmpty()) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("分析提示"),
-                LocalQTCompat::fromLocal8Bit("请先选择要分析的数据行"),
-                true
-            );
-        }
-        return;
-    }
-
-    // 获取分析器类型
-    QString analyzerName;
-    switch (analyzerType) {
-    case 0:
-        analyzerName = "basic_statistics";
-        break;
-    case 1:
-        analyzerName = "trend_analysis";
-        break;
-    case 2:
-        analyzerName = "anomaly_detection";
-        break;
-    default:
-        analyzerName = "basic_statistics";
-        break;
-    }
-
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("开始分析选中的 %1 行数据，分析器类型: %2"))
-        .arg(selectedRows.size())
-        .arg(analyzerName));
-
-    // 提取要分析的数据项
-    const std::vector<DataAnalysisItem>& allItems = m_model->getDataItems();
-    std::vector<DataAnalysisItem> itemsToAnalyze;
-
-    for (int row : selectedRows) {
-        if (row >= 0 && row < static_cast<int>(allItems.size())) {
-            itemsToAnalyze.push_back(allItems[row]);
-        }
-    }
-
-    if (itemsToAnalyze.empty()) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("分析错误"),
-                LocalQTCompat::fromLocal8Bit("没有有效的数据进行分析"),
-                true
-            );
-        }
-        return;
-    }
-
-    // 执行分析
-    AnalysisResult result = DataAnalysisManager::getInstance().analyzeBatch(
-        itemsToAnalyze, analyzerName);
-
-    if (!result.success) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("分析错误"),
-                QString(LocalQTCompat::fromLocal8Bit("分析失败: %1")).arg(result.error),
-                true
-            );
-        }
-        return;
-    }
-
-    // 显示分析结果
-    QString resultText = QString(LocalQTCompat::fromLocal8Bit("分析结果 (%1 项数据):\n"))
-        .arg(itemsToAnalyze.size());
-
-    // 限制显示的指标数量，防止UI过载
-    int metricCount = 0;
-    for (auto it = result.metrics.constBegin();
-        it != result.metrics.constEnd() && metricCount < 10;
-        ++it, ++metricCount) {
-
-        QString valueStr;
-        if (it.value().canConvert<double>()) {
-            valueStr = QString::number(it.value().toDouble(), 'f', 2);
-        }
-        else {
-            valueStr = it.value().toString();
-        }
-
-        resultText += QString("%1: %2\n").arg(it.key()).arg(valueStr);
-    }
-
-    if (result.metrics.size() > 10) {
-        resultText += QString(LocalQTCompat::fromLocal8Bit("... 以及 %1 个其他指标"))
-            .arg(result.metrics.size() - 10);
-    }
-
-    if (m_view) {
-        m_view->slot_DA_V_showAnalysisResult(resultText);
-    }
-
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("分析完成，计算了 %1 个指标")).arg(result.metrics.size()));
-}
-
-void DataAnalysisController::handleVisualizeRequest(int chartType)
-{
-    if (!m_model) {
-        return;
-    }
-
-    const std::vector<DataAnalysisItem>& items = m_model->getDataItems();
-    if (items.empty()) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("可视化提示"),
-                LocalQTCompat::fromLocal8Bit("没有可用数据进行可视化"),
-                true
-            );
-        }
-        return;
-    }
-
-    // 创建可视化
-    DataVisualizationOptions::ChartType type;
-    switch (chartType) {
-    case 0:
-        type = DataVisualizationOptions::LINE_CHART;
-        break;
-    case 1:
-        type = DataVisualizationOptions::BAR_CHART;
-        break;
-    case 2:
-        type = DataVisualizationOptions::HISTOGRAM;
-        break;
-    case 3:
-        type = DataVisualizationOptions::SCATTER_PLOT;
-        break;
-    default:
-        type = DataVisualizationOptions::LINE_CHART;
-        break;
-    }
-
-    visualizeData(static_cast<int>(type));
-}
-
-void DataAnalysisController::extractFeaturesAndIndex(const DataAnalysisItem& item, const QString& fileName) {
-    // 提取特征 - 暂时禁用以等待完整实现
-#if 0
-    QMap<QString, QVariant> features = FeatureExtractor::getInstance().extractFeatures(item);
-
-    // 创建和更新索引
-    if (!fileName.isEmpty()) {
-        int indexId = IndexGenerator::getInstance().addPacketIndex(
-            convertToDataPacket(item),
-            0, // 需要从FileSaveManager获取实际偏移量
-            fileName
-        );
-
-        // 添加特征到索引
-        for (auto it = features.begin(); it != features.end(); ++it) {
-            IndexGenerator::getInstance().addFeature(indexId, it.key(), it.value());
-        }
-    }
-
-    // 更新模型
-    m_model->setFeatures(item.index, features);
-#endif
-}
-
-bool DataAnalysisController::loadDataFromIndex(const QString& indexPath)
-{
-    // 加载索引文件
-    if (!IndexGenerator::getInstance().loadIndex(indexPath)) {
-        return false;
-    }
-
-    // 获取索引条目
-    QVector<PacketIndexEntry> entries = IndexGenerator::getInstance().getAllIndexEntries();
-
-    // 清除当前数据
-    m_model->clearDataItems();
-
-    // 批量处理索引条目
-    std::vector<DataAnalysisItem> items;
-    for (const auto& entry : entries) {
-        DataAnalysisItem item = convertIndexEntryToAnalysisItem(entry);
-        items.push_back(item);
-    }
-
-    // 添加到模型
-    m_model->addDataItems(items);
-
-    return true;
-}
-
-DataAnalysisItem DataAnalysisController::convertIndexEntryToAnalysisItem(const PacketIndexEntry& entry)
-{
-    // 创建DataAnalysisItem对象并转换相关字段
-    QString timestamp = QDateTime::fromMSecsSinceEpoch(entry.timestamp / 1000000).toString("yyyy-MM-dd hh:mm:ss.zzz");
-    double value = 0.0;
-
-    // 如果特征中包含主值，使用它
-    if (entry.features.contains("main_value")) {
-        value = entry.features["main_value"].toDouble();
-    }
-
-    QVector<double> dataPoints;
-    if (entry.features.contains("data_points")) {
-        QVariantList points = entry.features["data_points"].toList();
-        for (const QVariant& point : points) {
-            dataPoints.append(point.toDouble());
-        }
-    }
-
-    QString description = QString(LocalQTCompat::fromLocal8Bit("来源: %1, 偏移: %2"))
-        .arg(entry.fileName).arg(entry.fileOffset);
-
-    return DataAnalysisItem(entry.packetIndex, timestamp, value, description, dataPoints);
-}
-
-bool DataAnalysisController::exportAnalysisResults(const QString& filePath) {
-    QFile file(filePath);
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        LOG_ERROR(QString(LocalQTCompat::fromLocal8Bit("无法打开文件进行导出: %1")).arg(filePath));
-        return false;
-    }
-
-    QTextStream out(&file);
-
-    // 写入标题行
-    out << LocalQTCompat::fromLocal8Bit("索引,时间戳,数值,描述,特征,关联文件,文件偏移\n");
-
-    // 获取所有选中行
-    QList<int> selectedRows = getSelectedRows();
-    const std::vector<DataAnalysisItem>& items = m_model->getDataItems();
-
-    for (int row : selectedRows) {
-        if (row >= 0 && row < static_cast<int>(items.size())) {
-            const DataAnalysisItem& item = items[row];
-
-            // 查找对应的索引条目
-            // 这里需要实现查找逻辑，可能需要额外存储映射关系
-            QString relatedFile = LocalQTCompat::fromLocal8Bit("未知");
-            uint64_t fileOffset = 0;
-
-            // 获取特征
-            QMap<QString, QVariant> features = m_model->getFeatures(row);
-
-            // 暂时禁用，等待完整实现
-#if 0
-            QString featuresStr = serializeFeatures(features);
-
-            out << item.index << ","
-                << item.timeStamp << ","
-                << item.value << ","
-                << item.description << ","
-                << featuresStr << ","
-                << relatedFile << ","
-                << fileOffset << "\n";
-#endif
-        }
-    }
-
-    file.close();
-    return true;
-}
-
-void DataAnalysisController::analyzeSelectedData()
-{
-    QList<int> selectedRows = getSelectedRows();
-
-    if (selectedRows.isEmpty()) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("分析提示"),
-                LocalQTCompat::fromLocal8Bit("请先选择要分析的数据行"),
-                true
-            );
-        }
-        return;
-    }
-
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("开始分析选中的 %1 行数据")).arg(selectedRows.size()));
-
-    // 提取特征
-    bool success = m_model->extractFeaturesBatch(selectedRows.toVector());
-
-    if (!success) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("分析错误"),
-                LocalQTCompat::fromLocal8Bit("特征提取失败"),
-                true
-            );
-        }
-        return;
-    }
-
-    // 获取第一个选中项的特征用于展示
-    int firstIndex = selectedRows.first();
-    QMap<QString, QVariant> features = m_model->getFeatures(firstIndex);
-
-    // 显示分析结果对话框
-    if (m_view && !features.isEmpty()) {
-        QString featureInfo;
-
-        for (auto it = features.constBegin(); it != features.constEnd(); ++it) {
-            QString valueStr;
-
-            if (it.value().canConvert<double>()) {
-                valueStr = QString::number(it.value().toDouble(), 'f', 2);
-            }
-            else if (it.value().canConvert<QVariantList>()) {
-                valueStr = QString(LocalQTCompat::fromLocal8Bit("[%1 个元素]")).arg(it.value().toList().size());
-            }
-            else {
-                valueStr = it.value().toString();
-            }
-
-            featureInfo += QString("%1: %2\n").arg(it.key()).arg(valueStr);
-        }
-
-        m_view->slot_DA_V_showMessageDialog(LocalQTCompat::fromLocal8Bit("特征分析结果"), featureInfo);
-    }
-
-    // 自动生成可视化（如果特征中包含直方图数据）
-    if (features.contains("histogram")) {
-        visualizeData(DataVisualizationOptions::HISTOGRAM);
-    }
-}
-
-void DataAnalysisController::visualizeData(int chartType)
-{
-    // 延迟初始化可视化组件
-    if (!m_visualization) {
-        m_visualization = std::make_unique<DataVisualization>();
-        connect(m_visualization.get(), &DataVisualization::pointClicked,
-            this, [this](double x, double y) {
-                LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("图表点击事件: x=%1, y=%2")).arg(x).arg(y));
+                }, Qt::QueuedConnection);
             });
-    }
 
-    // 获取所有数据项或选中的数据项
-    QList<int> selectedRows = getSelectedRows();
-    const std::vector<DataAnalysisItem>& allItems = m_model->getDataItems();
-    std::vector<DataAnalysisItem> itemsToVisualize;
-
-    if (selectedRows.isEmpty()) {
-        // 使用所有数据
-        itemsToVisualize = allItems;
+        m_loadWatcher.setFuture(future);
     }
     else {
-        // 使用选中的数据
-        for (int row : selectedRows) {
-            if (row >= 0 && row < static_cast<int>(allItems.size())) {
-                itemsToVisualize.push_back(allItems[row]);
-            }
+        // 全部加载完成
+        if (m_ui && m_ui->tableWidget) {
+            m_ui->tableWidget->setUpdatesEnabled(true);
         }
-    }
 
-    if (itemsToVisualize.empty()) {
         if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("可视化提示"),
-                LocalQTCompat::fromLocal8Bit("没有可用数据进行可视化"),
-                true
+            m_view->slot_DA_V_hideProgressDialog();
+            m_view->slot_DA_V_updateUIState(!m_entriesToLoad.isEmpty());
+            m_view->slot_DA_V_updateStatusBar(
+                LocalQTCompat::fromLocal8Bit("索引数据已加载"),
+                m_entriesToLoad.size()
             );
         }
-        return;
-    }
 
-    // 设置可视化选项
-    DataVisualizationOptions options;
-    options.type = static_cast<DataVisualizationOptions::ChartType>(chartType);
+        // 记录性能数据
+        qint64 elapsedMs = m_performanceTimer.elapsed();
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("表格数据加载完成，共 %1 条记录，耗时 %2 毫秒").arg(m_entriesToLoad.size()).arg(elapsedMs));
 
-    switch (chartType) {
-    case DataVisualizationOptions::LINE_CHART:
-        options.title = LocalQTCompat::fromLocal8Bit("数据趋势图");
-        options.xAxisTitle = LocalQTCompat::fromLocal8Bit("时间");
-        options.yAxisTitle = LocalQTCompat::fromLocal8Bit("数值");
-        break;
-
-    case DataVisualizationOptions::BAR_CHART:
-        options.title = LocalQTCompat::fromLocal8Bit("数据分布图");
-        options.xAxisTitle = LocalQTCompat::fromLocal8Bit("数据项");
-        options.yAxisTitle = LocalQTCompat::fromLocal8Bit("数值");
-        break;
-
-    case DataVisualizationOptions::HISTOGRAM:
-        options.title = LocalQTCompat::fromLocal8Bit("直方图分析");
-        options.xAxisTitle = LocalQTCompat::fromLocal8Bit("数值区间");
-        options.yAxisTitle = LocalQTCompat::fromLocal8Bit("频率");
-        break;
-
-    case DataVisualizationOptions::SCATTER_PLOT:
-        options.title = LocalQTCompat::fromLocal8Bit("数据散点图");
-        options.xAxisTitle = LocalQTCompat::fromLocal8Bit("X值");
-        options.yAxisTitle = LocalQTCompat::fromLocal8Bit("Y值");
-        break;
-
-    default:
-        break;
-    }
-
-    // 生成可视化
-    m_visualization->visualizeFromItems(itemsToVisualize, options);
-
-    // 显示可视化对话框
-    m_visualization->setWindowTitle(options.title);
-    m_visualization->resize(800, 500);
-    m_visualization->show();
-    m_visualization->raise();
-    m_visualization->activateWindow();
-
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("已创建%1，包含 %2 个数据点"))
-        .arg(options.title)
-        .arg(itemsToVisualize.size()));
-}
-
-void DataAnalysisController::exportVisualization(const QString& filePath)
-{
-    if (!m_visualization) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("导出提示"),
-                LocalQTCompat::fromLocal8Bit("请先创建可视化图表"),
-                true
-            );
-        }
-        return;
-    }
-
-    QString selectedFilePath = filePath;
-
-    // 如果未提供文件路径，弹出文件保存对话框
-    if (selectedFilePath.isEmpty() && m_view) {
-        selectedFilePath = QFileDialog::getSaveFileName(m_view,
-            LocalQTCompat::fromLocal8Bit("导出图表"),
-            QString(),
-            LocalQTCompat::fromLocal8Bit("PNG图片 (*.png);;JPG图片 (*.jpg);;所有文件 (*.*)"));
-
-        if (selectedFilePath.isEmpty()) {
-            return; // 用户取消了选择
-        }
-    }
-
-    bool success = m_visualization->saveChart(selectedFilePath);
-
-    if (m_view) {
-        if (success) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("导出成功"),
-                QString(LocalQTCompat::fromLocal8Bit("图表已保存到：%1")).arg(selectedFilePath)
-            );
-        }
-        else {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("导出失败"),
-                LocalQTCompat::fromLocal8Bit("保存图表时出错"),
-                true
-            );
-        }
-    }
-}
-
-/*************************** 槽函数实现 ***************************/
-
-void DataAnalysisController::slot_DA_C_onVideoPreviewClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("视频预览按钮点击"));
-
-    // 检查是否有数据
-    if (!m_model || m_model->getDataItemCount() == 0) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("提示"),
-                LocalQTCompat::fromLocal8Bit("没有可用的数据进行视频预览"),
-                true
-            );
-        }
-        return;
-    }
-
-    // 实际应用中，这里可能会触发一个信号给主窗口，让主窗口打开视频预览窗口
-    // 例如：emit signal_DA_C_videoPreviewRequested();
-
-    if (m_view) {
-        m_view->slot_DA_V_showMessageDialog(
-            LocalQTCompat::fromLocal8Bit("视频预览"),
-            LocalQTCompat::fromLocal8Bit("视频预览功能正在开发中")
-        );
-    }
-}
-
-void DataAnalysisController::slot_DA_C_onSaveDataClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("保存数据按钮点击"));
-
-    // 检查是否有数据
-    if (!m_model || m_model->getDataItemCount() == 0) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("提示"),
-                LocalQTCompat::fromLocal8Bit("没有可用的数据进行保存"),
-                true
-            );
-        }
-        return;
-    }
-
-    // 导出数据
-    bool selectedOnly = !m_selectedRows.isEmpty();
-    if (selectedOnly && m_view) {
-        // 如果有选中行，询问是否只保存选中行
-        QMessageBox::StandardButton result = QMessageBox::question(m_view,
-            LocalQTCompat::fromLocal8Bit("保存选择"),
-            LocalQTCompat::fromLocal8Bit("是否只保存选中的行？"),
-            QMessageBox::Yes | QMessageBox::No,
-            QMessageBox::No);
-
-        selectedOnly = (result == QMessageBox::Yes);
-    }
-
-    exportData(QString(), selectedOnly);
-}
-
-void DataAnalysisController::slot_DA_C_onImportDataClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("导入数据按钮点击"));
-    importData();
-}
-
-void DataAnalysisController::slot_DA_C_onExportDataClicked()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("导出数据按钮点击"));
-
-    // 检查是否有数据
-    if (!m_model || m_model->getDataItemCount() == 0) {
-        if (m_view) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("提示"),
-                LocalQTCompat::fromLocal8Bit("没有可用的数据进行导出"),
-                true
-            );
-        }
-        return;
-    }
-
-    // 导出所有数据
-    exportData();
-}
-
-void DataAnalysisController::slot_DA_C_onSelectionChanged(const QList<int>& selectedRows)
-{
-    m_selectedRows = selectedRows;
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("表格选择变更，选中 %1 行")).arg(selectedRows.size()));
-}
-
-void DataAnalysisController::slot_DA_C_onStatisticsChanged(const StatisticsInfo& stats)
-{
-    if (m_view) {
-        m_view->slot_DA_V_updateStatisticsDisplay(stats);
+        // 清空加载缓存
+        m_entriesToLoad.clear();
+        m_batchLoadPosition = 0;
     }
 }
 
@@ -1148,15 +1084,30 @@ void DataAnalysisController::slot_DA_C_onImportCompleted(bool success, const QSt
     }
 }
 
-void DataAnalysisController::slot_DA_C_onExportCompleted(bool success, const QString& message)
+void DataAnalysisController::slot_DA_C_onImportDataClicked()
 {
-    if (m_view) {
-        m_view->slot_DA_V_showMessageDialog(
-            success ? LocalQTCompat::fromLocal8Bit("导出成功") : LocalQTCompat::fromLocal8Bit("导出失败"),
-            message,
-            !success
-        );
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("导入数据按钮点击"));
+    importData();
+}
+
+void DataAnalysisController::slot_DA_C_onExportDataClicked()
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("导出数据按钮点击"));
+
+    // 检查是否有数据
+    if (IndexGenerator::getInstance().getIndexCount() == 0) {
+        if (m_view) {
+            m_view->slot_DA_V_showMessageDialog(
+                LocalQTCompat::fromLocal8Bit("提示"),
+                LocalQTCompat::fromLocal8Bit("没有可用的索引数据进行导出"),
+                true
+            );
+        }
+        return;
     }
+
+    // 导出所有数据
+    exportData();
 }
 
 void DataAnalysisController::slot_DA_C_onClearDataClicked()
@@ -1165,45 +1116,127 @@ void DataAnalysisController::slot_DA_C_onClearDataClicked()
     clearData();
 }
 
+void DataAnalysisController::slot_DA_C_onSelectionChanged(const QList<int>& selectedRows)
+{
+    m_selectedRows = selectedRows;
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("表格选择变更，选中 %1 行").arg(selectedRows.size()));
+}
+
 void DataAnalysisController::slot_DA_C_onLoadDataFromFileRequested(const QString& filePath)
 {
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("从文件加载数据请求: %1")).arg(filePath));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("从文件加载数据请求: %1").arg(filePath));
     loadDataFromFile(filePath);
 }
 
-void DataAnalysisController::slot_DA_C_onFeaturesExtracted(int index, const QMap<QString, QVariant>& features)
+void DataAnalysisController::slot_DA_C_onIndexEntryAdded(const PacketIndexEntry& entry)
 {
-    LOG_INFO(QString(LocalQTCompat::fromLocal8Bit("项目 %1 的特征提取完成，共 %2 个特征"))
-        .arg(index).arg(features.size()));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新索引条目"));
+    // 设置标志防止重入
+    if (!m_ui || !m_ui->tableWidget || m_isUpdatingTable) {
+        return;
+    }
 
-    // 可以在这里实现特征提取完成后的处理逻辑
+    m_isUpdatingTable = true;
+
+    QTableWidget* table = m_ui->tableWidget;
+
+    // 获取当前行数
+    int row = table->rowCount();
+    table->setRowCount(row + 1);
+
+    // 索引ID
+    QTableWidgetItem* idItem = new QTableWidgetItem(QString::number(row));
+    idItem->setTextAlignment(Qt::AlignCenter);
+    table->setItem(row, 0, idItem);
+
+    // 时间戳
+    QString timeStr = QDateTime::fromMSecsSinceEpoch(entry.timestamp / 1000000).toString("yyyy-MM-dd hh:mm:ss.zzz");
+    QTableWidgetItem* timestampItem = new QTableWidgetItem(timeStr);
+    table->setItem(row, 1, timestampItem);
+
+    // 文件偏移
+    QTableWidgetItem* offsetItem = new QTableWidgetItem(QString("0x%1").arg(entry.fileOffset, 8, 16, QChar('0')));
+    offsetItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    table->setItem(row, 2, offsetItem);
+
+    // 大小
+    QTableWidgetItem* sizeItem = new QTableWidgetItem(QString::number(entry.size));
+    sizeItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    table->setItem(row, 3, sizeItem);
+
+    // 文件名
+    QTableWidgetItem* fileNameItem = new QTableWidgetItem(entry.fileName);
+    table->setItem(row, 4, fileNameItem);
+
+    // 批次ID
+    QTableWidgetItem* batchItem = new QTableWidgetItem(QString::number(entry.batchId));
+    batchItem->setTextAlignment(Qt::AlignCenter);
+    table->setItem(row, 5, batchItem);
+
+    // 包序号
+    QTableWidgetItem* packetIndexItem = new QTableWidgetItem(QString::number(entry.packetIndex));
+    packetIndexItem->setTextAlignment(Qt::AlignCenter);
+    table->setItem(row, 6, packetIndexItem);
+
+    // 滚动到最新行
+    table->scrollToItem(idItem);
+
+    // 更新UI状态
+    if (m_view) {
+        m_view->slot_DA_V_updateUIState(true);
+    }
+
+    m_isUpdatingTable = false;
 }
 
-void DataAnalysisController::slot_DA_C_onRealTimeUpdateToggled(bool enabled)
+void DataAnalysisController::slot_DA_C_onIndexUpdated(int count)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("索引已更新"));
     if (m_view) {
-        m_view->slot_DA_V_enableRealTimeUpdate(enabled);
+        m_view->slot_DA_V_updateStatusBar(
+            LocalQTCompat::fromLocal8Bit("索引已更新"),
+            count
+        );
     }
 }
 
-void DataAnalysisController::slot_DA_C_onUpdateIntervalChanged(int interval)
+void DataAnalysisController::slot_DA_C_onProcessingFinished()
 {
+    // 标记处理完成
+    m_processingData = false;
+
+    // 获取处理结果
+    int processedCount = m_processWatcher.result();
+
+    // 记录性能数据
+    qint64 elapsedMs = m_performanceTimer.elapsed();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("异步处理完成 - 处理了 %1 个数据包，耗时 %2 毫秒").arg(processedCount).arg(elapsedMs));
+
+    // 隐藏进度对话框
     if (m_view) {
-        m_view->slot_DA_V_setUpdateInterval(interval);
+        m_view->slot_DA_V_hideProgressDialog();
+
+        // 如果有数据包被处理，显示成功消息
+        if (processedCount > 0) {
+            m_view->slot_DA_V_showMessageDialog(
+                LocalQTCompat::fromLocal8Bit("处理完成"),
+                LocalQTCompat::fromLocal8Bit("成功处理 %1 个数据包，耗时 %2 毫秒")
+                .arg(processedCount).arg(elapsedMs)
+            );
+        }
     }
+
+    // 重新加载索引数据
+    loadData();
 }
 
-void DataAnalysisController::slot_DA_C_onAnalyzeButtonClicked(int analyzerType)
+void DataAnalysisController::slot_DA_C_onIndexFileChanged(const QString& path)
 {
-    handleAnalyzeRequest(analyzerType);
-}
+    // 索引文件发生变化，需要重新加载数据
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("检测到索引文件变化: %1").arg(path));
 
-void DataAnalysisController::slot_DA_C_onVisualizeButtonClicked(int chartType)
-{
-    handleVisualizeRequest(chartType);
-}
-
-void DataAnalysisController::slot_DA_C_onApplyFilterClicked(const QString& filterText)
-{
-    handleFilter(filterText);
+    // 但避免在正在处理的状态下重新加载
+    if (!m_processingData && !m_loadWatcher.isRunning()) {
+        loadData();
+    }
 }

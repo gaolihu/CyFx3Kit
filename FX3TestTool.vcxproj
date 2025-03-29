@@ -115,7 +115,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Source\Analysis\DataAnalysisInterface.cpp" />
-    <ClCompile Include="Source\Analysis\FeatureExtractor.cpp" />
+    <ClCompile Include="Source\Analysis\IndexGenerator.cpp" />
     <ClCompile Include="Source\Core\AppStateMachine.cpp" />
     <ClCompile Include="Source\Core\CommandManager.cpp" />
     <ClCompile Include="Source\Core\DataAcquisition.cpp" />
@@ -127,7 +127,6 @@
     <ClCompile Include="Source\File\DataAccessService.cpp" />
     <ClCompile Include="Source\File\DataCacheManager.cpp" />
     <ClCompile Include="Source\File\FileSaveManager.cpp" />
-    <ClCompile Include="Source\File\IndexGenerator.cpp" />
     <ClCompile Include="Source\File\StandardFileWriter.cpp" />
     <ClCompile Include="Source\Main\main.cpp" />
     <ClCompile Include="Source\MVC\Controllers\ChannelSelectController.cpp" />
@@ -170,8 +169,8 @@
     <QtMoc Include="Source\MVC\Controllers\WaveformAnalysisController.h" />
     <QtMoc Include="Source\MVC\Controllers\DataAnalysisController.h" />
     <QtMoc Include="Source\MVC\Controllers\FileSaveController.h" />
-    <QtMoc Include="Source\Analysis\FeatureExtractor.h" />
     <QtMoc Include="Source\Analysis\DataAnalysisInterface.h" />
+    <QtMoc Include="Source\Analysis\IndexGenerator.h" />
     <ClInclude Include="Source\Core\DataPacket.h" />
     <QtMoc Include="Source\MVC\Controllers\DeviceController.h" />
     <QtMoc Include="Source\MVC\Models\ChannelSelectModel.h" />
@@ -194,9 +193,9 @@
     <QtMoc Include="Source\Core\ModuleManager.h" />
     <QtMoc Include="Source\MVC\Views\FileSaveView.h" />
     <QtMoc Include="Source\Core\MainUiStateManager.h" />
-    <QtMoc Include="Source\File\IndexGenerator.h" />
     <QtMoc Include="Source\File\DataAccessService.h" />
     <QtMoc Include="Source\MVC\Views\DataVisualization.h" />
+    <ClInclude Include="Source\File\IIndexAccess.h" />
     <ClInclude Include="Source\MVC\Views\IDeviceView.h" />
     <QtMoc Include="Source\MVC\Views\UpdateDeviceView.h" />
     <QtMoc Include="Source\MVC\Views\VideoDisplayView.h" />

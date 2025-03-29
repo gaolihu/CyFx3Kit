@@ -466,7 +466,7 @@ private:
     // 流控制和错误处理参数
     static constexpr size_t MAX_PACKET_SIZE = 16 * 16 * 1024;     // 16KB 每包
     static constexpr size_t BUFFER_SIZE = 16 * 16 * 1024;         // 16KB 每缓冲区
-    static constexpr size_t BUFFER_COUNT = 64;               // 32 个缓冲区
+    static constexpr size_t BUFFER_COUNT = 64;               // 64 个缓冲区
     static constexpr int MAX_READ_RETRIES = 3;               // 最大重试次数
     static constexpr int READ_RETRY_DELAY_MS = 100;          // 重试延迟
     static constexpr int MAX_CONSECUTIVE_FAILURES = 10;      // 最大连续失败次数
