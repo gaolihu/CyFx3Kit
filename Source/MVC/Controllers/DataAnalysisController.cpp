@@ -42,7 +42,6 @@ DataAnalysisController::DataAnalysisController(DataAnalysisView* view)
     // 获取模型实例（单例模式）
     m_model = DataAnalysisModel::getInstance();
 
-#if 0
     // 连接异步处理完成信号
     connect(&m_processWatcher, &QFutureWatcher<int>::finished,
         this, &DataAnalysisController::slot_DA_C_onProcessingFinished);
@@ -54,7 +53,6 @@ DataAnalysisController::DataAnalysisController(DataAnalysisView* view)
     // 连接文件监视器
     connect(&m_fileWatcher, &QFileSystemWatcher::fileChanged,
         this, &DataAnalysisController::slot_DA_C_onIndexFileChanged);
-#endif
 
     // 启动性能计时器
     m_performanceTimer.start();
@@ -886,12 +884,11 @@ void DataAnalysisController::loadDataBatched(const QVector<PacketIndexEntry>& en
     table->clearContents();
     table->setRowCount(entries.size());
 
-    // 显示进度对话框（只有大量数据时才显示）
-    if (m_view && entries.size() > 1000) {
-        m_view->slot_DA_V_showProgressDialog(
-            LocalQTCompat::fromLocal8Bit("加载数据"),
+    // 只在首次加载大量数据时显示进度，使用状态栏而不是弹窗
+    if (m_view && entries.size() > 10000) {
+        m_view->slot_DA_V_updateStatusBar(
             LocalQTCompat::fromLocal8Bit("正在加载索引数据..."),
-            0, 100
+            entries.size()
         );
     }
 
@@ -914,10 +911,13 @@ void DataAnalysisController::loadDataBatched(const QVector<PacketIndexEntry>& en
         QMetaObject::invokeMethod(this, [this, firstBatch]() {
             optimizedTableUpdate(firstBatch, 0, firstBatch.size());
 
-            // 更新进度
+            // 只在状态栏更新进度
             if (m_view && !m_entriesToLoad.isEmpty()) {
                 int progress = (m_batchLoadPosition * 100) / m_entriesToLoad.size();
-                m_view->slot_DA_V_updateProgressDialog(progress);
+                m_view->slot_DA_V_updateStatusBar(
+                    LocalQTCompat::fromLocal8Bit("加载中: %1%").arg(progress),
+                    m_batchLoadPosition
+                );
             }
 
             // 如果只有一批数据，直接完成
@@ -1206,14 +1206,12 @@ void DataAnalysisController::slot_DA_C_onProcessingFinished()
     if (m_view) {
         m_view->slot_DA_V_hideProgressDialog();
 
-        // 如果有数据包被处理，显示成功消息
-        if (processedCount > 0) {
-            m_view->slot_DA_V_showMessageDialog(
-                LocalQTCompat::fromLocal8Bit("处理完成"),
-                LocalQTCompat::fromLocal8Bit("成功处理 %1 个数据包，耗时 %2 毫秒")
-                .arg(processedCount).arg(elapsedMs)
-            );
-        }
+        // 只在状态栏更新信息，不再弹出对话框
+        m_view->slot_DA_V_updateStatusBar(
+            LocalQTCompat::fromLocal8Bit("处理完成: %1 个数据包，耗时 %2 毫秒")
+            .arg(processedCount).arg(elapsedMs),
+            processedCount
+        );
     }
 
     // 重新加载索引数据
