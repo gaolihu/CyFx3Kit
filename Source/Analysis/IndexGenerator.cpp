@@ -276,7 +276,7 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
 
     // 批处理数据包以提高性能
     std::vector<DataPacket> packetBatch;
-    packetBatch.reserve(500);
+    packetBatch.reserve(1000);
 
     // 打印前64字节用于调试
     if (bufferSize >= 64) {
@@ -482,13 +482,13 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
                                     }
 
                                     // 批量添加索引
-                                    if (packetBatch.size() >= 500) {
+                                    if (packetBatch.size() >= 1000) {
                                         addPacketIndexBatch(packetBatch, fileOffset, fileName);
 #ifdef IDXG_DBG
                                         LOG_INFO(LocalQTCompat::fromLocal8Bit("批量添加了 %1 个数据包索引").arg(packetBatch.size()));
 #endif // IDXG_DBG
                                         packetBatch.clear();
-                                        packetBatch.reserve(500);
+                                        packetBatch.reserve(1000);
                                     }
 
                                     // 计算模式信息
@@ -673,20 +673,20 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
 
     // 保存索引
     if (packetsFound > 0) {
-        if (packetsFound > 1000) {
+        if (packetsFound > 4000) {
             saveIndex(true);
+            emit indexUpdated(m_entryCount);
 #ifdef IDXG_DBG
             LOG_INFO(LocalQTCompat::fromLocal8Bit("找到大量数据包(%1)，已保存索引").arg(packetsFound));
 #endif // IDXG_DBG
         }
         else if (m_entryCount - m_lastSavedCount >= 5000) {
             saveIndex(false);
+            emit indexUpdated(m_entryCount);
 #ifdef IDXG_DBG
             LOG_INFO(LocalQTCompat::fromLocal8Bit("索引条目累积到阈值，已保存索引"));
 #endif // IDXG_DBG
         }
-
-        emit indexUpdated(m_entryCount);
     }
 
 #ifdef IDXG_DBG
