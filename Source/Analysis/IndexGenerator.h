@@ -120,10 +120,9 @@ public:
      * @param data 原始数据缓冲区
      * @param size 缓冲区大小
      * @param fileOffset 文件偏移位置
-     * @param fileName 文件名
      * @return 识别到的数据包数量
      */
-    int parseDataStream(const uint8_t* data, size_t size, uint64_t fileOffset, const QString& fileName);
+    int parseDataStream(const uint8_t* data, size_t size, uint64_t fileOffset);
 
     /**
      * @brief 根据时间戳查找最接近的数据包
@@ -146,25 +145,6 @@ public:
      * @return 匹配的索引条目列表
      */
     QVector<PacketIndexEntry> queryIndex(const IndexQuery& query);
-
-    /**
-     * @brief 设置默认会话索引路径
-     * @param sessionPath 会话索引文件基本路径 (不含扩展名)
-     */
-    void setSessionIndexPath(const QString& sessionPath);
-
-    /**
-     * @brief 获取当前会话索引路径
-     * @return 当前会话索引路径
-     */
-    QString getSessionIndexPath();
-
-    /**
-     * @brief 合并现有索引文件到会话索引
-     * @param sourcePath 源索引文件路径
-     * @return 是否成功
-     */
-    bool mergeIndexFile(const QString& sourcePath);
 
     /**
      * @brief 设置当前会话ID
@@ -218,25 +198,22 @@ private:
     int binarySearchTimestamp(uint64_t timestamp, bool lowerBound) const;
 
     // 快速内存映射查找
-    QMap<uint64_t, int> m_timestampToIndex;  // 时间戳到索引的映射
+    QMap<uint64_t, int> m_timestampToIndex;     // 时间戳到索引的映射
 
-    QVector<PacketIndexEntry> m_indexEntries;  // 所有索引条目
+    QVector<PacketIndexEntry> m_indexEntries;   // 所有索引条目
     QFile m_indexFile;
     QTextStream m_textStream;
     QMutex m_mutex;
     bool m_isOpen;
     uint64_t m_entryCount;
     uint64_t m_lastSavedCount;          ///< 最后一次保存时的条目数
-    QString m_indexPath;
 
     // 解析数据流的状态变量
     std::vector<uint8_t> m_lastBuffer;  ///< 上一次缓冲区末尾数据
     bool m_foundPartialHeader;          ///< 是否发现不完整头部
 
-    QString m_sessionIndexPath;         ///< 会话索引文件路径
-    bool m_useSessionIndex;             ///< 是否使用会话索引
-
     QString m_sessionId;                ///< 会话标识符
     QString m_basePath;                 ///< 索引文件基本路径
+    QString m_indexFileName;            ///< 索引文件名称
     bool m_persistentMode;              ///< 持久化模式
 };

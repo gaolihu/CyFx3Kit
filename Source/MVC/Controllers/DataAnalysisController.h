@@ -108,9 +108,7 @@ public:
      * @brief 设置当前数据源
      * @param filePath 文件路径
      */
-    void setDataSource(const QString& filePath) {
-        m_currentDataSource = filePath;
-    }
+    void setDataSource(const QString& filePath);
 
     /**
      * @brief 获取当前数据源

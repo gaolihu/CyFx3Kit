@@ -19,7 +19,6 @@ IndexGenerator::IndexGenerator(QObject* parent)
     , m_entryCount(0)
     , m_lastSavedCount(0)
     , m_foundPartialHeader(false)
-    , m_useSessionIndex(false)
     , m_persistentMode(true)
 {
 }
@@ -35,8 +34,6 @@ bool IndexGenerator::open(const QString& path)
     if (m_isOpen) {
         return true;
     }
-
-    m_indexPath = path;
 
     // 确保目录存在
     QFileInfo fileInfo(path);
@@ -109,9 +106,9 @@ bool IndexGenerator::saveIndex(bool forceSave)
 
     QJsonDocument doc(rootObj);
 
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("保存到索引文件：%1").arg(m_indexFileName));
     // 保存到JSON文件
-    QString jsonPath = m_indexPath + ".json";
-    QFile jsonFile(jsonPath);
+    QFile jsonFile(m_basePath + m_indexFileName);
 
     if (!jsonFile.open(QIODevice::WriteOnly)) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开JSON索引文件: %1").arg(jsonFile.errorString()));
@@ -239,10 +236,12 @@ int IndexGenerator::addPacketIndexBatch(const std::vector<DataPacket>& packets,
 }
 
 // #define IDXG_DBG
-int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t fileOffset, const QString& fileName)
+int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t fileOffset)
 {
 #ifdef IDXG_DBG
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("解析数据流，大小：%1字节, 偏移：%2，文件名：%3").arg(size).arg(fileOffset).arg(fileName));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("解析数据流，大小：%1字节, 偏移：%2")
+        .arg(size)
+        .arg(fileOffset));
 #endif // IDXG_DBG
 
     // 检查输入有效性
@@ -518,7 +517,7 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
 
                                     // 批量添加索引
                                     if (packetBatch.size() >= 1000) {
-                                        addPacketIndexBatch(packetBatch, fileOffset, fileName);
+                                        addPacketIndexBatch(packetBatch, fileOffset, m_indexFileName);
 #ifdef IDXG_DBG
                                         LOG_INFO(LocalQTCompat::fromLocal8Bit("批量添加了 %1 个数据包索引").arg(packetBatch.size()));
 #endif // IDXG_DBG
@@ -700,7 +699,7 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
 
     // 处理批处理队列剩余的数据包
     if (!packetBatch.empty()) {
-        addPacketIndexBatch(packetBatch, fileOffset, fileName);
+        addPacketIndexBatch(packetBatch, fileOffset, m_indexFileName);
 #ifdef IDXG_DBG
         LOG_INFO(LocalQTCompat::fromLocal8Bit("批量添加最后%1个数据包索引").arg(packetBatch.size()));
 #endif // IDXG_DBG
@@ -919,7 +918,6 @@ bool IndexGenerator::loadIndex(const QString& path)
     LOG_INFO(LocalQTCompat::fromLocal8Bit("成功加载索引从: %1，共 %2 条记录").arg(jsonPath).arg(m_entryCount));
 
     // 打开索引文件用于附加
-    m_indexPath = path;
     m_indexFile.setFileName(path);
 
     if (!m_indexFile.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
@@ -972,118 +970,6 @@ void IndexGenerator::flush()
     }
 }
 
-void IndexGenerator::setSessionIndexPath(const QString& sessionPath)
-{
-    QMutexLocker locker(&m_mutex);
-
-    // 如果当前有打开的索引文件且不是会话索引，保存并关闭
-    if (m_isOpen && !m_useSessionIndex) {
-        saveIndex(true);
-        close();
-    }
-
-    m_sessionIndexPath = sessionPath;
-    m_useSessionIndex = !sessionPath.isEmpty();
-
-    // 如果设置了会话索引路径且不是当前打开的，尝试打开或创建
-    if (m_useSessionIndex && (m_indexPath != m_sessionIndexPath)) {
-        // 先尝试加载已有的会话索引
-        if (QFile::exists(m_sessionIndexPath + ".idx")) {
-            loadIndex(m_sessionIndexPath);
-        }
-        else {
-            // 不存在则创建新会话索引
-            open(m_sessionIndexPath);
-        }
-    }
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("会话索引已设置: %1").arg(m_sessionIndexPath));
-}
-
-QString IndexGenerator::getSessionIndexPath()
-{
-    QMutexLocker locker(&m_mutex);
-    return m_sessionIndexPath;
-}
-
-// 合并索引文件实现
-bool IndexGenerator::mergeIndexFile(const QString& sourcePath)
-{
-    if (!m_useSessionIndex || m_sessionIndexPath.isEmpty()) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("未设置会话索引路径，无法合并"));
-        return false;
-    }
-
-    // 加载源索引文件
-    QFile sourceJsonFile(sourcePath + ".json");
-    if (!sourceJsonFile.exists() || !sourceJsonFile.open(QIODevice::ReadOnly)) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开源索引文件: %1").arg(sourcePath));
-        return false;
-    }
-
-    QJsonDocument sourceDoc = QJsonDocument::fromJson(sourceJsonFile.readAll());
-    sourceJsonFile.close();
-
-    if (sourceDoc.isNull() || !sourceDoc.isObject()) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无效的源JSON索引文件"));
-        return false;
-    }
-
-    QJsonArray entriesArray = sourceDoc.object()["entries"].toArray();
-    int entriesAdded = 0;
-
-    // 将源索引条目添加到会话索引
-    for (int i = 0; i < entriesArray.size(); ++i) {
-        QJsonObject entryObj = entriesArray[i].toObject();
-
-        PacketIndexEntry entry;
-        entry.timestamp = entryObj["timestamp"].toString().toULongLong();
-        entry.fileOffset = entryObj["fileOffset"].toString().toULongLong();
-        entry.size = entryObj["size"].toInt();
-        entry.fileName = entryObj["fileName"].toString();
-        entry.batchId = entryObj["batchId"].toInt();
-        entry.packetIndex = entryObj["packetIndex"].toInt();
-
-        // 添加到内存索引
-        int indexId = m_indexEntries.size();
-        m_indexEntries.append(entry);
-
-        // 更新快速查找映射
-        m_timestampToIndex.insert(entry.timestamp, indexId);
-
-        // 如果索引文件已打开，追加记录
-        if (m_isOpen) {
-            m_textStream << indexId << ","
-                << entry.timestamp << ","
-                << entry.size << ","
-                << entry.fileOffset << ","
-                << entry.fileName << ","
-                << entry.batchId << ","
-                << entry.packetIndex << "\n";
-        }
-
-        entriesAdded++;
-        m_entryCount++;
-    }
-
-    // 更新并保存会话索引
-    if (entriesAdded > 0) {
-        m_textStream.flush();
-        saveIndex(true);
-
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("成功合并 %1 条记录从 %2 到会话索引").arg(entriesAdded).arg(sourcePath));
-
-        // 清理临时索引文件
-        QFile::remove(sourcePath + ".idx");
-        QFile::remove(sourcePath + ".json");
-
-        emit indexUpdated(m_entryCount);
-        return true;
-    }
-
-    return false;
-}
-
 void IndexGenerator::setSessionId(const QString& sessionId)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("设置会话ID: %1").arg(sessionId));
@@ -1102,6 +988,7 @@ void IndexGenerator::setSessionId(const QString& sessionId)
     }
 
     m_sessionId = sessionId;
+    m_indexFileName = m_sessionId + ".json";
     LOG_INFO(LocalQTCompat::fromLocal8Bit("索引文件会话ID已设置: %1").arg(m_sessionId));
 }
 

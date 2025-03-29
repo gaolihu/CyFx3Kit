@@ -328,8 +328,7 @@ bool DataAnalysisController::importData(const QString& filePath)
             int packetsFound = IndexGenerator::getInstance().parseDataStream(
                 reinterpret_cast<const uint8_t*>(buffer.constData()),
                 buffer.size(),
-                totalRead,
-                fileName
+                totalRead
             );
 
             totalPackets += packetsFound;
@@ -640,17 +639,25 @@ bool DataAnalysisController::loadDataFromFile(const QString& filePath)
     }
 }
 
+void DataAnalysisController::setDataSource(const QString& filePath) {
+    m_currentDataSource = filePath;
+
+    // 生成或获取会话ID
+    QString sessionId = m_sessionId;
+    if (sessionId.isEmpty()) {
+        sessionId = QString("session_%1").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"));
+        m_sessionId = sessionId;
+    }
+
+    IndexGenerator::getInstance().setBasePath(filePath);
+    IndexGenerator::getInstance().setSessionId(sessionId);
+}
+
 void DataAnalysisController::processRawData(const uint8_t* data, size_t size, uint64_t fileOffset, const QString& fileName)
 {
     if (!data || size == 0) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("处理原始数据失败：无效数据"));
         return;
-    }
-
-    // 设置当前数据源
-    QString sourceFileName = fileName;
-    if (sourceFileName.isEmpty()) {
-        sourceFileName = m_currentDataSource.isEmpty() ? m_sessionId : m_currentDataSource;
     }
 
     // 避免在UI线程中直接处理大量数据
@@ -664,13 +671,13 @@ void DataAnalysisController::processRawData(const uint8_t* data, size_t size, ui
     m_processingData = true;
     m_performanceTimer.restart();
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始异步处理原始数据：%1 字节，文件：%2").arg(size).arg(sourceFileName));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始异步处理原始数据：%1 字节").arg(size));
 
     // 拷贝数据（因为原始指针在异步处理完成前可能已经无效）
     std::vector<uint8_t> dataCopy(data, data + size);
 
     // 异步处理数据
-    QFuture<int> future = QtConcurrent::run([this, dataCopy, fileOffset, sourceFileName]() -> int {
+    QFuture<int> future = QtConcurrent::run([this, dataCopy, fileOffset]() -> int {
         try {
             // 确保索引文件已打开
             if (!m_sessionId.isEmpty() && !m_sessionBasePath.isEmpty()) {
@@ -680,8 +687,7 @@ void DataAnalysisController::processRawData(const uint8_t* data, size_t size, ui
 
             // 使用IndexGenerator的parseDataStream方法分析和索引数据流
             int packetsFound = IndexGenerator::getInstance().parseDataStream(
-                dataCopy.data(), dataCopy.size(), fileOffset, sourceFileName
-            );
+                dataCopy.data(), dataCopy.size(), fileOffset);
 
             // 强制保存索引 - 只在找到数据包时保存
             if (packetsFound > 0) {
@@ -716,36 +722,15 @@ void DataAnalysisController::processDataPackets(const std::vector<DataPacket>& p
 
     m_processingData = true;
 
-    // 生成有意义的会话ID
-    QString sessionId;
-    if (!m_sessionId.isEmpty()) {
-        // 优先使用已设置的会话ID
-        sessionId = m_sessionId;
-    }
-    else {
-        // 创建基于时间的会话ID
-        sessionId = QString("session_%1").arg(QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss"));
-    }
-
-    // 更新成员变量
-    m_sessionId = sessionId;
-
-    // 拷贝数据包和会话信息到局部变量，以便在异步任务中使用
+    // 创建数据包的深拷贝以确保线程安全
     std::vector<DataPacket> packetsCopy = packets;
-    QString sessionIdCopy = sessionId;
-    QString basePathCopy = filePath;
-    QString sourceFileName = m_sessionId + ".json";
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("%1包，会话：%2，源目录：%3，文件名：%4")
-        .arg(packets.size())
-        .arg(sessionId)
-        .arg(filePath)
-        .arg(sourceFileName));
+    // LOG_INFO(LocalQTCompat::fromLocal8Bit("处理包大小：%1").arg(packets.size()));
 
-    // 异步处理数据
-    QFuture<int> future = QtConcurrent::run([this, packetsCopy, sessionIdCopy, basePathCopy, sourceFileName]() -> int {
+    // 异步处理数据 - 使用值捕获确保线程安全
+    QFuture<int> future = QtConcurrent::run([packetsCopy]() -> int {
         try {
-            // 将多个数据包合并为一个连续的数据缓冲区
+            // 高效合并数据包
             size_t totalSize = 0;
             for (const auto& packet : packetsCopy) {
                 totalSize += packet.getSize();
@@ -756,27 +741,20 @@ void DataAnalysisController::processDataPackets(const std::vector<DataPacket>& p
                 return 0;
             }
 
-            // 创建连续的数据缓冲区
             std::vector<uint8_t> combinedData;
-            combinedData.reserve(totalSize);
+            combinedData.reserve(totalSize); // 预先分配内存避免频繁重分配
 
-            // 构建完整的缓冲区 - 修复的部分
             for (const auto& packet : packetsCopy) {
                 if (packet.data && !packet.data->empty()) {
-                    // 正确访问共享指针中的vector数据
                     combinedData.insert(combinedData.end(),
                         packet.data->begin(),
                         packet.data->end());
                 }
             }
 
-            IndexGenerator::getInstance().setBasePath(basePathCopy);
-            IndexGenerator::getInstance().setSessionId(sessionIdCopy);
-
-            // 使用IndexGenerator的parseDataStream进行数据分析和索引
+            // 使用IndexGenerator解析数据
             int packetsFound = IndexGenerator::getInstance().parseDataStream(
-                combinedData.data(), combinedData.size(), 0, sourceFileName
-            );
+                combinedData.data(), combinedData.size(), 0);
 
             LOG_INFO(LocalQTCompat::fromLocal8Bit("从数据包中解析并索引了 %1 个数据包").arg(packetsFound));
             return packetsFound;
@@ -1181,7 +1159,6 @@ void DataAnalysisController::slot_DA_C_onIndexEntryAdded(const PacketIndexEntry&
 
 void DataAnalysisController::slot_DA_C_onIndexUpdated(int count)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("索引已更新"));
     if (m_view) {
         m_view->slot_DA_V_updateStatusBar(
             LocalQTCompat::fromLocal8Bit("索引已更新"),

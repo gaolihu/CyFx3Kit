@@ -669,6 +669,9 @@ void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
                 if (autoSave) {
                     LOG_INFO("自动保存已启用，启动保存");
 
+                    // 将文件目录设置到数据分析模块中
+                    m_dataAnalysisController->setDataSource(m_fileSaveController->getCurrentFileName());
+
                     if (m_fileSaveController->slot_FS_C_startSaving()) {
                         // 延迟100ms确保保存状态已更新
                         QTimer::singleShot(100, [this, packets]() {
