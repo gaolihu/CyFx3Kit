@@ -168,8 +168,6 @@ void DataAnalysisController::loadData()
         return;
     }
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始加载索引数据"));
-
     // 更新状态栏，显示正在加载
     if (m_view) {
         m_view->slot_DA_V_updateStatusBar(
@@ -360,8 +358,6 @@ bool DataAnalysisController::importData(const QString& filePath)
 
     // 设置监视器
     m_processWatcher.setFuture(future);
-
-    // 注意：导入操作将在后台继续进行，完成后会调用slot_DA_C_onProcessingFinished
 
     return true;
 }
@@ -720,10 +716,6 @@ void DataAnalysisController::processDataPackets(const std::vector<DataPacket>& p
 
     m_processingData = true;
 
-    // 解析文件路径以获取更合理的会话ID
-    QFileInfo fileInfo(filePath);
-    QString fileName = fileInfo.fileName();
-
     // 生成有意义的会话ID
     QString sessionId;
     if (!m_sessionId.isEmpty()) {
@@ -738,16 +730,17 @@ void DataAnalysisController::processDataPackets(const std::vector<DataPacket>& p
     // 更新成员变量
     m_sessionId = sessionId;
 
-    // 设置数据源
-    setDataSource(fileName.isEmpty() ? sessionId : fileName);
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("处理 %1 个数据包，会话：%2，源文件：%3").arg(packets.size()).arg(sessionId).arg(filePath));
-
     // 拷贝数据包和会话信息到局部变量，以便在异步任务中使用
     std::vector<DataPacket> packetsCopy = packets;
     QString sessionIdCopy = sessionId;
     QString basePathCopy = filePath;
-    QString sourceFileName = fileName.isEmpty() ? sessionId : fileName;
+    QString sourceFileName = m_sessionId + ".json";
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("%1包，会话：%2，源目录：%3，文件名：%4")
+        .arg(packets.size())
+        .arg(sessionId)
+        .arg(filePath)
+        .arg(sourceFileName));
 
     // 异步处理数据
     QFuture<int> future = QtConcurrent::run([this, packetsCopy, sessionIdCopy, basePathCopy, sourceFileName]() -> int {
@@ -784,11 +777,6 @@ void DataAnalysisController::processDataPackets(const std::vector<DataPacket>& p
             int packetsFound = IndexGenerator::getInstance().parseDataStream(
                 combinedData.data(), combinedData.size(), 0, sourceFileName
             );
-
-            // 强制保存索引 - 只在找到数据包时保存
-            if (packetsFound > 0) {
-                IndexGenerator::getInstance().saveIndex(true);
-            }
 
             LOG_INFO(LocalQTCompat::fromLocal8Bit("从数据包中解析并索引了 %1 个数据包").arg(packetsFound));
             return packetsFound;

@@ -72,7 +72,6 @@ bool IndexGenerator::open(const QString& path)
 
 void IndexGenerator::close()
 {
-    QMutexLocker locker(&m_mutex);
     LOG_INFO(LocalQTCompat::fromLocal8Bit("关闭索引文件"));
 
     if (m_isOpen) {
@@ -131,7 +130,7 @@ int IndexGenerator::addPacketIndex(const DataPacket& packet, uint64_t fileOffset
     // 每500条记录刷新一次，平衡性能和安全
     if (m_entryCount % 500 == 0) {
         m_textStream.flush();
-        // emit indexUpdated(m_entryCount);
+        emit indexUpdated(m_entryCount);
     }
 
     return indexId;
@@ -144,6 +143,9 @@ int IndexGenerator::addPacketIndexBatch(const std::vector<DataPacket>& packets,
     if (!m_isOpen || packets.empty()) {
         return 0;
     }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("批次保存索引文件，文件名：%1")
+        .arg(fileName));
 
     int totalAdded = 0;
     uint64_t currentOffset = startFileOffset;
@@ -195,7 +197,7 @@ int IndexGenerator::addPacketIndexBatch(const std::vector<DataPacket>& packets,
 
     // 每处理完一批数据发送一次信号
     if (totalAdded > 0) {
-        // emit indexUpdated(m_entryCount);
+        emit indexUpdated(m_entryCount);
     }
 
     return totalAdded;
@@ -664,24 +666,32 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
     // 处理批处理队列剩余的数据包
     if (!packetBatch.empty()) {
         addPacketIndexBatch(packetBatch, fileOffset, fileName);
+#ifdef IDXG_DBG
         LOG_INFO(LocalQTCompat::fromLocal8Bit("批量添加最后%1个数据包索引").arg(packetBatch.size()));
+#endif // IDXG_DBG
     }
 
     // 保存索引
     if (packetsFound > 0) {
         if (packetsFound > 1000) {
             saveIndex(true);
+#ifdef IDXG_DBG
             LOG_INFO(LocalQTCompat::fromLocal8Bit("找到大量数据包(%1)，已保存索引").arg(packetsFound));
+#endif // IDXG_DBG
         }
         else if (m_entryCount - m_lastSavedCount >= 5000) {
             saveIndex(false);
+#ifdef IDXG_DBG
             LOG_INFO(LocalQTCompat::fromLocal8Bit("索引条目累积到阈值，已保存索引"));
+#endif // IDXG_DBG
         }
 
-        // emit indexUpdated(m_entryCount);
+        emit indexUpdated(m_entryCount);
     }
 
+#ifdef IDXG_DBG
     LOG_INFO(LocalQTCompat::fromLocal8Bit("解析数据流完成：共找到%1个数据包").arg(packetsFound));
+#endif // IDXG_DBG
     return packetsFound;
 }
 
@@ -886,7 +896,7 @@ bool IndexGenerator::loadIndex(const QString& path)
     m_isOpen = true;
 
     // 发送更新信号
-    // emit indexUpdated(m_entryCount);
+    emit indexUpdated(m_entryCount);
 
     return true;
 }
@@ -919,7 +929,10 @@ void IndexGenerator::clearIndex()
 
 bool IndexGenerator::saveIndex(bool forceSave)
 {
-    QMutexLocker locker(&m_mutex);
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("%1保存索引文件，条目数：%2，上次：%3")
+        .arg(forceSave ? "强制保存" : "")
+        .arg(m_entryCount)
+        .arg(m_lastSavedCount));
 
     if (!m_isOpen) {
         return false;
@@ -927,6 +940,7 @@ bool IndexGenerator::saveIndex(bool forceSave)
 
     // 增加保存阈值，避免频繁IO操作
     if (!forceSave && m_entryCount - m_lastSavedCount < 5000) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("保存索引文件").arg(forceSave ? "强制保存" : ""));
         return true; // 没有足够的新条目，跳过保存
     }
 
@@ -1086,7 +1100,7 @@ bool IndexGenerator::mergeIndexFile(const QString& sourcePath)
         QFile::remove(sourcePath + ".idx");
         QFile::remove(sourcePath + ".json");
 
-        // emit indexUpdated(m_entryCount);
+        emit indexUpdated(m_entryCount);
         return true;
     }
 
