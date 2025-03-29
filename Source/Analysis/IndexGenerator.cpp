@@ -95,12 +95,16 @@ bool IndexGenerator::saveIndex(bool forceSave)
         entryObj["fileName"] = entry.fileName;
         entryObj["batchId"] = static_cast<int>(entry.batchId);
         entryObj["packetIndex"] = static_cast<int>(entry.packetIndex);
+        entryObj["commandType"] = static_cast<int>(entry.commandType);
+        entryObj["sequence"] = static_cast<int>(entry.sequence);
+        entryObj["isValidHeader"] = entry.isValidHeader;
+        entryObj["commandDesc"] = entry.commandDesc;
 
         entriesArray.append(entryObj);
     }
 
     QJsonObject rootObj;
-    rootObj["version"] = "2.0";
+    rootObj["version"] = "2.1"; // 更新版本号表示索引格式变更
     rootObj["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
     rootObj["entries"] = entriesArray;
 
@@ -123,6 +127,7 @@ bool IndexGenerator::saveIndex(bool forceSave)
     return true;
 }
 
+
 int IndexGenerator::addPacketIndex(const DataPacket& packet, uint64_t fileOffset, const QString& fileName)
 {
     QMutexLocker locker(&m_mutex);
@@ -140,6 +145,12 @@ int IndexGenerator::addPacketIndex(const DataPacket& packet, uint64_t fileOffset
     entry.batchId = packet.batchId;
     entry.packetIndex = packet.packetIndex;
 
+    // 新增字段
+    entry.commandType = packet.commandType;
+    entry.sequence = packet.sequence;
+    entry.isValidHeader = packet.isValidHeader;
+    entry.commandDesc = getCommandDescription(packet.commandType);
+
     // 添加到内存索引
     int indexId = m_indexEntries.size();
     m_indexEntries.append(entry);
@@ -154,7 +165,11 @@ int IndexGenerator::addPacketIndex(const DataPacket& packet, uint64_t fileOffset
         << entry.fileOffset << ","
         << entry.fileName << ","
         << entry.batchId << ","
-        << entry.packetIndex;
+        << entry.packetIndex << ","
+        << static_cast<int>(entry.commandType) << ","
+        << entry.sequence << ","
+        << (entry.isValidHeader ? "1" : "0") << ","
+        << entry.commandDesc;
 
     m_textStream << "\n";
     m_entryCount++;
@@ -168,34 +183,39 @@ int IndexGenerator::addPacketIndex(const DataPacket& packet, uint64_t fileOffset
     return indexId;
 }
 
-int IndexGenerator::addPacketIndexBatch(const std::vector<DataPacket>& packets,
-    uint64_t startFileOffset,
-    const QString& fileName)
+int IndexGenerator::addPacketIndexBatch(const std::vector<DataPacket>& packets, uint64_t startFileOffset)
 {
     if (!m_isOpen || packets.empty()) {
         return 0;
     }
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("批次保存索引文件，文件名：%1")
-        .arg(fileName));
-
+#if 0
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("批次保存索引文件，偏移：%2，大小：%3")
+        .arg(startFileOffset)
+        .arg(packets.size()));
+#endif
     int totalAdded = 0;
     uint64_t currentOffset = startFileOffset;
 
     // 预先计算缓冲区的大小，减少多次分配内存
     QString entriesBuffer;
-    entriesBuffer.reserve(packets.size() * 100); // 每条记录预估100个字符
+    entriesBuffer.reserve(packets.size() * 120); // 每条记录预估120个字符
 
     // 批量处理所有数据包
     for (const auto& packet : packets) {
         // 创建新索引条目
         PacketIndexEntry entry;
         entry.timestamp = packet.timestamp;
-        entry.fileOffset = currentOffset;
+        entry.fileOffset = packet.offsetInFile;
         entry.size = static_cast<uint32_t>(packet.getSize());
-        entry.fileName = fileName;
+        // entry.fileName = m_indexFileName;
         entry.batchId = packet.batchId;
         entry.packetIndex = packet.packetIndex;
+
+        // 新增字段
+        entry.commandType = packet.commandType;
+        entry.sequence = packet.sequence;
+        entry.isValidHeader = packet.isValidHeader;
+        entry.commandDesc = getCommandDescription(packet.commandType);
 
         // 添加到内存索引
         int indexId = m_indexEntries.size();
@@ -205,14 +225,18 @@ int IndexGenerator::addPacketIndexBatch(const std::vector<DataPacket>& packets,
         m_timestampToIndex.insert(entry.timestamp, indexId);
 
         // 构建索引记录
-        entriesBuffer.append(QString("%1,%2,%3,%4,%5,%6,%7\n")
+        entriesBuffer.append(QString("%1,%2,%3,%4,%5,%6,%7,%8,%9,%10,%11\n")
             .arg(indexId)
             .arg(entry.timestamp)
             .arg(entry.size)
             .arg(entry.fileOffset)
             .arg(entry.fileName)
             .arg(entry.batchId)
-            .arg(entry.packetIndex));
+            .arg(entry.packetIndex)
+            .arg(static_cast<int>(entry.commandType))
+            .arg(entry.sequence)
+            .arg(entry.isValidHeader ? "1" : "0")
+            .arg(entry.commandDesc));
 
         totalAdded++;
         currentOffset += packet.getSize();
@@ -395,16 +419,20 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
                         size_t headerSize = (i + 8) - offset;
 
                         // 打印找到的头部信息
+#ifdef IDXG_DBG
                         QString headerHex;
                         for (size_t j = 0; j < headerSize && offset + j < bufferSize; j++) {
                             headerHex += QString("%1 ").arg(buffer[offset + j], 2, 16, QChar('0'));
                         }
-#ifdef IDXG_DBG
-                        LOG_INFO(LocalQTCompat::fromLocal8Bit("偏移量%1处找到潜在头部: %2").arg(offset).arg(headerHex));
+                        LOG_INFO(LocalQTCompat::fromLocal8Bit("偏移%1处找到潜在头，i: %2，大小: %3~[%4]")
+                            .arg(offset)
+                            .arg(i)
+                            .arg(headerSize)
+                            .arg(headerHex));
 #endif // IDXG_DBG
 
-                        // 确保有足够的空间读取元数据（至少8字节）
-                        if (offset + headerSize + 8 <= bufferSize) {
+                        // 确保有足够的空间读取元数据（至少24字节来包含XX和SC1-SC3）
+                        if (offset + headerSize + 24 <= bufferSize) {
                             // 提取类型和大小信息
                             uint8_t type1 = buffer[offset + headerSize];
                             uint32_t repeat = (((uint32_t)buffer[offset + headerSize + 1]) << 16) |
@@ -417,17 +445,20 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
                                 (((uint32_t)buffer[offset + headerSize + 6]) << 8) |
                                 (uint32_t)buffer[offset + headerSize + 7];
 
+                            // 提取命令类型XX和序列号SC1-SC3
+                            uint8_t commandType = 0x00; // 默认值
+                            uint32_t sequence = 0;
+#ifdef IDXG_DBG
                             // 打印元数据字节
                             QString metaHex;
                             for (size_t j = 0; j < 8 && offset + headerSize + j < bufferSize; j++) {
                                 metaHex += QString("%1 ").arg(buffer[offset + headerSize + j], 2, 16, QChar('0'));
                             }
-#ifdef IDXG_DBG
                             LOG_INFO(LocalQTCompat::fromLocal8Bit("元数据字节: %1").arg(metaHex));
 #endif // IDXG_DBG
 #ifdef IDXG_DBG
-                            LOG_INFO(LocalQTCompat::fromLocal8Bit("解析元数据: type1=%1, repeat=%2(0x%3), type2=%4, repeat_inv=0x%5").
-                                arg(type1)
+                            LOG_INFO(LocalQTCompat::fromLocal8Bit("解析元数据: type1=%1, repeat=%2(0x%3), type2=%4, repeat_inv=0x%5")
+                                .arg(type1)
                                 .arg(repeat)
                                 .arg(repeat, 8, 16, QChar('0'))
                                 .arg(type2)
@@ -496,6 +527,20 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
                                     packet.timestamp = QDateTime::currentMSecsSinceEpoch() * 1000000;
                                     packet.batchId = type1;
                                     packet.packetIndex = packetsFound;
+                                    packet.offsetInFile = i - 4;
+
+                                    // 设置新增字段
+                                    packet.commandType = commandType;
+                                    packet.sequence = sequence;
+                                    packet.isValidHeader = true;  // 已验证的有效头部
+
+#ifdef IDXG_DBG
+                                    LOG_INFO(LocalQTCompat::fromLocal8Bit("创建数据包：偏移=%1，文件偏移：%2，命令类型=0x%2，序列号=0x%3").
+                                        arg(packetOffset).
+                                        arg(i - 4).
+                                        arg(commandType, 2, 16, QChar('0')).
+                                        arg(sequence, 6, 16, QChar('0')));
+#endif // IDXG_DBG
 
                                     // 创建数据向量
                                     std::shared_ptr<std::vector<uint8_t>> dataVector = std::make_shared<std::vector<uint8_t>>();
@@ -509,21 +554,11 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
                                     packetBatch.push_back(packet);
                                     packetsFound++;
 
+#ifdef IDXG_DBG
                                     if (packetsFound % 100 == 0) {
-#ifdef IDXG_DBG
                                         LOG_INFO(LocalQTCompat::fromLocal8Bit("已处理 %1 个数据包").arg(packetsFound));
-#endif // IDXG_DBG
                                     }
-
-                                    // 批量添加索引
-                                    if (packetBatch.size() >= 1000) {
-                                        addPacketIndexBatch(packetBatch, fileOffset, m_indexFileName);
-#ifdef IDXG_DBG
-                                        LOG_INFO(LocalQTCompat::fromLocal8Bit("批量添加了 %1 个数据包索引").arg(packetBatch.size()));
 #endif // IDXG_DBG
-                                        packetBatch.clear();
-                                        packetBatch.reserve(1000);
-                                    }
 
                                     // 计算模式信息
                                     if (lastValidOffset > 0) {
@@ -556,6 +591,16 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
                                             patternDistance = currentDistance;
                                             patternMatches = 1;
                                         }
+                                    }
+
+                                    // 批量添加索引
+                                    if (packetBatch.size() >= 1000) {
+                                        addPacketIndexBatch(packetBatch, fileOffset);
+#ifdef IDXG_DBG
+                                        LOG_INFO(LocalQTCompat::fromLocal8Bit("批量添加了 %1 个数据包索引").arg(packetBatch.size()));
+#endif // IDXG_DBG
+                                        packetBatch.clear();
+                                        packetBatch.reserve(1000);
                                     }
 
                                     lastValidOffset = offset;
@@ -699,7 +744,7 @@ int IndexGenerator::parseDataStream(const uint8_t* data, size_t size, uint64_t f
 
     // 处理批处理队列剩余的数据包
     if (!packetBatch.empty()) {
-        addPacketIndexBatch(packetBatch, fileOffset, m_indexFileName);
+        addPacketIndexBatch(packetBatch, fileOffset);
 #ifdef IDXG_DBG
         LOG_INFO(LocalQTCompat::fromLocal8Bit("批量添加最后%1个数据包索引").arg(packetBatch.size()));
 #endif // IDXG_DBG
@@ -893,6 +938,12 @@ bool IndexGenerator::loadIndex(const QString& path)
     QJsonObject rootObj = doc.object();
     QJsonArray entriesArray = rootObj["entries"].toArray();
 
+    // 获取版本信息，用于处理不同版本的索引格式
+    QString version = rootObj["version"].toString("1.0");
+    bool isNewVersion = (version >= "2.1");
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("加载索引文件，版本: %1").arg(version));
+
     for (int i = 0; i < entriesArray.size(); ++i) {
         QJsonObject entryObj = entriesArray[i].toObject();
 
@@ -903,6 +954,21 @@ bool IndexGenerator::loadIndex(const QString& path)
         entry.fileName = entryObj["fileName"].toString();
         entry.batchId = entryObj["batchId"].toInt();
         entry.packetIndex = entryObj["packetIndex"].toInt();
+
+        // 处理新版本字段
+        if (isNewVersion) {
+            entry.commandType = entryObj["commandType"].toInt();
+            entry.sequence = entryObj["sequence"].toInt();
+            entry.isValidHeader = entryObj["isValidHeader"].toBool();
+            entry.commandDesc = entryObj["commandDesc"].toString();
+        }
+        else {
+            // 旧版本默认值
+            entry.commandType = 0;
+            entry.sequence = 0;
+            entry.isValidHeader = false;
+            entry.commandDesc = getCommandDescription(0);
+        }
 
         // 添加到内存索引
         int indexId = m_indexEntries.size();
@@ -1067,4 +1133,20 @@ int IndexGenerator::binarySearchTimestamp(uint64_t timestamp, bool lowerBound) c
     }
 
     return result;
+}
+
+QString IndexGenerator::getCommandDescription(uint8_t commandType)
+{
+    switch (commandType) {
+    case 0x00: return LocalQTCompat::fromLocal8Bit("默认，显示到2345行");
+    case 0x11: return LocalQTCompat::fromLocal8Bit("CMD行指令数据");
+    case 0x22: return LocalQTCompat::fromLocal8Bit("CMD行BTA标志");
+    case 0x33: return LocalQTCompat::fromLocal8Bit("CMD行ULPS标志");
+    case 0x44: return LocalQTCompat::fromLocal8Bit("视频预览有效行");
+    case 0x55: return LocalQTCompat::fromLocal8Bit("此笔数据含有复制标识的行");
+    case 0x66: return LocalQTCompat::fromLocal8Bit("命令行指令");
+    case 0x77: return LocalQTCompat::fromLocal8Bit("FRAME一帧的开始");
+    case 0x88: return LocalQTCompat::fromLocal8Bit("监流设备");
+    default: return LocalQTCompat::fromLocal8Bit("未知指令类型");
+    }
 }

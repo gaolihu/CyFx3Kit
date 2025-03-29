@@ -30,6 +30,10 @@ struct PacketIndexEntry {
     QString fileName;          // 所在文件名
     uint32_t batchId;          // 批次ID
     uint32_t packetIndex;      // 在批次中的索引
+    uint8_t commandType;       // 指令类型 (XX值)
+    uint32_t sequence;         // 序列号(从SC1-SC3构建)
+    bool isValidHeader;        // 是否为有效的头部
+    QString commandDesc;       // 指令描述
 };
 
 /**
@@ -76,8 +80,7 @@ public:
      * @return 添加成功的条目数量
      */
     int addPacketIndexBatch(const std::vector<DataPacket>& packets,
-        uint64_t startFileOffset,
-        const QString& fileName);
+        uint64_t startFileOffset);
 
     /**
      * @brief 保存索引到磁盘
@@ -196,6 +199,13 @@ private:
      * @return 找到的索引位置，-1表示未找到
      */
     int binarySearchTimestamp(uint64_t timestamp, bool lowerBound) const;
+
+    /**
+     * @brief 获取指令类型的描述
+     * @param commandType 指令类型值(XX)
+     * @return 指令类型的描述文本
+     */
+    QString getCommandDescription(uint8_t commandType);
 
     // 快速内存映射查找
     QMap<uint64_t, int> m_timestampToIndex;     // 时间戳到索引的映射

@@ -17,7 +17,13 @@ struct DataPacket {
     bool isBatchComplete = true;                 // 是否是批次的最后一个包
     uint32_t batchId = 0;                        // 批次ID
     uint32_t packetIndex = 0;                    // 批次Index
+    size_t offsetInFile = 0;                   // 此笔数据在文件中的偏移量
     size_t packetsInBatch = 1;                   // 批次中包的总数
+
+    // 协议字段
+    uint8_t commandType;    // XX值
+    uint32_t sequence;      // SC1-SC3构建的序列号
+    bool isValidHeader;     // 是否有效头部
 
     // 便捷访问方法
     const uint8_t* getData() const { return data ? data->data() : nullptr; }

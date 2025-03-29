@@ -493,10 +493,15 @@ void FX3MainController::slot_FX3Main_C_handleStartTransfer()
 
     if (m_moduleManager && !m_moduleManager->isModuleInitialized(ModuleManager::ModuleType::FILE_OPTIONS)) {
         // 检查文件保存模块是否已初始化
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("初始化文件保存模块，忽略本次开始传输"));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("初始化必要模块，忽略本次开始传输"));
 
         // 使用现有的TAB管理机制显示模块
         handleModuleDisplay(ModuleManager::ModuleType::FILE_OPTIONS);
+        handleModuleDisplay(ModuleManager::ModuleType::CHANNEL_CONFIG);
+        handleModuleDisplay(ModuleManager::ModuleType::WAVEFORM_ANALYSIS);
+        handleModuleDisplay(ModuleManager::ModuleType::VIDEO_DISPLAY);
+        handleModuleDisplay(ModuleManager::ModuleType::DATA_ANALYSIS);
+
         return;
     }
 

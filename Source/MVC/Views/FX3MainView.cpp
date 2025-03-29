@@ -175,6 +175,18 @@ bool FX3MainView::initializeLogger()
     }
 
     try {
+#if 1
+        QTabWidget* tabWidget = findChild<QTabWidget*>("mainTabWidget");
+        QWidget* logTab = findChild<QWidget*>("logTab");
+
+        if (tabWidget && logTab) {
+            int index = tabWidget->indexOf(logTab);
+            if (index != -1) {
+                tabWidget->removeTab(index);
+            }
+            return true;
+        }
+#endif
         // 获取日志控件 - 位于标签页内部
         QTextEdit* logTextEdit = findChild<QTextEdit*>("logTextEdit");
         if (logTextEdit) {

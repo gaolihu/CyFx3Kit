@@ -756,7 +756,7 @@ void DataAnalysisController::processDataPackets(const std::vector<DataPacket>& p
             int packetsFound = IndexGenerator::getInstance().parseDataStream(
                 combinedData.data(), combinedData.size(), 0);
 
-            LOG_INFO(LocalQTCompat::fromLocal8Bit("从数据包中解析并索引了 %1 个数据包").arg(packetsFound));
+            // LOG_INFO(LocalQTCompat::fromLocal8Bit("从数据包中解析并索引了 %1 个数据包").arg(packetsFound));
             return packetsFound;
         }
         catch (const std::exception& e) {
