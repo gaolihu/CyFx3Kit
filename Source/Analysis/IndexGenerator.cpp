@@ -33,7 +33,6 @@ bool IndexGenerator::open(const QString& path)
     LOG_INFO(LocalQTCompat::fromLocal8Bit("打开索引文件：%1").arg(path));
 
     if (m_isOpen) {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("索引文件：%1已经打开").arg(path));
         return true;
     }
 
@@ -49,22 +48,17 @@ bool IndexGenerator::open(const QString& path)
         }
     }
 
-    m_indexFile.setFileName(path);
-    if (!m_indexFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法创建索引文件: %1 - %2").arg(path).arg(m_indexFile.errorString()));
-        return false;
+    // 直接加载已有的JSON索引或创建新的内存索引
+    if (QFile::exists(path + ".json")) {
+        return loadIndex(path);
     }
 
-    m_textStream.setDevice(&m_indexFile);
-
-    // 写入索引文件头
-    m_textStream << "# FX3 Data Index File v2.0\n";
-    m_textStream << "# Format: ID,TimestampNs,PacketSize,FileOffset,FileName,BatchId,PacketIndex\n";
-    m_textStream << "# Created: " << QDateTime::currentDateTime().toString(Qt::ISODate) << "\n";
-    m_textStream.flush();
-
-    m_isOpen = true;
+    // 初始化空索引
+    m_indexEntries.clear();
+    m_timestampToIndex.clear();
     m_entryCount = 0;
+    m_lastSavedCount = 0;
+    m_isOpen = true;
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("索引文件已创建: %1").arg(path));
     return true;
@@ -75,20 +69,61 @@ void IndexGenerator::close()
     LOG_INFO(LocalQTCompat::fromLocal8Bit("关闭索引文件"));
 
     if (m_isOpen) {
-        // 保存索引
+        // 保存索引到JSON
         saveIndex(true);
-
-        // 写入摘要信息
-        m_textStream << "# Total Entries: " << m_entryCount << "\n";
-        m_textStream << "# Closed: " << QDateTime::currentDateTime().toString(Qt::ISODate) << "\n";
-
-        m_textStream.flush();
-        m_indexFile.close();
         m_isOpen = false;
-
         LOG_INFO(LocalQTCompat::fromLocal8Bit("索引文件已关闭，总条目数: %1").arg(m_entryCount));
     }
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("关闭索引文件OK"));
+}
+
+bool IndexGenerator::saveIndex(bool forceSave)
+{
+    if (!m_isOpen) {
+        return false;
+    }
+
+    // 增加保存阈值，避免频繁IO操作
+    if (!forceSave && m_entryCount - m_lastSavedCount < 10000) {
+        return true; // 没有足够的新条目，跳过保存
+    }
+
+    // 创建JSON文档
+    QJsonArray entriesArray;
+
+    for (const PacketIndexEntry& entry : m_indexEntries) {
+        QJsonObject entryObj;
+        entryObj["timestamp"] = QString::number(entry.timestamp);
+        entryObj["fileOffset"] = QString::number(entry.fileOffset);
+        entryObj["size"] = static_cast<int>(entry.size);
+        entryObj["fileName"] = entry.fileName;
+        entryObj["batchId"] = static_cast<int>(entry.batchId);
+        entryObj["packetIndex"] = static_cast<int>(entry.packetIndex);
+
+        entriesArray.append(entryObj);
+    }
+
+    QJsonObject rootObj;
+    rootObj["version"] = "2.0";
+    rootObj["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+    rootObj["entries"] = entriesArray;
+
+    QJsonDocument doc(rootObj);
+
+    // 保存到JSON文件
+    QString jsonPath = m_indexPath + ".json";
+    QFile jsonFile(jsonPath);
+
+    if (!jsonFile.open(QIODevice::WriteOnly)) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开JSON索引文件: %1").arg(jsonFile.errorString()));
+        return false;
+    }
+
+    // 使用紧凑格式减小文件大小
+    jsonFile.write(doc.toJson(QJsonDocument::Compact));
+    jsonFile.close();
+
+    m_lastSavedCount = m_entryCount;
+    return true;
 }
 
 int IndexGenerator::addPacketIndex(const DataPacket& packet, uint64_t fileOffset, const QString& fileName)
@@ -925,64 +960,6 @@ void IndexGenerator::clearIndex()
     m_timestampToIndex.clear();
     m_entryCount = 0;
     m_lastSavedCount = 0;
-}
-
-bool IndexGenerator::saveIndex(bool forceSave)
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("%1保存索引文件，条目数：%2，上次：%3")
-        .arg(forceSave ? "强制保存" : "")
-        .arg(m_entryCount)
-        .arg(m_lastSavedCount));
-
-    if (!m_isOpen) {
-        return false;
-    }
-
-    // 增加保存阈值，避免频繁IO操作
-    if (!forceSave && m_entryCount - m_lastSavedCount < 5000) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("保存索引文件").arg(forceSave ? "强制保存" : ""));
-        return true; // 没有足够的新条目，跳过保存
-    }
-
-    // 创建JSON文档
-    QJsonArray entriesArray;
-
-    for (const PacketIndexEntry& entry : m_indexEntries) {
-        QJsonObject entryObj;
-        entryObj["timestamp"] = QString::number(entry.timestamp); // 使用字符串避免大整数精度问题
-        entryObj["fileOffset"] = QString::number(entry.fileOffset);
-        entryObj["size"] = static_cast<int>(entry.size);
-        entryObj["fileName"] = entry.fileName;
-        entryObj["batchId"] = static_cast<int>(entry.batchId);
-        entryObj["packetIndex"] = static_cast<int>(entry.packetIndex);
-
-        entriesArray.append(entryObj);
-    }
-
-    QJsonObject rootObj;
-    rootObj["version"] = "2.0";
-    rootObj["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
-    rootObj["entries"] = entriesArray;
-
-    QJsonDocument doc(rootObj);
-
-    // 保存到JSON文件
-    QString jsonPath = m_indexPath + ".json";
-    QFile jsonFile(jsonPath);
-
-    if (!jsonFile.open(QIODevice::WriteOnly)) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开JSON索引文件: %1").arg(jsonFile.errorString()));
-        return false;
-    }
-
-    // 使用紧凑格式减小文件大小
-    jsonFile.write(doc.toJson(QJsonDocument::Compact));
-    jsonFile.close();
-
-    m_lastSavedCount = m_entryCount;
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("索引已保存到: %1，共 %2 条记录").arg(jsonPath).arg(m_entryCount));
-
-    return true;
 }
 
 void IndexGenerator::flush()

@@ -42,6 +42,7 @@ DataAnalysisController::DataAnalysisController(DataAnalysisView* view)
     // 获取模型实例（单例模式）
     m_model = DataAnalysisModel::getInstance();
 
+#if 0
     // 连接异步处理完成信号
     connect(&m_processWatcher, &QFutureWatcher<int>::finished,
         this, &DataAnalysisController::slot_DA_C_onProcessingFinished);
@@ -53,6 +54,7 @@ DataAnalysisController::DataAnalysisController(DataAnalysisView* view)
     // 连接文件监视器
     connect(&m_fileWatcher, &QFileSystemWatcher::fileChanged,
         this, &DataAnalysisController::slot_DA_C_onIndexFileChanged);
+#endif
 
     // 启动性能计时器
     m_performanceTimer.start();
