@@ -5,6 +5,9 @@
 #include <QImage>
 #include <QPainter>
 #include <memory>
+#include <QTimer>
+#include "DataAccessService.h"
+#include "IIndexAccess.h"
 
 class VideoDisplayView;
 namespace Ui { class VideoDisplayClass; }
@@ -58,6 +61,48 @@ public:
      */
     void handlePaintEvent(QPainter* painter);
 
+    /**
+     * @brief 加载指定命令类型的帧数据
+     * @param commandType 命令类型
+     * @param limit 最大加载数量 (-1表示不限制)
+     * @return 加载的帧数量
+     */
+    int loadFramesByCommandType(uint8_t commandType, int limit = -1);
+
+    /**
+     * @brief 加载指定时间范围的帧数据
+     * @param startTime 开始时间戳
+     * @param endTime 结束时间戳
+     * @return 加载的帧数量
+     */
+    int loadFramesByTimeRange(uint64_t startTime, uint64_t endTime);
+
+    /**
+     * @brief 设置当前帧索引
+     * @param index 帧索引
+     * @return 是否成功
+     */
+    bool setCurrentFrame(int index);
+
+    /**
+     * @brief 移动到下一帧
+     * @return 是否成功
+     */
+    bool moveToNextFrame();
+
+    /**
+     * @brief 移动到上一帧
+     * @return 是否成功
+     */
+    bool moveToPreviousFrame();
+
+    /**
+     * @brief 设置自动播放
+     * @param enable 是否启用自动播放
+     * @param interval 播放间隔(毫秒)
+     */
+    void setAutoPlay(bool enable, int interval = 33);
+
 public slots:
     /**
      * @brief 开始按钮点击事件处理
@@ -110,6 +155,55 @@ public slots:
      */
     void onVideoWidthChanged(const QString& text);
 
+    /**
+     * @brief 命令类型改变事件处理
+     * @param index 当前选中的命令类型索引
+     */
+    void onCommandTypeChanged(int index);
+
+    /**
+     * @brief 开始时间戳改变事件处理
+     * @param text 时间戳文本
+     */
+    void onStartTimeChanged(const QString& text);
+
+    /**
+     * @brief 结束时间戳改变事件处理
+     * @param text 时间戳文本
+     */
+    void onEndTimeChanged(const QString& text);
+
+    /**
+     * @brief 播放控制按钮点击事件处理
+     */
+    void onPlayButtonClicked();
+
+    /**
+     * @brief 暂停按钮点击事件处理
+     */
+    void onPauseButtonClicked();
+
+    /**
+     * @brief 下一帧按钮点击事件处理
+     */
+    void onNextFrameButtonClicked();
+
+    /**
+     * @brief 上一帧按钮点击事件处理
+     */
+    void onPrevFrameButtonClicked();
+
+    /**
+     * @brief 速度改变事件处理
+     * @param value 速度值
+     */
+    void onSpeedChanged(int value);
+
+    /**
+     * @brief 自动播放定时器超时处理
+     */
+    void onPlaybackTimerTimeout();
+
 private slots:
     /**
      * @brief 配置变更处理函数
@@ -128,6 +222,19 @@ private slots:
      * @param image 新的渲染图像
      */
     void onRenderImageChanged(const QImage& image);
+
+    /**
+     * @brief 当前帧索引变更处理函数
+     * @param index 新的帧索引
+     * @param total 总帧数
+     */
+    void onCurrentFrameChanged(int index, int total);
+
+    /**
+     * @brief 当前索引条目变更处理函数
+     * @param entry 新的索引条目
+     */
+    void onCurrentEntryChanged(const PacketIndexEntry& entry);
 
 private:
     /**
@@ -169,6 +276,22 @@ private:
      */
     QImage decodeRawData(const QByteArray& data);
 
+    /**
+     * @brief 加载当前帧数据
+     * @return 是否成功加载
+     */
+    bool loadCurrentFrameData();
+
+    /**
+     * @brief 更新播放控制UI
+     */
+    void updatePlaybackControls();
+
+    /**
+     * @brief 填充命令类型下拉列表
+     */
+    void populateCommandTypeComboBox();
+
 private:
     VideoDisplayView* m_view;                            ///< 视图对象
     Ui::VideoDisplayClass* m_ui;                         ///< UI对象
@@ -176,10 +299,21 @@ private:
 
     bool m_isInitialized;                                ///< 初始化标志
     bool m_isBatchUpdate;                                ///< 批量更新标志
+    bool m_isPlaying;                                    ///< 是否正在播放
+
+    QTimer* m_playbackTimer;                             ///< 播放定时器
 
     // 常量定义
     static const int MAX_RESOLUTION = 4096;              ///< 最大分辨率限制
     static const int DEFAULT_WIDTH = 1920;               ///< 默认宽度
     static const int DEFAULT_HEIGHT = 1080;              ///< 默认高度
     static const uint8_t DEFAULT_FORMAT = 0x39;          ///< 默认RAW10格式
+
+    // 命令类型映射
+    struct CommandTypeInfo {
+        uint8_t code;
+        QString name;
+    };
+
+    QVector<CommandTypeInfo> m_commandTypes;             ///< 命令类型列表
 };

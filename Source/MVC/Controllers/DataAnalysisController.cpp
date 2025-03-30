@@ -706,7 +706,7 @@ void DataAnalysisController::processRawData(const uint8_t* data, size_t size, ui
     m_processWatcher.setFuture(future);
 }
 
-void DataAnalysisController::processDataPackets(const std::vector<DataPacket>& packets, const QString& filePath)
+void DataAnalysisController::processDataPackets(const std::vector<DataPacket>& packets)
 {
     if (packets.empty()) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("处理数据包失败：无数据包"));

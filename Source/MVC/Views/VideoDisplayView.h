@@ -51,6 +51,36 @@ public:
      */
     void updateVideoFrame(const QByteArray& frameData);
 
+    /**
+     * @brief 加载指定命令类型的帧数据
+     * @param commandType 命令类型
+     * @param limit 最大加载数量 (-1表示不限制)
+     * @return 加载的帧数量
+     */
+    int loadFramesByCommandType(uint8_t commandType, int limit = -1);
+
+    /**
+     * @brief 加载指定时间范围的帧数据
+     * @param startTime 开始时间戳
+     * @param endTime 结束时间戳
+     * @return 加载的帧数量
+     */
+    int loadFramesByTimeRange(uint64_t startTime, uint64_t endTime);
+
+    /**
+     * @brief 设置当前帧索引
+     * @param index 帧索引
+     * @return 是否成功
+     */
+    bool setCurrentFrame(int index);
+
+    /**
+     * @brief 开始/停止自动播放
+     * @param enable 是否启用自动播放
+     * @param interval 播放间隔(毫秒)
+     */
+    void setAutoPlay(bool enable, int interval = 33);
+
 signals:
     /**
      * @brief 视频显示状态改变信号
@@ -58,12 +88,31 @@ signals:
      */
     void videoDisplayStatusChanged(bool isRunning);
 
+    /**
+     * @brief 帧索引变更信号
+     * @param index 新的帧索引
+     * @param total 总帧数
+     */
+    void frameIndexChanged(int index, int total);
+
 protected:
     /**
      * @brief 绘图事件处理
      * @param event 绘图事件
      */
     void paintEvent(QPaintEvent* event) override;
+
+    /**
+     * @brief 键盘事件处理
+     * @param event 键盘事件
+     */
+    void keyPressEvent(QKeyEvent* event) override;
+
+    /**
+     * @brief 鼠标滚轮事件处理
+     * @param event 鼠标滚轮事件
+     */
+    void wheelEvent(QWheelEvent* event) override;
 
 private:
     /**

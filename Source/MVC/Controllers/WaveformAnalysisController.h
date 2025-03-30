@@ -8,14 +8,13 @@
 
 class WaveformAnalysisView;
 namespace Ui { class WaveformAnalysisClass; }
-class WaveformConfigModel;
-struct WaveformConfig;
-struct MeasurementResult;
+class WaveformAnalysisModel;
+class DataAccessService;
 
 /**
  * @brief 波形分析控制器类
  *
- * 负责处理波形分析的业务逻辑
+ * 负责处理波形分析的业务逻辑和视图更新
  */
 class WaveformAnalysisController : public QObject
 {
@@ -36,6 +35,7 @@ public:
     /**
      * @brief 初始化控制器
      * 连接信号和槽，设置初始状态
+     * @return 初始化是否成功
      */
     bool initialize();
 
@@ -47,23 +47,16 @@ public:
     void handlePaintEvent(QPainter* painter, const QRect& chartRect);
 
     /**
-     * @brief 设置波形数据
-     * @param xData X轴数据
-     * @param yData Y轴数据
+     * @brief 处理水平平移操作
+     * @param deltaX 水平偏移像素
      */
-    void setWaveformData(const QVector<double>& xData, const QVector<double>& yData);
+    void handlePanDelta(int deltaX);
 
     /**
-     * @brief 添加数据点
-     * @param x X轴数据点
-     * @param y Y轴数据点
+     * @brief 在指定位置添加标记点
+     * @param pos 鼠标位置
      */
-    void addDataPoint(double x, double y);
-
-    /**
-     * @brief 清除数据
-     */
-    void clearData();
+    void addMarkerAtPosition(const QPoint& pos);
 
 public slots:
     /**
@@ -79,242 +72,198 @@ public slots:
     /**
      * @brief 执行测量
      */
-    void performMeasurement();
+    // void performMeasurement();
 
     /**
      * @brief 导出数据
      */
-    void exportData();
+    // void exportData();
 
     /**
-     * @brief 波形类型改变处理
-     * @param index 组合框索引
+     * @brief 放大
      */
-    void onWaveformTypeChanged(int index);
+    void zoomIn();
 
     /**
-     * @brief 触发模式改变处理
-     * @param index 组合框索引
+     * @brief 缩小
      */
-    void onTriggerModeChanged(int index);
+    void zoomOut();
 
     /**
-     * @brief 缩放控制 - 放大
+     * @brief 重置缩放
      */
-    void onZoomInButtonClicked();
+    void zoomReset();
 
     /**
-     * @brief 缩放控制 - 缩小
+     * @brief 在指定点放大
+     * @param pos 鼠标位置
      */
-    void onZoomOutButtonClicked();
+    void zoomInAtPoint(const QPoint& pos);
 
     /**
-     * @brief 缩放控制 - 重置
+     * @brief 在指定点缩小
+     * @param pos 鼠标位置
      */
-    void onZoomResetButtonClicked();
+    void zoomOutAtPoint(const QPoint& pos);
 
     /**
-     * @brief 自动缩放状态改变
-     * @param checked 是否选中
-     */
-    void onAutoScaleChanged(bool checked);
-
-    /**
-     * @brief 水平滑块值改变
+     * @brief 设置水平缩放
      * @param value 滑块值
      */
-    void onHorizontalScaleChanged(int value);
+    // void setHorizontalScale(int value);
 
     /**
-     * @brief 垂直滑块值改变
+     * @brief 设置垂直缩放
      * @param value 滑块值
      */
-    void onVerticalScaleChanged(int value);
+    // void setVerticalScale(int value);
 
     /**
-     * @brief 采样率改变
-     * @param value 采样率值
+     * @brief 设置自动缩放
+     * @param enabled 是否启用
      */
-    void onSampleRateChanged(int value);
+    // void setAutoScale(bool enabled);
 
     /**
-     * @brief 窗口大小改变
-     * @param value 窗口大小值
+     * @brief 加载数据
+     * @param filename 文件名
+     * @param startIndex 起始索引
+     * @param length 数据长度
      */
-    void onWindowSizeChanged(int value);
+    void loadData(const QString& filename, int startIndex, int length);
 
     /**
-     * @brief 窗口类型改变
-     * @param index 窗口类型索引
+     * @brief 加载数据包
+     * @param packetIndex 数据包索引
      */
-    void onWindowTypeChanged(int index);
-
-    /**
-     * @brief 峰值检测状态改变
-     * @param checked 是否选中
-     */
-    void onPeakDetectionChanged(bool checked);
-
-    /**
-     * @brief 噪声滤波状态改变
-     * @param checked 是否选中
-     */
-    void onNoiseFilterChanged(bool checked);
-
-    /**
-     * @brief 自相关状态改变
-     * @param checked 是否选中
-     */
-    void onAutoCorrelationChanged(bool checked);
-
-    /**
-     * @brief 显示网格状态改变
-     * @param checked 是否选中
-     */
-    void onGridEnabledChanged(bool checked);
-
-    /**
-     * @brief 颜色主题改变
-     * @param index 颜色主题索引
-     */
-    void onColorThemeChanged(int index);
-
-    /**
-     * @brief 刷新率改变
-     * @param value 刷新率值
-     */
-    void onRefreshRateChanged(int value);
+    // void loadDataPacket(uint64_t packetIndex);
 
 private slots:
     /**
-     * @brief 配置变更处理
-     * @param config 新的波形配置
+     * @brief 模型数据加载完成
+     * @param success 是否成功
      */
-    void onConfigChanged(const WaveformConfig& config);
+    void onDataLoaded(bool success);
 
     /**
-     * @brief 波形数据变更处理
-     * @param xData 新的X轴数据
-     * @param yData 新的Y轴数据
+     * @brief 视图范围改变
+     * @param xMin 最小索引
+     * @param xMax 最大索引
      */
-    void onWaveformDataChanged(const QVector<double>& xData, const QVector<double>& yData);
+    void onViewRangeChanged(double xMin, double xMax);
 
     /**
-     * @brief 测量结果变更处理
-     * @param result 新的测量结果
+     * @brief 标记点改变
      */
-    void onMeasurementResultChanged(const MeasurementResult& result);
+    void onMarkersChanged();
 
     /**
-     * @brief 标记点变更处理
-     * @param xData 标记点X坐标
-     * @param yData 标记点Y坐标
+     * @brief 通道状态改变
+     * @param channel 通道索引
+     * @param enabled 是否启用
      */
-    void onMarkersChanged(const QVector<double>& xData, const QVector<double>& yData);
+    void onChannelStateChanged(int channel, bool enabled);
 
     /**
-     * @brief 更新模拟数据
-     * 用于演示和测试目的
+     * @brief 数据分析完成
+     * @param result 分析结果
      */
-    void onUpdateSimulatedData();
+    // void onDataAnalysisCompleted(const QString& result);
+
+    /**
+     * @brief 更新定时器触发
+     */
+    void onUpdateTimerTriggered();
 
 private:
     /**
-     * @brief 连接UI控件的信号与槽
+     * @brief 连接信号和槽
      */
     void connectSignals();
 
     /**
-     * @brief 更新UI状态
-     * 根据当前配置更新组件状态
-     */
-    void updateUIState();
-
-    /**
-     * @brief 应用模型数据到UI
-     */
-    void applyModelToUI();
-
-    /**
-     * @brief 应用UI数据到模型
-     */
-    void applyUIToModel();
-
-    /**
-     * @brief 生成模拟波形数据
-     * 用于演示和测试目的
-     */
-    void generateSimulatedData();
-
-    /**
-     * @brief 绘制波形
+     * @brief 绘制背景和框架
      * @param painter 绘图对象
-     * @param rect 绘制区域矩形
+     * @param rect 区域矩形
      */
-    void drawWaveform(QPainter* painter, const QRect& rect);
+    void drawBackground(QPainter* painter, const QRect& rect);
 
     /**
      * @brief 绘制网格
      * @param painter 绘图对象
-     * @param rect 绘制区域矩形
+     * @param rect 区域矩形
      */
     void drawGrid(QPainter* painter, const QRect& rect);
 
     /**
      * @brief 绘制标尺
      * @param painter 绘图对象
-     * @param rect 绘制区域矩形
+     * @param rect 区域矩形
      */
     void drawRulers(QPainter* painter, const QRect& rect);
 
     /**
+     * @brief 绘制通道标签
+     * @param painter 绘图对象
+     * @param rect 区域矩形
+     */
+    void drawChannelLabels(QPainter* painter, const QRect& rect);
+
+    /**
+     * @brief 绘制波形数据
+     * @param painter 绘图对象
+     * @param rect 区域矩形
+     */
+    void drawWaveforms(QPainter* painter, const QRect& rect);
+
+    /**
      * @brief 绘制标记点
      * @param painter 绘图对象
-     * @param rect 绘制区域矩形
+     * @param rect 区域矩形
      */
     void drawMarkers(QPainter* painter, const QRect& rect);
 
     /**
-     * @brief 计算波形数据的显示转换
-     * @param rect 显示区域矩形
-     * @param xData X轴数据
-     * @param yData Y轴数据
-     * @param points 转换后的屏幕坐标点集
+     * @brief 绘制光标和辅助信息
+     * @param painter 绘图对象
+     * @param rect 区域矩形
      */
-    void calculateWaveformPoints(const QRect& rect,
-        const QVector<double>& xData,
-        const QVector<double>& yData,
-        QVector<QPointF>& points);
+    void drawCursor(QPainter* painter, const QRect& rect);
 
     /**
-     * @brief 更新测量结果文本显示
-     * @param result 测量结果
+     * @brief 将数据索引转换为屏幕坐标
+     * @param index 数据索引
+     * @param rect 绘制区域
+     * @return 屏幕X坐标
      */
-    void updateMeasurementDisplay(const MeasurementResult& result);
+    int dataToScreenX(double index, const QRect& rect);
 
     /**
-     * @brief 数据转换为波形颜色
-     * 根据数据值和配置计算显示颜色
-     * @param value 数据值
-     * @return 对应的显示颜色
+     * @brief 将屏幕坐标转换为数据索引
+     * @param x 屏幕X坐标
+     * @param rect 绘制区域
+     * @return 数据索引
      */
-    QColor getWaveformColor(double value);
+    double screenToDataX(int x, const QRect& rect);
+
+    /**
+     * @brief 更新UI状态
+     */
+    void updateUIState();
 
 private:
-    WaveformAnalysisView* m_view;                                ///< 视图对象
-    Ui::WaveformAnalysisClass* m_ui;                         ///< UI对象
-    WaveformConfigModel* m_model;                            ///< 模型对象
+    WaveformAnalysisView* m_view;                 ///< 视图对象
+    Ui::WaveformAnalysisClass* m_ui;              ///< UI对象
+    WaveformAnalysisModel* m_model;               ///< 模型对象
+    DataAccessService* m_dataService;             ///< 数据访问服务
 
-    QTimer* m_simulationTimer;                               ///< 模拟数据定时器
+    QTimer* m_updateTimer;                        ///< 更新定时器
+    bool m_isRunning;                             ///< 是否正在运行
+    bool m_isInitialized;                         ///< 是否已初始化
+    double m_verticalScale;                       ///< 垂直缩放因子
+    bool m_autoScale;                             ///< 自动缩放
+    QPoint m_cursorPosition;                      ///< 光标位置
+    bool m_isCursorVisible;                       ///< 光标是否可见
 
-    bool m_isInitialized;                                    ///< 初始化标志
-    bool m_isBatchUpdate;                                    ///< 批量更新标志
-
-    // 绘图相关变量
-    double m_xMin;                                           ///< X轴最小值
-    double m_xMax;                                           ///< X轴最大值
-    double m_yMin;                                           ///< Y轴最小值
-    double m_yMax;                                           ///< Y轴最大值
-    QVector<QPointF> m_displayPoints;                        ///< 显示点集合
-    QVector<QPointF> m_markerPoints;                         ///< 标记点集合
+    QRect m_lastChartRect;                        ///< 上次图表区域
 };

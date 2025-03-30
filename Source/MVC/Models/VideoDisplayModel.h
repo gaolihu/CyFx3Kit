@@ -4,6 +4,9 @@
 #include <QObject>
 #include <memory>
 #include <QImage>
+#include <QVector>
+#include <QPair>
+#include "IndexGenerator.h"
 
 /**
  * @brief 视频配置数据结构
@@ -18,6 +21,11 @@ struct VideoConfig {
     int virtualChannel = 0;              ///< 虚拟通道
     double fps = 0.0;                    ///< 帧率 (PPS)
     bool isRunning = false;              ///< 是否正在运行
+    uint8_t commandType = 0;             ///< 命令类型过滤
+    uint64_t startTimestamp = 0;         ///< 开始时间戳
+    uint64_t endTimestamp = 0;           ///< 结束时间戳
+    bool autoAdvance = false;            ///< 自动播放下一帧
+    int playbackSpeed = 1;               ///< 播放速度倍率
 };
 
 /**
@@ -57,6 +65,18 @@ public:
     void setFrameData(const QByteArray& data);
 
     /**
+     * @brief 获取当前索引条目
+     * @return 当前帧的索引条目
+     */
+    PacketIndexEntry getCurrentEntry() const;
+
+    /**
+     * @brief 设置当前索引条目
+     * @param entry 新的索引条目
+     */
+    void setCurrentEntry(const PacketIndexEntry& entry);
+
+    /**
      * @brief 获取渲染图像
      * @return 当前渲染的图像
      */
@@ -85,6 +105,49 @@ public:
      */
     void resetToDefault();
 
+    /**
+     * @brief 设置已加载的帧列表
+     * @param entries 索引条目列表
+     */
+    void setLoadedFrames(const QVector<PacketIndexEntry>& entries);
+
+    /**
+     * @brief 获取已加载的帧列表
+     * @return 索引条目列表
+     */
+    QVector<PacketIndexEntry> getLoadedFrames() const;
+
+    /**
+     * @brief 获取当前帧索引
+     * @return 当前帧在已加载列表中的索引
+     */
+    int getCurrentFrameIndex() const;
+
+    /**
+     * @brief 设置当前帧索引
+     * @param index 新的帧索引
+     * @return 是否设置成功
+     */
+    bool setCurrentFrameIndex(int index);
+
+    /**
+     * @brief 获取总帧数
+     * @return 已加载的总帧数
+     */
+    int getTotalFrames() const;
+
+    /**
+     * @brief 移动到下一帧
+     * @return 是否成功移动到下一帧
+     */
+    bool moveToNextFrame();
+
+    /**
+     * @brief 移动到上一帧
+     * @return 是否成功移动到上一帧
+     */
+    bool moveToPreviousFrame();
+
 signals:
     /**
      * @brief 配置变更信号
@@ -103,6 +166,19 @@ signals:
      * @param image 新的渲染图像
      */
     void renderImageChanged(const QImage& image);
+
+    /**
+     * @brief 当前帧索引变更信号
+     * @param index 新的帧索引
+     * @param total 总帧数
+     */
+    void currentFrameChanged(int index, int total);
+
+    /**
+     * @brief 当前索引条目变更信号
+     * @param entry 新的索引条目
+     */
+    void currentEntryChanged(const PacketIndexEntry& entry);
 
 private:
     /**
@@ -125,4 +201,7 @@ private:
     VideoConfig m_config;                                ///< 当前配置
     QByteArray m_frameData;                              ///< 当前帧数据
     QImage m_renderImage;                                ///< 当前渲染图像
+    QVector<PacketIndexEntry> m_loadedFrames;            ///< 已加载的帧列表
+    int m_currentFrameIndex = -1;                        ///< 当前帧索引
+    PacketIndexEntry m_currentEntry;                     ///< 当前帧的索引条目
 };

@@ -110,7 +110,7 @@
     <ClCompile Include="Source\MVC\Models\VideoDisplayModel.cpp">
       <Filter>Source Files\MVC\Models</Filter>
     </ClCompile>
-    <ClCompile Include="Source\MVC\Models\WaveformConfigModel.cpp">
+    <ClCompile Include="Source\MVC\Models\WaveformAnalysisModel.cpp">
       <Filter>Source Files\MVC\Models</Filter>
     </ClCompile>
     <ClCompile Include="Source\MVC\Controllers\UpdateDeviceController.cpp">
@@ -169,9 +169,6 @@
     </ClCompile>
     <ClCompile Include="Source\MVC\Views\DataVisualization.cpp">
       <Filter>Source Files\MVC\Views</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Analysis\DataAnalysisInterface.cpp">
-      <Filter>Source Files\Analysis</Filter>
     </ClCompile>
     <ClCompile Include="Source\Analysis\IndexGenerator.cpp">
       <Filter>Source Files\Analysis</Filter>
@@ -241,7 +238,7 @@
     <QtMoc Include="Source\MVC\Models\VideoDisplayModel.h">
       <Filter>Source Files\MVC\Models</Filter>
     </QtMoc>
-    <QtMoc Include="Source\MVC\Models\WaveformConfigModel.h">
+    <QtMoc Include="Source\MVC\Models\WaveformAnalysisModel.h">
       <Filter>Source Files\MVC\Models</Filter>
     </QtMoc>
     <QtMoc Include="Source\MVC\Controllers\UpdateDeviceController.h">
@@ -298,9 +295,6 @@
     <QtMoc Include="Source\MVC\Views\DataVisualization.h">
       <Filter>Source Files\MVC\Views</Filter>
     </QtMoc>
-    <QtMoc Include="Source\Analysis\DataAnalysisInterface.h">
-      <Filter>Source Files\Analysis</Filter>
-    </QtMoc>
     <QtMoc Include="Source\Analysis\IndexGenerator.h">
       <Filter>Source Files\Analysis</Filter>
     </QtMoc>
@@ -333,8 +327,8 @@
     <ClInclude Include="Source\Core\DeviceState.h">
       <Filter>Source Files\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\File\IIndexAccess.h">
-      <Filter>Source Files\File</Filter>
+    <ClInclude Include="Source\Analysis\IIndexAccess.h">
+      <Filter>Source Files\Analysis</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

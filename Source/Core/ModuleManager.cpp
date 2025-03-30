@@ -487,7 +487,7 @@ void ModuleManager::notifyAllModules(ModuleEvent event, const QVariant& data) {
         break;
     case ModuleEvent::CONFIG_CHANGED:
         if (data.canConvert<ChannelConfig>()) {
-            emit signal_channelConfigChanged(data.value<ChannelConfig>());
+            // emit signal_channelConfigChanged(data.value<ChannelConfig>());
         }
         break;
     default:
@@ -698,14 +698,13 @@ void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
     if (m_moduleInitialized[ModuleType::DATA_ANALYSIS] &&
         m_moduleVisibility[ModuleType::DATA_ANALYSIS] &&
         m_dataAnalysisController) {
-        m_dataAnalysisController->processDataPackets(packets, m_fileSaveController->getCurrentFileName());
+        m_dataAnalysisController->processDataPackets(packets);
     }
 
     // 视频显示模块
     if (m_moduleInitialized[ModuleType::VIDEO_DISPLAY] &&
         m_moduleVisibility[ModuleType::VIDEO_DISPLAY] &&
         m_videoDisplayController) {
-        // 假设控制器提供处理数据包的方法
         // m_videoDisplayController->processDataPacket(packet);
     }
 

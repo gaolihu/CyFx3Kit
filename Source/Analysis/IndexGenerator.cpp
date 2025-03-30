@@ -1076,7 +1076,7 @@ void IndexGenerator::setBasePath(const QString& basePath)
         return;
     }
 
-    m_basePath = basePath;
+    m_basePath = basePath + "/";
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("索引文件基本路径已设置: %1").arg(m_basePath));
 }

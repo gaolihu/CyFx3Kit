@@ -12,6 +12,7 @@ VideoDisplayModel* VideoDisplayModel::getInstance()
 VideoDisplayModel::VideoDisplayModel()
     : QObject(nullptr)
     , m_config(createDefaultConfig())
+    , m_currentFrameIndex(-1)
 {
     // 创建默认的空白图像
     m_renderImage = QImage(m_config.width, m_config.height, QImage::Format_RGB888);
@@ -57,6 +58,17 @@ void VideoDisplayModel::setFrameData(const QByteArray& data)
     emit frameDataChanged(m_frameData);
 }
 
+PacketIndexEntry VideoDisplayModel::getCurrentEntry() const
+{
+    return m_currentEntry;
+}
+
+void VideoDisplayModel::setCurrentEntry(const PacketIndexEntry& entry)
+{
+    m_currentEntry = entry;
+    emit currentEntryChanged(m_currentEntry);
+}
+
 QImage VideoDisplayModel::getRenderImage() const
 {
     return m_renderImage;
@@ -81,6 +93,9 @@ bool VideoDisplayModel::saveConfig()
         settings.setValue("dataMode", m_config.dataMode);
         settings.setValue("colorArrangement", m_config.colorArrangement);
         settings.setValue("virtualChannel", m_config.virtualChannel);
+        settings.setValue("commandType", m_config.commandType);
+        settings.setValue("playbackSpeed", m_config.playbackSpeed);
+        settings.setValue("autoAdvance", m_config.autoAdvance);
 
         LOG_INFO("视频配置已保存到存储");
         return true;
@@ -104,6 +119,9 @@ bool VideoDisplayModel::loadConfig()
         m_config.dataMode = settings.value("dataMode", 0).toInt();
         m_config.colorArrangement = settings.value("colorArrangement", 0).toInt();
         m_config.virtualChannel = settings.value("virtualChannel", 0).toInt();
+        m_config.commandType = settings.value("commandType", 0).toUInt();
+        m_config.playbackSpeed = settings.value("playbackSpeed", 1).toInt();
+        m_config.autoAdvance = settings.value("autoAdvance", false).toBool();
 
         // 重置运行状态
         m_config.isRunning = false;
@@ -133,10 +151,84 @@ void VideoDisplayModel::resetToDefault()
     m_renderImage = QImage(m_config.width, m_config.height, QImage::Format_RGB888);
     m_renderImage.fill(Qt::black);
 
+    // 清空已加载的帧列表
+    m_loadedFrames.clear();
+    m_currentFrameIndex = -1;
+
     emit configChanged(m_config);
     emit renderImageChanged(m_renderImage);
+    emit currentFrameChanged(-1, 0);
 
     LOG_INFO("视频配置已重置为默认值");
+}
+
+void VideoDisplayModel::setLoadedFrames(const QVector<PacketIndexEntry>& entries)
+{
+    m_loadedFrames = entries;
+    m_currentFrameIndex = m_loadedFrames.isEmpty() ? -1 : 0;
+
+    // 如果有帧，设置当前帧索引条目
+    if (m_currentFrameIndex >= 0) {
+        m_currentEntry = m_loadedFrames[m_currentFrameIndex];
+        emit currentEntryChanged(m_currentEntry);
+    }
+
+    emit currentFrameChanged(m_currentFrameIndex, m_loadedFrames.size());
+
+    LOG_INFO(QString("已加载 %1 个帧").arg(m_loadedFrames.size()));
+}
+
+QVector<PacketIndexEntry> VideoDisplayModel::getLoadedFrames() const
+{
+    return m_loadedFrames;
+}
+
+int VideoDisplayModel::getCurrentFrameIndex() const
+{
+    return m_currentFrameIndex;
+}
+
+bool VideoDisplayModel::setCurrentFrameIndex(int index)
+{
+    if (index < -1 || index >= m_loadedFrames.size()) {
+        return false;
+    }
+
+    m_currentFrameIndex = index;
+
+    // 如果索引有效，更新当前索引条目
+    if (m_currentFrameIndex >= 0) {
+        m_currentEntry = m_loadedFrames[m_currentFrameIndex];
+        emit currentEntryChanged(m_currentEntry);
+    }
+
+    emit currentFrameChanged(m_currentFrameIndex, m_loadedFrames.size());
+
+    LOG_INFO(QString("当前帧索引: %1/%2").arg(m_currentFrameIndex + 1).arg(m_loadedFrames.size()));
+    return true;
+}
+
+int VideoDisplayModel::getTotalFrames() const
+{
+    return m_loadedFrames.size();
+}
+
+bool VideoDisplayModel::moveToNextFrame()
+{
+    if (m_loadedFrames.isEmpty() || m_currentFrameIndex >= m_loadedFrames.size() - 1) {
+        return false;
+    }
+
+    return setCurrentFrameIndex(m_currentFrameIndex + 1);
+}
+
+bool VideoDisplayModel::moveToPreviousFrame()
+{
+    if (m_loadedFrames.isEmpty() || m_currentFrameIndex <= 0) {
+        return false;
+    }
+
+    return setCurrentFrameIndex(m_currentFrameIndex - 1);
 }
 
 VideoConfig VideoDisplayModel::createDefaultConfig()
@@ -153,6 +245,11 @@ VideoConfig VideoDisplayModel::createDefaultConfig()
     config.virtualChannel = 0;
     config.fps = 0.0;
     config.isRunning = false;
+    config.commandType = 0;  // 默认命令类型
+    config.startTimestamp = 0;
+    config.endTimestamp = 0;
+    config.autoAdvance = false;
+    config.playbackSpeed = 1;
 
     return config;
 }

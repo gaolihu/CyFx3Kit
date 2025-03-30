@@ -130,9 +130,8 @@ public:
     /**
      * @brief 处理数据包集合
      * @param packets 数据包列表
-     * @param filePath 保存索引文件路径
      */
-    void processDataPackets(const std::vector<DataPacket>& packets, const QString& filePath);
+    void processDataPackets(const std::vector<DataPacket>& packets);
 
     /**
      * @brief 更新索引表格
