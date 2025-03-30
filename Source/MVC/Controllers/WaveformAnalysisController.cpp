@@ -75,6 +75,9 @@ bool WaveformAnalysisController::initialize()
         m_model->setChannelEnabled(ch, true);
     }
 
+    // 重置视图范围到安全值
+    m_model->setViewRange(0.0, 100.0);
+
     // 连接信号和槽
     connectSignals();
 
@@ -92,12 +95,10 @@ bool WaveformAnalysisController::initialize()
         }
     }
 
-    // 加载一些测试数据，确保UI正常显示
-    // loadSimulatedData(500);
-
     // 初始状态设置
     m_isInitialized = true;
     m_isRunning = false;
+    m_verticalScale = 1.0;  // 设置默认垂直缩放
 
     LOG_INFO("波形分析控制器已初始化");
     return true;
@@ -808,8 +809,20 @@ int WaveformAnalysisController::dataToScreenX(double index, const QRect& rect)
         return rect.left() + static_cast<int>((index - 0) * rect.width() / 100.0);
     }
 
+    // 检查index是否在合理范围内
+    if (index < xMin - (xMax - xMin) || index > xMax + (xMax - xMin)) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("数据索引超出合理范围: %1, 范围=[%2,%3]")
+            .arg(index).arg(xMin).arg(xMax));
+
+        // 限制在合理范围内
+        index = std::max(xMin, std::min(index, xMax));
+    }
+
     // 线性映射数据索引到屏幕坐标
     int screenX = rect.left() + static_cast<int>((index - xMin) * rect.width() / (xMax - xMin));
+
+    // 确保返回合理的屏幕坐标
+    screenX = std::max(rect.left(), std::min(screenX, rect.right()));
 
     // 添加周期性采样日志，避免日志过多
     if (static_cast<int>(index) % 100 == 0 || index == xMin || index == xMax) {

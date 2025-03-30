@@ -228,6 +228,20 @@ public:
      */
     bool initializeSignalConnections(QWidget* parentWidget);
 
+    /**
+     * @brief 设置标签页的样式
+     * @param tabWidget 标签页控件
+     * @param index 标签页索引
+     * @param tabName 标签页名称
+     */
+    void applyTabStyle(QTabWidget* tabWidget, int index, const QString& tabName);
+
+    /**
+     * @brief 初始化标签栏全局样式
+     * @param tabWidget 标签页控件
+     */
+    void initializeTabBarStyle(QTabWidget* tabWidget);
+
 public slots:
     /**
      * @brief 处理应用状态变化

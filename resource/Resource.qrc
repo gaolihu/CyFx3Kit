@@ -3,4 +3,7 @@
         <file>res/Picture/1.png</file>
         <file>res/Picture/2.png</file>
     </qresource>
+    <qresource prefix="/icon">
+        <file>res/Picture/close.svg</file>
+    </qresource>
 </RCC>

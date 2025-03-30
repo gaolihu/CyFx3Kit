@@ -62,12 +62,21 @@ MainUiStateManager::~MainUiStateManager()
 
 bool MainUiStateManager::initializeTabManagement(QTabWidget* mainTabWidget)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("初始化Tab管理"));
+
     if (!mainTabWidget) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("初始化Tab管理失败: mainTabWidget为空"));
         return false;
     }
 
     m_mainTabWidget = mainTabWidget;
+
+    m_homeTabIndex = 0;
+    m_channelTabIndex = -1;
+    m_dataAnalysisTabIndex = -1;
+    m_videoDisplayTabIndex = -1;
+    m_waveformTabIndex = -1;
+    m_fileSaveTabIndex = -1;
 
     // 设置默认标签页为日志
     m_mainTabWidget->setCurrentIndex(0);
@@ -76,7 +85,9 @@ bool MainUiStateManager::initializeTabManagement(QTabWidget* mainTabWidget)
     connect(m_mainTabWidget, &QTabWidget::tabCloseRequested,
         this, &MainUiStateManager::slot_MainUI_STM_onTabCloseRequested);
 
+    initializeTabBarStyle(m_mainTabWidget);
     LOG_INFO(LocalQTCompat::fromLocal8Bit("Tab管理初始化成功"));
+
     return true;
 }
 
@@ -86,6 +97,8 @@ void MainUiStateManager::addModuleToMainTab(QWidget* widget, const QString& tabN
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("添加模块失败：标签控件或模块窗口为空"));
         return;
     }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("添加模块到主标签页: %1").arg(tabName));
 
     // 检查是否已添加
     if (tabIndex >= 0 && tabIndex < m_mainTabWidget->count()) {
@@ -99,50 +112,188 @@ void MainUiStateManager::addModuleToMainTab(QWidget* widget, const QString& tabN
         m_mainTabWidget->addTab(widget, tabName) :
         m_mainTabWidget->addTab(widget, icon, tabName);
 
-    m_mainTabWidget->setCurrentIndex(tabIndex);
-
     // 设置关闭按钮，除了主页标签
     if (tabIndex != m_homeTabIndex) {
         m_mainTabWidget->setTabsClosable(true);
     }
 
+    // 设置为当前标签页
+    if (tabIndex >= 0) {
+        m_mainTabWidget->setCurrentIndex(tabIndex);
+
+        // 应用自定义样式
+        applyTabStyle(m_mainTabWidget, tabIndex, tabName);
+    }
+
     LOG_INFO(LocalQTCompat::fromLocal8Bit("已添加模块标签页: %1，索引: %2").arg(tabName).arg(tabIndex));
+}
+
+void MainUiStateManager::applyTabStyle(QTabWidget* tabWidget, int index, const QString& tabName)
+{
+    if (!tabWidget || index < 0 || index >= tabWidget->count())
+        return;
+
+    QTabBar* tabBar = tabWidget->tabBar();
+    if (!tabBar)
+        return;
+
+    // 计算合适的标签宽度
+    QFontMetrics fm(tabBar->font());
+    int textWidth = fm.horizontalAdvance(tabName);
+    int minWidth = 120; // 最小宽度
+
+    // 使用文本宽度加上一些边距，或最小宽度中的较大值
+    int tabWidth = qMax(minWidth, textWidth + 40);
+
+    // 设置标签的最小宽度
+    tabBar->setTabButton(index, QTabBar::LeftSide, nullptr);
+
+    // 使用 CSS 设置特定标签的样式
+    QString tabStyle = QString("QTabBar::tab:selected { min-width: %1px; font-weight: bold; background-color: #f0f0f0; border-bottom-color: #f0f0f0; }")
+        .arg(tabWidth);
+
+    // 获取当前样式表并添加新样式
+    QString currentStyle = tabWidget->styleSheet();
+
+    // 避免重复添加样式
+    if (!currentStyle.contains(tabStyle)) {
+        tabWidget->setStyleSheet(currentStyle + tabStyle);
+    }
+
+    // 更新特定标签的文本，这会触发重绘
+    tabBar->setTabText(index, tabName);
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("应用标签样式: %1，宽度=%2").arg(tabName).arg(tabWidth));
+}
+
+void MainUiStateManager::initializeTabBarStyle(QTabWidget* tabWidget)
+{
+    if (!tabWidget)
+        return;
+
+    QTabBar* tabBar = tabWidget->tabBar();
+    if (!tabBar)
+        return;
+
+    // 设置全局样式表
+    QString styleSheet = R"(
+    QTabWidget::pane {
+        border-top: 1px solid #B0BEC5;
+        background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #F0F4F8, stop:1 #D9E2EC);
+    }
+
+    QTabWidget::tab-bar {
+        left: 5px;
+    }
+
+    /* Tab 基础样式 */
+    QTabBar::tab {
+        min-width: 120px;
+        padding: 6px 14px;
+        margin-right: 3px;
+        border: 1px solid #B0BEC5;
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+        background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #E3EAF2, stop:1 #B0C4DE);
+        color: #37474F;
+    }
+
+    /* 选中状态 */
+    QTabBar::tab:selected {
+        background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FFFFFF, stop:1 #D6E1F2);
+        border-bottom-color: #FFFFFF;
+        font-weight: bold;
+        color: #0D47A1;
+    }
+
+    /* 悬浮 */
+    QTabBar::tab:hover {
+        background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #DDE5F2, stop:1 #A0B6D8);
+    }
+
+    /* 关闭按钮 */
+    QTabBar::close-button {
+        image: url(:/icon/res/Picture/close.svg);
+        subcontrol-position: right;
+        width: 30px;
+        height: 30px;
+    }
+
+    /* 关闭按钮 - 悬浮 */
+    QTabBar::close-button:hover {
+        image: url(:/icons/res/Picture/close_hover.svg);
+    }
+
+    /* 关闭按钮 - 按下 */
+    QTabBar::close-button:pressed {
+        image: url(:/icons/res/Picture/close_pressed.svg);
+    }
+    )";
+
+    tabWidget->setStyleSheet(styleSheet);
+
+    // 设置其他属性
+    tabBar->setExpanding(false);  // 不要拉伸标签填充整个空间
+    tabBar->setDocumentMode(true);  // 使用文档模式，标签看起来更现代
+    tabBar->setElideMode(Qt::ElideRight);  // 文本过长时在右侧显示省略号
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("初始化标签栏全局样式"));
 }
 
 void MainUiStateManager::showModuleTab(int& tabIndex, QWidget* widget, const QString& tabName, const QIcon& icon)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("显示模块标签: %1, name: %2").arg(tabIndex).arg(tabName));
     if (!m_mainTabWidget) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("标签控件为空，无法显示模块"));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("主标签页控件为空，无法显示模块"));
         return;
     }
 
-    // 如果标签页已存在
-    if (tabIndex >= 0 && tabIndex < m_mainTabWidget->count()) {
-        m_mainTabWidget->setCurrentIndex(tabIndex);
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("切换到模块标签页: %1").arg(tabName));
+    if (!widget) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("模块窗口为空，无法显示"));
+        return;
     }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("显示模块标签页: %1").arg(tabName));
+
+    // 如果标签页已存在，直接显示
+    if (tabIndex >= 0 && tabIndex < m_mainTabWidget->count() && m_mainTabWidget->widget(tabIndex) == widget) {
+        m_mainTabWidget->setCurrentIndex(tabIndex);
+        return;
+    }
+
     // 否则添加新标签页
+    if (icon.isNull()) {
+        tabIndex = m_mainTabWidget->addTab(widget, tabName);
+    }
     else {
-        addModuleToMainTab(widget, tabName, tabIndex, icon);
+        tabIndex = m_mainTabWidget->addTab(widget, icon, tabName);
+    }
+
+    // 设置为当前标签页
+    if (tabIndex >= 0) {
+        m_mainTabWidget->setCurrentIndex(tabIndex);
+
+        // 应用自定义样式
+        applyTabStyle(m_mainTabWidget, tabIndex, tabName);
     }
 }
 
 void MainUiStateManager::removeModuleTab(int& tabIndex)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("移除Tab: %1").arg(tabIndex));
-    if (!m_mainTabWidget || tabIndex < 0 || tabIndex >= m_mainTabWidget->count()) {
+    if (!m_mainTabWidget) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("主标签页控件为空，无法移除模块"));
         return;
     }
 
-    // 保存要删除的标签名称
-    QString tabName = m_mainTabWidget->tabText(tabIndex);
+    if (tabIndex < 0 || tabIndex >= m_mainTabWidget->count()) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("无效的标签页索引: %1").arg(tabIndex));
+        return;
+    }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("移除模块标签页, 索引: %1").arg(tabIndex));
 
     // 移除标签页
     m_mainTabWidget->removeTab(tabIndex);
     tabIndex = -1;
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("已移除模块标签页: %1").arg(tabName));
 }
 
 void MainUiStateManager::slot_MainUI_STM_onTabCloseRequested(int index)

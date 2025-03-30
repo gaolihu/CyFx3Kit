@@ -22,7 +22,14 @@ WaveformAnalysisModel::WaveformAnalysisModel()
     initializeDefaults();
 
     m_dataService = &DataAccessService::getInstance();
-
+#if 1
+    // 测试用
+    // 初始化索引数据，确保至少有基本数据
+    m_indexData.resize(100);
+    for (int i = 0; i < 100; i++) {
+        m_indexData[i] = i;
+    }
+#endif
     LOG_INFO("波形分析模型已创建");
 }
 
@@ -327,20 +334,43 @@ QVector<double> WaveformAnalysisModel::getIndexData() const
 
 void WaveformAnalysisModel::getViewRange(double& xMin, double& xMax) const
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取视图范围：%1 ~ %2")
-        .arg(xMin)
-        .arg(xMax));
+    // 检查范围值是否有效并记录日志
+    if (!std::isfinite(m_xMin) || !std::isfinite(m_xMax) || m_xMin >= m_xMax) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("视图范围异常: %1 ~ %2，返回默认范围")
+            .arg(m_xMin)
+            .arg(m_xMax));
 
-    xMin = m_xMin;
-    xMax = m_xMax;
+        // 返回安全的默认值
+        xMin = 0.0;
+        xMax = 100.0;
+    }
+    else {
+        xMin = m_xMin;
+        xMax = m_xMax;
+
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("获取视图范围：%1 ~ %2")
+            .arg(xMin)
+            .arg(xMax));
+    }
 }
 
 void WaveformAnalysisModel::setViewRange(double xMin, double xMax)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置视图范围: xMin=%1, xMax=%2").arg(xMin).arg(xMax));
+    // 验证参数有效性
+    if (!std::isfinite(xMin) || !std::isfinite(xMax)) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无效的视图范围参数: xMin=%1, xMax=%2").arg(xMin).arg(xMax));
+        return;
+    }
 
     if (xMin >= xMax) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("无效的视图范围: xMin(%1) >= xMax(%2)").arg(xMin).arg(xMax));
+        return;
+    }
+
+    // 防止极端值
+    const double MAX_RANGE = 1.0e6;
+    if (std::abs(xMin) > MAX_RANGE || std::abs(xMax) > MAX_RANGE) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("视图范围过大: xMin=%1, xMax=%2").arg(xMin).arg(xMax));
         return;
     }
 
