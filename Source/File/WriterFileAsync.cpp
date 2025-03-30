@@ -1,19 +1,19 @@
-// Source/File/AsyncFileWriter.cpp
+// Source/File/WriterFileAsync.cpp
 
 #include "FileSaveManager.h"
 #include "Logger.h"
 
-AsyncFileWriter::AsyncFileWriter()
+WriterFileAsync::WriterFileAsync()
     : m_isOpen(false)
     , m_running(false)
 {
 }
 
-AsyncFileWriter::~AsyncFileWriter() {
+WriterFileAsync::~WriterFileAsync() {
     close();
 }
 
-bool AsyncFileWriter::open(const QString& filename) {
+bool WriterFileAsync::open(const QString& filename) {
     close(); // 确保之前的文件已关闭
 
     // 验证文件名并规范化路径
@@ -58,7 +58,7 @@ bool AsyncFileWriter::open(const QString& filename) {
     // 启动写入线程
     m_running = true;
     try {
-        m_writerThread = std::thread(&AsyncFileWriter::writerThreadFunc, this);
+        m_writerThread = std::thread(&WriterFileAsync::writerThreadFunc, this);
         LOG_INFO(LocalQTCompat::fromLocal8Bit("异步写入线程已启动，文件已打开: %1").arg(normalizedPath));
     }
     catch (const std::exception& e) {
@@ -73,7 +73,7 @@ bool AsyncFileWriter::open(const QString& filename) {
     return true;
 }
 
-bool AsyncFileWriter::write(const QByteArray& data) {
+bool WriterFileAsync::write(const QByteArray& data) {
     if (!m_isOpen) {
         m_lastError = LocalQTCompat::fromLocal8Bit("文件未打开");
         return false;
@@ -111,7 +111,7 @@ bool AsyncFileWriter::write(const QByteArray& data) {
     return true;
 }
 
-bool AsyncFileWriter::close() {
+bool WriterFileAsync::close() {
     if (m_running) {
         // 设置停止标志并通知线程
         m_running = false;
@@ -132,15 +132,15 @@ bool AsyncFileWriter::close() {
     return true;
 }
 
-QString AsyncFileWriter::getLastError() const {
+QString WriterFileAsync::getLastError() const {
     return m_lastError;
 }
 
-bool AsyncFileWriter::isOpen() const {
+bool WriterFileAsync::isOpen() const {
     return m_isOpen;
 }
 
-void AsyncFileWriter::writerThreadFunc() {
+void WriterFileAsync::writerThreadFunc() {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("异步写入线程已启动"));
 
     while (m_running) {

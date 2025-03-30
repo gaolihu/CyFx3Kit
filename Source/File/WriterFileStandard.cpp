@@ -1,9 +1,9 @@
-// Source/File/StandardFileWriter.cpp
+// Source/File/WriterFileStandard.cpp
 
 #include "FileSaveManager.h"
 #include "Logger.h"
 
-bool StandardFileWriter::open(const QString& filename) {
+bool WriterFileStandard::open(const QString& filename) {
     close(); // 确保之前的文件已关闭
 
     m_file.setFileName(filename);
@@ -19,7 +19,7 @@ bool StandardFileWriter::open(const QString& filename) {
     return true;
 }
 
-bool StandardFileWriter::write(const QByteArray& data) {
+bool WriterFileStandard::write(const QByteArray& data) {
     if (!m_isOpen) {
         m_lastError = LocalQTCompat::fromLocal8Bit("文件未打开");
         LOG_ERROR(m_lastError);
@@ -39,7 +39,7 @@ bool StandardFileWriter::write(const QByteArray& data) {
     return true;
 }
 
-bool StandardFileWriter::close() {
+bool WriterFileStandard::close() {
     if (m_isOpen) {
         m_file.flush();
         m_file.close();
@@ -49,6 +49,6 @@ bool StandardFileWriter::close() {
     return true;
 }
 
-QString StandardFileWriter::getLastError() const {
+QString WriterFileStandard::getLastError() const {
     return m_lastError;
 }

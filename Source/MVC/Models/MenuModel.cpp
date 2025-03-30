@@ -198,7 +198,7 @@ void MenuModel::addMenuItem(const QString& actionName, MenuItemType menuType,
     m_menuItems[actionName] = item;
 
     emit signal_MN_M_menuItemAdded(actionName, menuType);
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("已添加菜单项: %1 (\"%2\")").arg(actionName).arg(text));
+    // LOG_INFO(LocalQTCompat::fromLocal8Bit("已添加菜单项: %1 (\"%2\")").arg(actionName).arg(text));
 }
 
 QStringList MenuModel::getMenuItemsByType(MenuItemType menuType) const

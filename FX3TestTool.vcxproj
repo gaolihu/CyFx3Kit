@@ -123,10 +123,10 @@
     <ClCompile Include="Source\Core\ModuleManager.cpp" />
     <ClCompile Include="Source\Core\MainUiStateManager.cpp" />
     <ClCompile Include="Source\Core\USBDevice.cpp" />
-    <ClCompile Include="Source\File\AsyncFileWriter.cpp" />
+    <ClCompile Include="Source\File\WriterFileAsync.cpp" />
     <ClCompile Include="Source\File\DataCacheManager.cpp" />
     <ClCompile Include="Source\File\FileSaveManager.cpp" />
-    <ClCompile Include="Source\File\StandardFileWriter.cpp" />
+    <ClCompile Include="Source\File\WriterFileStandard.cpp" />
     <ClCompile Include="Source\Main\main.cpp" />
     <ClCompile Include="Source\MVC\Controllers\ChannelSelectController.cpp" />
     <ClCompile Include="Source\MVC\Controllers\DataAnalysisController.cpp" />

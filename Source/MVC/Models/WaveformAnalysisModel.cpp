@@ -343,10 +343,12 @@ void WaveformAnalysisModel::getViewRange(double& xMin, double& xMax) const
     else {
         xMin = m_xMin;
         xMax = m_xMax;
-
+#if 0
+        // Too much noise
         LOG_INFO(LocalQTCompat::fromLocal8Bit("获取视图范围：%1 ~ %2")
             .arg(xMin)
             .arg(xMax));
+#endif
     }
 }
 

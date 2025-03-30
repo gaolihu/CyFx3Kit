@@ -101,7 +101,7 @@ QAction* MenuView::addMenuItem(const QString& actionName, MenuItemType menuType,
     // 连接信号
     connect(action, &QAction::triggered, this, &MenuView::slot_MN_V_onMenuAction);
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("已添加菜单项: %1").arg(actionName));
+    // LOG_INFO(LocalQTCompat::fromLocal8Bit("已添加菜单项: %1").arg(actionName));
 
     return action;
 }
@@ -308,8 +308,10 @@ void MenuView::syncMenusFromModel()
             // 同步启用状态
             bool enabled = model->isMenuItemEnabled(item);
             action->setEnabled(enabled);
+            /*
             LOG_DEBUG(LocalQTCompat::fromLocal8Bit("同步菜单启用状态: %1 -> %2")
                 .arg(item).arg(enabled ? "启用" : "禁用"));
+                */
 
             // 同步可见状态
             bool visible = model->isMenuItemVisible(item);
@@ -379,6 +381,6 @@ QAction* MenuView::createMenuItem(const QString& actionName, MenuItemType menuTy
     // 连接信号
     connect(action, &QAction::triggered, this, &MenuView::slot_MN_V_onMenuAction);
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("已创建菜单项: %1").arg(actionName));
+    // LOG_INFO(LocalQTCompat::fromLocal8Bit("已创建菜单项: %1").arg(actionName));
     return action;
 }

@@ -53,7 +53,7 @@
     <ClCompile Include="Source\Core\USBDevice.cpp">
       <Filter>Source Files\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\File\AsyncFileWriter.cpp">
+    <ClCompile Include="Source\File\WriterFileAsync.cpp">
       <Filter>Source Files\File</Filter>
     </ClCompile>
     <ClCompile Include="Source\File\DataCacheManager.cpp">
@@ -62,7 +62,7 @@
     <ClCompile Include="Source\File\FileSaveManager.cpp">
       <Filter>Source Files\File</Filter>
     </ClCompile>
-    <ClCompile Include="Source\File\StandardFileWriter.cpp">
+    <ClCompile Include="Source\File\WriterFileStandard.cpp">
       <Filter>Source Files\File</Filter>
     </ClCompile>
     <ClCompile Include="Source\Main\main.cpp">

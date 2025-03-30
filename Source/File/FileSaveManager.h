@@ -23,7 +23,7 @@
 #include <queue>
 #include <functional>
 
-#include "DataAcquisition.h"  // 包含数据包定义
+#include "DataPacket.h"
 
 // 文件格式定义
 enum class FileFormat {
@@ -100,11 +100,11 @@ public:
 };
 
 // 标准文件写入器
-class StandardFileWriter : public IFileWriter {
+class WriterFileStandard : public IFileWriter {
 public:
-    StandardFileWriter() : m_isOpen(false) {}
+    WriterFileStandard() : m_isOpen(false) {}
 
-    virtual ~StandardFileWriter() {
+    virtual ~WriterFileStandard() {
         close();
     }
 
@@ -123,10 +123,10 @@ private:
 };
 
 // 异步文件写入器
-class AsyncFileWriter : public IFileWriter {
+class WriterFileAsync : public IFileWriter {
 public:
-    AsyncFileWriter();
-    ~AsyncFileWriter() override;
+    WriterFileAsync();
+    ~WriterFileAsync() override;
 
     bool open(const QString& filename) override;
     bool write(const QByteArray& data) override;

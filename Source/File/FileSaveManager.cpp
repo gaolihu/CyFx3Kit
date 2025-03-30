@@ -20,7 +20,7 @@ FileSaveManager& FileSaveManager::instance()
 FileSaveManager::FileSaveManager()
     : m_running(false)
     , m_paused(false)
-    , m_useAsyncWriter(false)
+    , m_useAsyncWriter(true)
     , m_lastSavedBytes(0)
 {
     // 初始化默认保存参数
@@ -174,11 +174,11 @@ bool FileSaveManager::shouldSplitFile() {
 void FileSaveManager::resetFileWriter()
 {
     if (m_useAsyncWriter) {
-        m_fileWriter = std::make_unique<AsyncFileWriter>();
+        m_fileWriter = std::make_unique<WriterFileAsync>();
         LOG_INFO(LocalQTCompat::fromLocal8Bit("使用异步文件写入器"));
     }
     else {
-        m_fileWriter = std::make_unique<StandardFileWriter>();
+        m_fileWriter = std::make_unique<WriterFileStandard>();
         LOG_INFO(LocalQTCompat::fromLocal8Bit("使用标准文件写入器"));
     }
 }
