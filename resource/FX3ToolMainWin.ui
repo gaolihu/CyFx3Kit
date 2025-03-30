@@ -188,7 +188,7 @@
           </widget>
           <widget class="QWidget" name="statusTab">
            <property name="styleSheet">
-            <string notr="true">background-image: url(:/background/res/Picture/2.png);</string>
+            <string notr="true"/>
            </property>
            <attribute name="title">
             <string>状态</string>
