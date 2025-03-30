@@ -855,6 +855,17 @@ bool ModuleManager::createWaveformAnalysisModule()
                 }
             });
 
+        connect(m_mainView->getUi()->mainTabWidget, &QTabWidget::currentChanged,
+            [this](int index) {
+                // Check if the current tab is the waveform analysis tab
+                if (index == m_waveformAnalysisTabIndex && m_waveformAnalysisController) {
+                    m_waveformAnalysisController->setTabVisible(true);
+                }
+                else if (m_waveformAnalysisController) {
+                    m_waveformAnalysisController->setTabVisible(false);
+                }
+            });
+
         // 标记为已初始化
         m_moduleInitialized[ModuleType::WAVEFORM_ANALYSIS] = true;
 

@@ -22,6 +22,11 @@ WaveformAnalysisModel::WaveformAnalysisModel()
     initializeDefaults();
 
     m_dataService = &DataAccessService::getInstance();
+
+    if (m_dataService) {
+        connect(m_dataService, &DataAccessService::signal_DT_ACC_dataReadComplete,
+            this, &WaveformAnalysisModel::processReceivedData);
+    }
 #if 1
     // 测试用
     // 初始化索引数据，确保至少有基本数据
@@ -61,19 +66,9 @@ void WaveformAnalysisModel::initializeDefaults()
     m_waveformRenderMode = 0; // 线条模式
 }
 
-void WaveformAnalysisModel::setDataAccessService(DataAccessService* service)
-{
-    m_dataService = service;
-
-    // 连接数据读取完成信号
-    if (m_dataService) {
-        connect(m_dataService, &DataAccessService::dataReadComplete,
-            this, &WaveformAnalysisModel::processReceivedData);
-    }
-}
-
 bool WaveformAnalysisModel::loadData(const QString& filename, int startIndex, int length)
 {
+    // 静态分析
     LOG_INFO(LocalQTCompat::fromLocal8Bit("开始加载波形数据: 文件=%1, 起始=%2, 长度=%3")
         .arg(filename).arg(startIndex).arg(length));
 
@@ -217,6 +212,7 @@ bool WaveformAnalysisModel::loadDataAsync(uint64_t packetIndex)
 
 void WaveformAnalysisModel::processReceivedData(uint64_t timestamp, const QByteArray& data)
 {
+    // 不应动态接收数据
     LOG_INFO(QString("收到数据包, 时间戳: %1, 大小: %2 字节").arg(timestamp).arg(data.size()));
 
     if (parsePacketData(data)) {
@@ -327,7 +323,7 @@ QVector<double> WaveformAnalysisModel::getChannelData(int channel) const
 
 QVector<double> WaveformAnalysisModel::getIndexData() const
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取索引数据"));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取索引数据，数据大小：%1").arg(m_indexData.size()));
 
     return m_indexData;
 }

@@ -1,4 +1,4 @@
-﻿// Source/File/DataAccessService.cpp
+﻿// Source/Analysis/DataAccessService.cpp
 #include "DataAccessService.h"
 #include "Logger.h"
 #include <QtConcurrent/QtConcurrent>
@@ -22,7 +22,7 @@ DataAccessService::DataAccessService(QObject* parent)
 
     // 初始化文件检查定时器
     m_fileCleanupTimer = new QTimer(this);
-    connect(m_fileCleanupTimer, &QTimer::timeout, this, &DataAccessService::checkAndCleanupUnusedFiles);
+    connect(m_fileCleanupTimer, &QTimer::timeout, this, &DataAccessService::slot_DT_ACC_checkAndCleanupUnusedFiles);
     m_fileCleanupTimer->start(60000); // 每分钟检查一次
 }
 
@@ -68,7 +68,7 @@ QByteArray DataAccessService::readPacketData(const PacketIndexEntry& entry)
         // 检查文件是否可读
         if (!isFileReadable(entry.fileName)) {
             m_stats.readErrors++;
-            emit dataReadError(LocalQTCompat::fromLocal8Bit("文件不可读: %1").arg(entry.fileName));
+            emit signal_DT_ACC_dataReadError(LocalQTCompat::fromLocal8Bit("文件不可读: %1").arg(entry.fileName));
             return QByteArray();
         }
 
@@ -77,7 +77,7 @@ QByteArray DataAccessService::readPacketData(const PacketIndexEntry& entry)
         if (!file) {
             LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开文件: %1").arg(entry.fileName));
             m_stats.readErrors++;
-            emit dataReadError(LocalQTCompat::fromLocal8Bit("无法打开文件: %1").arg(entry.fileName));
+            emit signal_DT_ACC_dataReadError(LocalQTCompat::fromLocal8Bit("无法打开文件: %1").arg(entry.fileName));
             return QByteArray();
         }
 
@@ -133,20 +133,20 @@ QByteArray DataAccessService::readPacketData(const PacketIndexEntry& entry)
             m_stats.totalReadTime += timer.elapsed();
 
             // 发送信号
-            emit dataReadComplete(entry.timestamp, data);
+            emit signal_DT_ACC_dataReadComplete(entry.timestamp, data);
             return data;
         }
 
         // 所有重试失败
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("读取数据失败，已达最大重试次数"));
         m_stats.readErrors++;
-        emit dataReadError(LocalQTCompat::fromLocal8Bit("读取数据重试失败"));
+        emit signal_DT_ACC_dataReadError(LocalQTCompat::fromLocal8Bit("读取数据重试失败"));
         return QByteArray();
     }
     catch (const std::exception& e) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("读取数据异常: %1").arg(e.what()));
         m_stats.readErrors++;
-        emit dataReadError(LocalQTCompat::fromLocal8Bit("读取数据异常: %1").arg(e.what()));
+        emit signal_DT_ACC_dataReadError(LocalQTCompat::fromLocal8Bit("读取数据异常: %1").arg(e.what()));
         return QByteArray();
     }
 }
@@ -478,7 +478,7 @@ QFuture<QVector<QPair<QByteArray, PacketIndexEntry>>> DataAccessService::queryAn
         });
 }
 
-void DataAccessService::checkAndCleanupUnusedFiles()
+void DataAccessService::slot_DT_ACC_checkAndCleanupUnusedFiles()
 {
     QMutexLocker locker(&m_fileMutex);
     QDateTime currentTime = QDateTime::currentDateTime();

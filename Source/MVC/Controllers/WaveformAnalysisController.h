@@ -65,6 +65,8 @@ public:
      */
     bool processWaveformData(const QByteArray& data);
 
+    void setTabVisible(bool visible);
+
 public slots:
     /**
      * @brief 开始分析
@@ -269,6 +271,8 @@ private:
      */
     void updateUIState();
 
+    bool loadWaveformDataFromService(int startIndex, int length);
+
 private:
     WaveformAnalysisView* m_view;           ///< 视图对象
     Ui::WaveformAnalysisClass* m_ui;        ///< UI对象
@@ -286,6 +290,7 @@ private:
     QRect m_lastChartRect;                  ///< 上次图表区域
 
     bool m_isActive{ false };               // Is this tab currently active
+    bool m_isCurrentlyVisible{ false };
     int m_viewWidth{ 1000 };                // Current view width in data points
     int m_currentPosition{ 0 };             // Current view start position
 };

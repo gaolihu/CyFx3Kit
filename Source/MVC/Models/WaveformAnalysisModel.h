@@ -27,12 +27,6 @@ public:
     static WaveformAnalysisModel* getInstance();
 
     /**
-     * @brief 设置数据访问服务
-     * @param service 数据访问服务指针
-     */
-    void setDataAccessService(DataAccessService* service);
-
-    /**
      * @brief 加载指定文件的数据
      * @param filename 文件名
      * @param startIndex 起始索引

@@ -136,6 +136,12 @@ protected:
      */
     void showEvent(QShowEvent* event) override;
 
+    /**
+     * @brief 显示事件
+     * @param event 显示事件
+     */
+    void hideEvent(QHideEvent* event) override;
+
 private slots:
     /**
      * @brief 处理通道选择变更

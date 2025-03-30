@@ -215,10 +215,19 @@ void WaveformAnalysisView::resizeEvent(QResizeEvent* event)
 void WaveformAnalysisView::showEvent(QShowEvent* event)
 {
     QWidget::showEvent(event);
-
-    // 通知控制器标签页被激活
+    // 通知控制器当前可见
     if (m_controller) {
+        m_controller->setTabVisible(true);
         m_controller->slot_WA_C_handleTabActivated();
+    }
+}
+
+void WaveformAnalysisView::hideEvent(QHideEvent* event)
+{
+    QWidget::hideEvent(event);
+    // Notify controller the tab is now hidden
+    if (m_controller) {
+        m_controller->setTabVisible(false);
     }
 }
 

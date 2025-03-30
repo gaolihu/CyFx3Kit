@@ -50,6 +50,14 @@ WaveformAnalysisController::~WaveformAnalysisController()
         slot_WA_C_stopAnalysis();
     }
 
+    // 清除模型数据引用，避免访问已释放资源
+    if (m_model) {
+        // m_model->clearAllData();
+    }
+
+    // 清除数据服务引用
+    m_dataService = nullptr;
+
     LOG_INFO("波形分析控制器已销毁");
 }
 
@@ -80,20 +88,6 @@ bool WaveformAnalysisController::initialize()
 
     // 连接信号和槽
     connectSignals();
-
-    // 检查数据服务
-    if (!m_dataService) {
-        LOG_WARN(LocalQTCompat::fromLocal8Bit("数据服务未设置，尝试获取实例"));
-        m_dataService = &DataAccessService::getInstance();
-        if (!m_dataService) {
-            LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法获取数据服务实例"));
-            // 继续初始化，但某些功能可能受限
-        }
-        else {
-            LOG_INFO(LocalQTCompat::fromLocal8Bit("成功获取数据服务实例"));
-            m_model->setDataAccessService(m_dataService);
-        }
-    }
 
     // 初始状态设置
     m_isInitialized = true;
@@ -852,14 +846,16 @@ void WaveformAnalysisController::slot_WA_C_handleTabActivated()
 
     if (!m_isActive) {
         m_isActive = true;
+    }
 
-        // On first activation, load initial data if needed
+    if (m_isCurrentlyVisible) {
+        // 首次激活时，加载初始数据
         if (m_model && m_model->getIndexData().isEmpty()) {
-            // Load initial data range - just enough for the current view
+            // 加载一个初始范围的数据 - 足够当前视图
             slot_WA_C_loadDataRange(m_currentPosition, m_viewWidth);
         }
 
-        // Update view
+        // 更新视图
         if (m_view) {
             m_view->update();
         }
@@ -868,27 +864,106 @@ void WaveformAnalysisController::slot_WA_C_handleTabActivated()
 
 void WaveformAnalysisController::slot_WA_C_updateVisibleRange(int startPos, int viewWidth)
 {
-    // Only load data if we're active and the range has changed significantly
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新可视范围 - 起始: %1, 长度: %2")
+        .arg(startPos).arg(viewWidth));
+
+    // 仅当活动且范围有显著变化时加载数据
     if (m_isActive && (abs(startPos - m_currentPosition) > viewWidth / 4 ||
         abs(viewWidth - m_viewWidth) > viewWidth / 4)) {
 
         m_currentPosition = startPos;
         m_viewWidth = viewWidth;
 
-        // Load data for the new range, plus some padding
+        // 加载新范围的数据，加上一些填充
         slot_WA_C_loadDataRange(startPos - viewWidth / 2, viewWidth * 2);
     }
 }
 
 bool WaveformAnalysisController::slot_WA_C_loadDataRange(int startPos, int length)
 {
-    // Ensure non-negative values
+    // 确保非负值
     startPos = std::max(0, startPos);
     length = std::max(100, length);
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("按需加载波形数据 - 起始: %1, 长度: %2")
         .arg(startPos).arg(length));
 
-    // 从DataAccessService中获取，TODO
-    return true;
+    return loadWaveformDataFromService(startPos, length);
+}
+
+bool WaveformAnalysisController::loadWaveformDataFromService(int startIndex, int length)
+{
+    if (!m_dataService) {
+        LOG_ERROR("数据访问服务未设置，无法加载波形数据");
+        return false;
+    }
+
+    // 获取当前会话的文件名 TODO
+    QString currentFile;// = m_dataService->getCurrentSessionFileName();
+    if (currentFile.isEmpty()) {
+        LOG_WARN("无法获取当前会话文件名");
+        return false;
+    }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始从文件加载波形数据 - 文件: %1, 起始: %2, 长度: %3")
+        .arg(currentFile).arg(startIndex).arg(length));
+
+    // 清除现有数据
+    QVector<double> indexData;
+    indexData.reserve(length);
+    for (int i = 0; i < length; ++i) {
+        indexData.append(startIndex + i);
+    }
+    m_model->updateIndexData(indexData);
+
+    bool hasData = false;
+
+    // 为每个通道加载数据
+    for (int ch = 0; ch < 4; ++ch) {
+        QVector<double> channelData = m_dataService->getChannelData(
+            currentFile, ch, startIndex, length);
+
+        if (!channelData.isEmpty()) {
+            m_model->updateChannelData(ch, channelData);
+            hasData = true;
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("通道%1数据加载成功: 大小=%2")
+                .arg(ch).arg(channelData.size()));
+        }
+        else {
+            LOG_WARN(LocalQTCompat::fromLocal8Bit("通道%1数据加载失败或为空").arg(ch));
+        }
+    }
+
+    // 设置视图范围
+    if (hasData) {
+        m_model->setViewRange(startIndex, startIndex + length - 1);
+    }
+
+    return hasData;
+}
+
+void WaveformAnalysisController::setTabVisible(bool visible)
+{
+    bool wasVisible = m_isCurrentlyVisible;
+    m_isCurrentlyVisible = visible;
+
+    // If becoming visible and we have active data acquisition, refresh the view
+    if (visible && !wasVisible) {
+        // Check if we have an active data acquisition
+        bool isAcquiring = false;
+        if (m_dataService) {
+            // isAcquiring = m_dataService->isDataAcquisitionActive();
+            // WTF
+        }
+
+        // Load fresh data if acquisition is active
+        if (isAcquiring) {
+            slot_WA_C_loadDataRange(m_currentPosition, m_viewWidth);
+        }
+
+        // Update the UI when becoming visible
+        if (m_view) {
+            m_view->update();
+        }
+    }
 }

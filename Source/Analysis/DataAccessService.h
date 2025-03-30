@@ -1,4 +1,4 @@
-﻿// Source/File/DataAccessService.h
+﻿// Source/Analysis/DataAccessService.h
 #pragma once
 
 #include <QObject>
@@ -191,19 +191,19 @@ signals:
      * @param timestamp 时间戳
      * @param data 读取的数据
      */
-    void dataReadComplete(uint64_t timestamp, const QByteArray& data);
+    void signal_DT_ACC_dataReadComplete(uint64_t timestamp, const QByteArray& data);
 
     /**
      * @brief 数据读取错误信号
      * @param errorMessage 错误信息
      */
-    void dataReadError(const QString& errorMessage);
+    void signal_DT_ACC_dataReadError(const QString& errorMessage);
 
 private slots:
     /**
      * @brief 检查并清理未使用的文件
      */
-    void checkAndCleanupUnusedFiles();
+    void slot_DT_ACC_checkAndCleanupUnusedFiles();
 
 private:
     DataAccessService(QObject* parent = nullptr);
