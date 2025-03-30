@@ -164,13 +164,13 @@
     <ClCompile Include="Source\Core\MainUiStateManager.cpp">
       <Filter>Source Files\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\File\DataAccessService.cpp">
-      <Filter>Source Files\File</Filter>
-    </ClCompile>
     <ClCompile Include="Source\MVC\Views\DataVisualization.cpp">
       <Filter>Source Files\MVC\Views</Filter>
     </ClCompile>
     <ClCompile Include="Source\Analysis\IndexGenerator.cpp">
+      <Filter>Source Files\Analysis</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Analysis\DataAccessService.cpp">
       <Filter>Source Files\Analysis</Filter>
     </ClCompile>
   </ItemGroup>
@@ -289,13 +289,13 @@
     <QtMoc Include="Source\Core\MainUiStateManager.h">
       <Filter>Source Files\Core</Filter>
     </QtMoc>
-    <QtMoc Include="Source\File\DataAccessService.h">
-      <Filter>Source Files\File</Filter>
-    </QtMoc>
     <QtMoc Include="Source\MVC\Views\DataVisualization.h">
       <Filter>Source Files\MVC\Views</Filter>
     </QtMoc>
     <QtMoc Include="Source\Analysis\IndexGenerator.h">
+      <Filter>Source Files\Analysis</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\Analysis\DataAccessService.h">
       <Filter>Source Files\Analysis</Filter>
     </QtMoc>
   </ItemGroup>

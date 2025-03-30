@@ -114,6 +114,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Analysis\DataAccessService.cpp" />
     <ClCompile Include="Source\Analysis\IndexGenerator.cpp" />
     <ClCompile Include="Source\Core\AppStateMachine.cpp" />
     <ClCompile Include="Source\Core\CommandManager.cpp" />
@@ -123,7 +124,6 @@
     <ClCompile Include="Source\Core\MainUiStateManager.cpp" />
     <ClCompile Include="Source\Core\USBDevice.cpp" />
     <ClCompile Include="Source\File\AsyncFileWriter.cpp" />
-    <ClCompile Include="Source\File\DataAccessService.cpp" />
     <ClCompile Include="Source\File\DataCacheManager.cpp" />
     <ClCompile Include="Source\File\FileSaveManager.cpp" />
     <ClCompile Include="Source\File\StandardFileWriter.cpp" />
@@ -169,6 +169,7 @@
     <QtMoc Include="Source\MVC\Controllers\DataAnalysisController.h" />
     <QtMoc Include="Source\MVC\Controllers\FileSaveController.h" />
     <QtMoc Include="Source\Analysis\IndexGenerator.h" />
+    <QtMoc Include="Source\Analysis\DataAccessService.h" />
     <ClInclude Include="Source\Analysis\IIndexAccess.h" />
     <ClInclude Include="Source\Core\DataPacket.h" />
     <QtMoc Include="Source\MVC\Controllers\DeviceController.h" />
@@ -192,7 +193,6 @@
     <QtMoc Include="Source\Core\ModuleManager.h" />
     <QtMoc Include="Source\MVC\Views\FileSaveView.h" />
     <QtMoc Include="Source\Core\MainUiStateManager.h" />
-    <QtMoc Include="Source\File\DataAccessService.h" />
     <QtMoc Include="Source\MVC\Views\DataVisualization.h" />
     <ClInclude Include="Source\MVC\Views\IDeviceView.h" />
     <QtMoc Include="Source\MVC\Views\UpdateDeviceView.h" />

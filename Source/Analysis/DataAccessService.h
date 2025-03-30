@@ -161,16 +161,6 @@ public:
     QVector<double> getChannelData(const QString& filename, int channel, int startIndex, int length);
 
     /**
-     * @brief 异步读取指定通道的数据
-     * @param filename 文件名
-     * @param channel 通道索引(0-3)
-     * @param startIndex 起始索引
-     * @param length 数据长度
-     * @return 异步操作Future
-     */
-    QFuture<QVector<double>> getChannelDataAsync(const QString& filename, int channel, int startIndex, int length);
-
-    /**
      * @brief 从数据包提取通道数据
      * @param data 数据包
      * @param channel 通道索引(0-3)
