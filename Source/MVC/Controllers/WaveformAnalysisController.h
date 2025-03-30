@@ -58,6 +58,13 @@ public:
      */
     void addMarkerAtPosition(const QPoint& pos);
 
+    /**
+     * @brief 处理波形数据
+     * @param data 原始二进制数据
+     * @return 处理是否成功
+     */
+    bool processWaveformData(const QByteArray& data);
+
 public slots:
     /**
      * @brief 开始分析
@@ -116,7 +123,7 @@ public slots:
      * @brief 设置垂直缩放
      * @param value 滑块值
      */
-    // void setVerticalScale(int value);
+    void setVerticalScale(double value);
 
     /**
      * @brief 设置自动缩放
@@ -129,14 +136,25 @@ public slots:
      * @param filename 文件名
      * @param startIndex 起始索引
      * @param length 数据长度
+     * @return 加载是否成功
      */
-    void loadData(const QString& filename, int startIndex, int length);
+    bool loadData(const QString& filename, int startIndex, int length);
+
+    // bool loadSimulatedData(int length);
 
     /**
      * @brief 加载数据包
      * @param packetIndex 数据包索引
      */
     // void loadDataPacket(uint64_t packetIndex);
+
+    // Method to handle tab activation
+    void handleTabActivated();
+
+    // Method to handle visible area change
+    void updateVisibleRange(int startPos, int viewWidth);
+
+    bool loadDataRange(int startPos, int length);
 
 private slots:
     /**
@@ -252,18 +270,22 @@ private:
     void updateUIState();
 
 private:
-    WaveformAnalysisView* m_view;                 ///< 视图对象
-    Ui::WaveformAnalysisClass* m_ui;              ///< UI对象
-    WaveformAnalysisModel* m_model;               ///< 模型对象
-    DataAccessService* m_dataService;             ///< 数据访问服务
+    WaveformAnalysisView* m_view;           ///< 视图对象
+    Ui::WaveformAnalysisClass* m_ui;        ///< UI对象
+    WaveformAnalysisModel* m_model;         ///< 模型对象
+    DataAccessService* m_dataService;       ///< 数据访问服务
 
-    QTimer* m_updateTimer;                        ///< 更新定时器
-    bool m_isRunning;                             ///< 是否正在运行
-    bool m_isInitialized;                         ///< 是否已初始化
-    double m_verticalScale;                       ///< 垂直缩放因子
-    bool m_autoScale;                             ///< 自动缩放
-    QPoint m_cursorPosition;                      ///< 光标位置
-    bool m_isCursorVisible;                       ///< 光标是否可见
+    QTimer* m_updateTimer;                  ///< 更新定时器
+    bool m_isRunning;                       ///< 是否正在运行
+    bool m_isInitialized;                   ///< 是否已初始化
+    double m_verticalScale;                 ///< 垂直缩放因子
+    bool m_autoScale;                       ///< 自动缩放
+    QPoint m_cursorPosition;                ///< 光标位置
+    bool m_isCursorVisible;                 ///< 光标是否可见
 
-    QRect m_lastChartRect;                        ///< 上次图表区域
+    QRect m_lastChartRect;                  ///< 上次图表区域
+
+    bool m_isActive{ false };               // Is this tab currently active
+    int m_viewWidth{ 1000 };                // Current view width in data points
+    int m_currentPosition{ 0 };             // Current view start position
 };

@@ -2,34 +2,69 @@
 <ui version="4.0">
  <class>WaveformAnalysisClass</class>
  <widget class="QWidget" name="WaveformAnalysisClass">
-  <!-- 基本布局不变，但需要确保m_chartView有足够空间显示四个通道 -->
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1188</width>
-    <height>700</height>
+    <width>1200</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>波形分析</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_main">
-   <!-- 工具栏部分保持不变 -->
-
+  <layout class="QVBoxLayout" name="verticalLayout_main" stretch="0,1,0">
+   <item>
+    <widget class="QToolBar" name="waveformToolbar">
+     <property name="movable">
+      <bool>false</bool>
+     </property>
+     <property name="allowedAreas">
+      <set>Qt::TopToolBarArea</set>
+     </property>
+     <property name="floatable">
+      <bool>false</bool>
+     </property>
+     <addaction name="actionLoadTestData"/>
+     <addaction name="separator"/>
+     <addaction name="actionZoomIn"/>
+     <addaction name="actionZoomOut"/>
+     <addaction name="actionZoomReset"/>
+     <addaction name="separator"/>
+     <addaction name="actionStartAnalysis"/>
+     <addaction name="actionStopAnalysis"/>
+     <addaction name="separator"/>
+     <addaction name="actionExportData"/>
+    </widget>
+   </item>
    <item>
     <widget class="QSplitter" name="m_mainSplitter">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <widget class="QWidget" name="waveformWidget" native="true">
-      <layout class="QVBoxLayout" name="layout_waveform">
+     <widget class="QWidget" name="waveformContainer">
+      <layout class="QVBoxLayout" name="waveformContainerLayout">
+       <property name="spacing">
+        <number>2</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QFrame" name="m_chartView">
          <property name="minimumSize">
           <size>
-           <width>400</width>
-           <height>400</height> <!-- 增加高度以容纳4个通道 -->
+           <width>500</width>
+           <height>500</height>
           </size>
          </property>
          <property name="frameShape">
@@ -38,70 +73,242 @@
          <property name="frameShadow">
           <enum>QFrame::Raised</enum>
          </property>
-         <!-- 在这里增加4个通道标签 -->
-         <layout class="QGridLayout" name="chartLayout">
-          <item row="0" column="0">
-           <widget class="QLabel" name="channel0Label">
-            <property name="text">
-             <string>BYTE0</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignVCenter</set>
-            </property>
-            <property name="styleSheet">
-             <string>color: red;</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="channel1Label">
-            <property name="text">
-             <string>BYTE1</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignVCenter</set>
-            </property>
-            <property name="styleSheet">
-             <string>color: blue;</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="channel2Label">
-            <property name="text">
-             <string>BYTE2</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignVCenter</set>
-            </property>
-            <property name="styleSheet">
-             <string>color: green;</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="channel3Label">
-            <property name="text">
-             <string>BYTE3</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignVCenter</set>
-            </property>
-            <property name="styleSheet">
-             <string>color: magenta;</string>
-            </property>
-           </widget>
-          </item>
-          <!-- 保留原有的缩放控制 -->
-         </layout>
         </widget>
        </item>
       </layout>
      </widget>
-     <!-- 右侧设置面板保持不变 -->
+     <widget class="QWidget" name="controlPanel">
+      <property name="minimumSize">
+       <size>
+        <width>250</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>300</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <layout class="QVBoxLayout" name="controlPanelLayout">
+       <item>
+        <widget class="QGroupBox" name="channelGroup">
+         <property name="title">
+          <string>通道控制</string>
+         </property>
+         <layout class="QVBoxLayout" name="channelGroupLayout">
+          <item>
+           <widget class="QCheckBox" name="channel0Check">
+            <property name="styleSheet">
+             <string>color: red;</string>
+            </property>
+            <property name="text">
+             <string>通道0 (BYTE0)</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="channel1Check">
+            <property name="styleSheet">
+             <string>color: blue;</string>
+            </property>
+            <property name="text">
+             <string>通道1 (BYTE1)</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="channel2Check">
+            <property name="styleSheet">
+             <string>color: green;</string>
+            </property>
+            <property name="text">
+             <string>通道2 (BYTE2)</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="channel3Check">
+            <property name="styleSheet">
+             <string>color: magenta;</string>
+            </property>
+            <property name="text">
+             <string>通道3 (BYTE3)</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="analysisGroup">
+         <property name="title">
+          <string>数据分析</string>
+         </property>
+         <layout class="QVBoxLayout" name="analysisGroupLayout">
+          <item>
+           <widget class="QPushButton" name="analyzeButton">
+            <property name="text">
+             <string>分析数据</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTextEdit" name="analysisResultText">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>分析结果将显示在这里...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="markerGroup">
+         <property name="title">
+          <string>标记和测量</string>
+         </property>
+         <layout class="QVBoxLayout" name="markerGroupLayout">
+          <item>
+           <widget class="QPushButton" name="clearMarkersButton">
+            <property name="text">
+             <string>清除所有标记</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="markerInfoLabel">
+            <property name="text">
+             <string>双击波形添加标记点</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QListWidget" name="markerList"/>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="scaleGroup">
+         <property name="title">
+          <string>垂直缩放</string>
+         </property>
+         <layout class="QVBoxLayout" name="scaleGroupLayout">
+          <item>
+           <widget class="QSlider" name="verticalScaleSlider">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+            <property name="maximum">
+             <number>10</number>
+            </property>
+            <property name="value">
+             <number>5</number>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="tickPosition">
+             <enum>QSlider::TicksBelow</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
+   <item>
+    <widget class="QStatusBar" name="waveformStatusBar"/>
+   </item>
   </layout>
+  <action name="actionLoadTestData">
+   <property name="text">
+    <string>加载测试数据</string>
+   </property>
+   <property name="toolTip">
+    <string>加载测试数据</string>
+   </property>
+  </action>
+  <action name="actionZoomIn">
+   <property name="text">
+    <string>放大</string>
+   </property>
+   <property name="toolTip">
+    <string>放大</string>
+   </property>
+  </action>
+  <action name="actionZoomOut">
+   <property name="text">
+    <string>缩小</string>
+   </property>
+   <property name="toolTip">
+    <string>缩小</string>
+   </property>
+  </action>
+  <action name="actionZoomReset">
+   <property name="text">
+    <string>重置视图</string>
+   </property>
+   <property name="toolTip">
+    <string>重置视图</string>
+   </property>
+  </action>
+  <action name="actionStartAnalysis">
+   <property name="text">
+    <string>开始分析</string>
+   </property>
+   <property name="toolTip">
+    <string>开始分析</string>
+   </property>
+  </action>
+  <action name="actionStopAnalysis">
+   <property name="text">
+    <string>停止分析</string>
+   </property>
+   <property name="toolTip">
+    <string>停止分析</string>
+   </property>
+  </action>
+  <action name="actionExportData">
+   <property name="text">
+    <string>导出数据</string>
+   </property>
+   <property name="toolTip">
+    <string>导出数据</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

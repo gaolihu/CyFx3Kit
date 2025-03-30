@@ -654,6 +654,7 @@ void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
 
     if (m_moduleInitialized[ModuleType::FILE_OPTIONS]) {
         if (m_fileSaveController) {
+            // 必须实时保存文件，这是数据分析、视频显示的基础
             if (m_fileSaveController->isSaving()) {
 #if 0
                 LOG_INFO(QString("保存状态：正在保存中，处理%1个数据包").arg(packets.size()));
@@ -698,24 +699,25 @@ void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
     if (m_moduleInitialized[ModuleType::DATA_ANALYSIS] &&
         m_moduleVisibility[ModuleType::DATA_ANALYSIS] &&
         m_dataAnalysisController) {
+        // 必须实时分析，生成索引信息
         m_dataAnalysisController->processDataPackets(packets);
     }
 
+#if 0
     // 视频显示模块
     if (m_moduleInitialized[ModuleType::VIDEO_DISPLAY] &&
         m_moduleVisibility[ModuleType::VIDEO_DISPLAY] &&
         m_videoDisplayController) {
-        // m_videoDisplayController->processDataPacket(packet);
+        // 什么也不干，视频显示模块采取Lazy的模式，只有被观察才会采取动作
     }
 
     // 波形分析模块
     if (m_moduleInitialized[ModuleType::WAVEFORM_ANALYSIS] &&
         m_moduleVisibility[ModuleType::WAVEFORM_ANALYSIS] &&
         m_waveformAnalysisController) {
-        // 假设控制器提供处理数据包的方法
-        // m_waveformAnalysisController->processDataPacket(packet);
+        // 什么也不干，波形分析模块采取Lazy的模式，只有被观察才会采取动作
     }
-
+#endif
 }
 
 bool ModuleManager::createChannelConfigModule()
@@ -833,11 +835,24 @@ bool ModuleManager::createWaveformAnalysisModule()
         // 获取控制器
         m_waveformAnalysisController = std::make_shared<WaveformAnalysisController>(m_waveformAnalysisView.get());
 
+        // 设置视图的控制器引用
+        m_waveformAnalysisView->setController(m_waveformAnalysisController.get());
+
         // 初始化控制器
         if (!m_waveformAnalysisController->initialize()) {
             LOG_ERROR(LocalQTCompat::fromLocal8Bit("初始化波形分析控制器失败"));
             throw std::runtime_error("初始化波形分析控制器失败");
         }
+
+        // 连接垂直缩放信号
+        connect(m_waveformAnalysisView.get(), &WaveformAnalysisView::verticalScaleChanged,
+            [this](int value) {
+                if (m_waveformAnalysisController) {
+                    // 将滑块值(1-10)转换为缩放系数(0.5-2.0)
+                    double scale = 0.5 + (value / 10.0) * 1.5;
+                    m_waveformAnalysisController->setVerticalScale(scale);
+                }
+            });
 
         // 标记为已初始化
         m_moduleInitialized[ModuleType::WAVEFORM_ANALYSIS] = true;

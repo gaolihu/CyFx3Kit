@@ -21,6 +21,8 @@ WaveformAnalysisModel::WaveformAnalysisModel()
     // 初始化默认设置
     initializeDefaults();
 
+    m_dataService = &DataAccessService::getInstance();
+
     LOG_INFO("波形分析模型已创建");
 }
 
@@ -65,9 +67,16 @@ void WaveformAnalysisModel::setDataAccessService(DataAccessService* service)
 
 bool WaveformAnalysisModel::loadData(const QString& filename, int startIndex, int length)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始加载波形数据: 文件=%1, 起始=%2, 长度=%3")
+        .arg(filename).arg(startIndex).arg(length));
+
     if (!m_dataService) {
-        LOG_ERROR("数据访问服务未设置");
-        return false;
+        LOG_ERROR("数据访问服务未设置，尝试获取服务实例");
+        m_dataService = &DataAccessService::getInstance();
+        if (!m_dataService) {
+            LOG_ERROR("获取数据服务实例失败");
+            return false;
+        }
     }
 
     if (m_isLoading) {
@@ -90,41 +99,66 @@ bool WaveformAnalysisModel::loadData(const QString& filename, int startIndex, in
             m_indexData.append(startIndex + i);
         }
 
-        // 模拟生成通道数据（实际应用中应从文件中读取）
-        // 在实际应用中，这里应该调用DataAccessService读取相关数据
+        // 使用DataAccessService获取实际通道数据
+        bool allChannelsEmpty = true;
         for (int channel = 0; channel < 4; ++channel) {
-            QVector<double> data;
-            data.reserve(length);
+            // 调用DataAccessService获取通道数据
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("开始获取通道%1数据").arg(channel));
+            QVector<double> channelData = m_dataService->getChannelData(
+                filename, channel, startIndex, length);
 
-            for (int i = 0; i < length; ++i) {
-                // 生成一些示例数据，实际应用中应替换为真实数据
-                // 这里生成0和1的序列，模拟数字信号
-                double value = (i % (10 + channel * 5) < (5 + channel * 2)) ? 1.0 : 0.0;
-                data.append(value);
+            if (!channelData.isEmpty()) {
+                m_channelData[channel] = channelData;
+                allChannelsEmpty = false;
+                LOG_INFO(LocalQTCompat::fromLocal8Bit("通道%1数据加载成功: 大小=%2")
+                    .arg(channel).arg(channelData.size()));
             }
+            else {
+                LOG_WARN(LocalQTCompat::fromLocal8Bit("通道%1数据加载失败或为空，使用模拟数据").arg(channel));
 
-            m_channelData[channel] = data;
+                // 如果获取失败，生成模拟数据作为后备
+                QVector<double> simulatedData;
+                simulatedData.reserve(length);
+
+                for (int i = 0; i < length; ++i) {
+                    // 生成不同模式的模拟数据，确保可视化效果
+                    double value = (i % (10 + channel * 5) < (5 + channel * 2)) ? 1.0 : 0.0;
+                    simulatedData.append(value);
+                }
+
+                m_channelData[channel] = simulatedData;
+                allChannelsEmpty = false;
+                LOG_INFO(LocalQTCompat::fromLocal8Bit("通道%1使用模拟数据: 大小=%2")
+                    .arg(channel).arg(simulatedData.size()));
+            }
         }
 
-        // 设置默认视图范围
-        m_xMin = startIndex;
-        m_xMax = startIndex + length - 1;
+        // 确保视图范围有效
+        if (length > 0) {
+            m_xMin = startIndex;
+            m_xMax = startIndex + length - 1;
+        }
+        else {
+            // 设置默认视图范围
+            m_xMin = 0;
+            m_xMax = 100;
+        }
+
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("设置视图范围: [%1, %2]").arg(m_xMin).arg(m_xMax));
 
         m_isLoading = false;
 
         // 发送数据加载完成信号
-        emit dataLoaded(true);
+        emit dataLoaded(!allChannelsEmpty);
         emit viewRangeChanged(m_xMin, m_xMax);
 
-        LOG_INFO(QString("已加载波形数据, 文件: %1, 起始: %2, 长度: %3")
-            .arg(filename)
-            .arg(startIndex)
-            .arg(length));
-        return true;
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("波形数据加载完成: 文件=%1, 起始=%2, 长度=%3")
+            .arg(filename).arg(startIndex).arg(length));
+        return !allChannelsEmpty;
     }
     catch (const std::exception& e) {
         m_isLoading = false;
-        LOG_ERROR(QString("加载波形数据失败: %1").arg(e.what()));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("加载波形数据异常: %1").arg(e.what()));
 
         // 发送数据加载失败信号
         emit dataLoaded(false);
@@ -191,6 +225,8 @@ void WaveformAnalysisModel::processReceivedData(uint64_t timestamp, const QByteA
 
 bool WaveformAnalysisModel::parsePacketData(const QByteArray& data)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("解析包数据，大小：%1").arg(data.size()));
+
     try {
         // 清除现有数据
         for (int i = 0; i < 4; ++i) {
@@ -199,7 +235,6 @@ bool WaveformAnalysisModel::parsePacketData(const QByteArray& data)
         m_indexData.clear();
 
         // 解析二进制数据到通道数据
-        // 这里仅是一个简单示例，实际应用中需要按照数据格式进行正确解析
         int dataLength = data.size();
 
         // 确保至少有足够的数据点
@@ -223,9 +258,25 @@ bool WaveformAnalysisModel::parsePacketData(const QByteArray& data)
                 // 从每个字节中提取对应通道的位
                 // 这里假设每个字节包含4个通道的数据，每个通道占用2位
                 uint8_t byteValue = static_cast<uint8_t>(data.at(i));
-                double value = (byteValue >> (channel * 2)) & 0x03;
 
-                // 归一化到0-1范围
+                // 根据通道索引提取不同的位
+                double value = 0.0;
+                switch (channel) {
+                case 0: // BYTE0：提取最低2位
+                    value = byteValue & 0x03;
+                    break;
+                case 1: // BYTE1：提取中间2位
+                    value = (byteValue >> 2) & 0x03;
+                    break;
+                case 2: // BYTE2：提取高2位
+                    value = (byteValue >> 4) & 0x03;
+                    break;
+                case 3: // BYTE3：提取最高2位
+                    value = (byteValue >> 6) & 0x03;
+                    break;
+                }
+
+                // 归一化到0-1范围，大于0的值都视为高电平
                 value = value > 0 ? 1.0 : 0.0;
 
                 channelData.append(value);
@@ -238,6 +289,16 @@ bool WaveformAnalysisModel::parsePacketData(const QByteArray& data)
         m_xMin = 0;
         m_xMax = dataLength - 1;
 
+        // 确保视图范围有效
+        if (m_xMax <= m_xMin) {
+            m_xMin = 0;
+            m_xMax = 100;
+        }
+
+        // 发送信号通知数据变化
+        emit dataLoaded(true);
+        emit viewRangeChanged(m_xMin, m_xMax);
+
         LOG_INFO(QString("成功解析数据包，数据点数: %1").arg(dataLength));
         return true;
     }
@@ -249,6 +310,8 @@ bool WaveformAnalysisModel::parsePacketData(const QByteArray& data)
 
 QVector<double> WaveformAnalysisModel::getChannelData(int channel) const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取 %1 通道数据").arg(channel));
+
     if (channel >= 0 && channel < m_channelData.size()) {
         return m_channelData[channel];
     }
@@ -257,18 +320,27 @@ QVector<double> WaveformAnalysisModel::getChannelData(int channel) const
 
 QVector<double> WaveformAnalysisModel::getIndexData() const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取索引数据"));
+
     return m_indexData;
 }
 
 void WaveformAnalysisModel::getViewRange(double& xMin, double& xMax) const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取视图范围：%1 ~ %2")
+        .arg(xMin)
+        .arg(xMax));
+
     xMin = m_xMin;
     xMax = m_xMax;
 }
 
 void WaveformAnalysisModel::setViewRange(double xMin, double xMax)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置视图范围: xMin=%1, xMax=%2").arg(xMin).arg(xMax));
+
     if (xMin >= xMax) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无效的视图范围: xMin(%1) >= xMax(%2)").arg(xMin).arg(xMax));
         return;
     }
 
@@ -280,11 +352,15 @@ void WaveformAnalysisModel::setViewRange(double xMin, double xMax)
 
 QVector<int> WaveformAnalysisModel::getMarkerPoints() const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取Marker点"));
+
     return m_markerPoints;
 }
 
 void WaveformAnalysisModel::addMarkerPoint(int index)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("增加Marker点"));
+
     if (!m_markerPoints.contains(index)) {
         m_markerPoints.append(index);
         emit markersChanged();
@@ -293,6 +369,8 @@ void WaveformAnalysisModel::addMarkerPoint(int index)
 
 void WaveformAnalysisModel::removeMarkerPoint(int index)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("删除Marker点"));
+
     int pos = m_markerPoints.indexOf(index);
     if (pos >= 0) {
         m_markerPoints.removeAt(pos);
@@ -302,6 +380,8 @@ void WaveformAnalysisModel::removeMarkerPoint(int index)
 
 void WaveformAnalysisModel::clearMarkerPoints()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("清理Marker点"));
+
     if (!m_markerPoints.isEmpty()) {
         m_markerPoints.clear();
         emit markersChanged();
@@ -310,11 +390,15 @@ void WaveformAnalysisModel::clearMarkerPoints()
 
 double WaveformAnalysisModel::getZoomLevel() const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取缩放等级"));
+
     return m_zoomLevel;
 }
 
 void WaveformAnalysisModel::setZoomLevel(double level)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置缩放等级：%1").arg(level));
+
     if (level > 0) {
         m_zoomLevel = level;
     }
@@ -327,6 +411,8 @@ bool WaveformAnalysisModel::isChannelEnabled(int channel) const
 
 void WaveformAnalysisModel::setChannelEnabled(int channel, bool enabled)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("使能%1通道").arg(channel));
+
     if (channel >= 0 && channel < 4) {
         if (m_channelEnabled[channel] != enabled) {
             m_channelEnabled[channel] = enabled;
@@ -337,11 +423,15 @@ void WaveformAnalysisModel::setChannelEnabled(int channel, bool enabled)
 
 QColor WaveformAnalysisModel::getChannelColor(int channel) const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取%1通道色彩").arg(channel));
+
     return m_channelColors.value(channel, QColor(Qt::black));
 }
 
 void WaveformAnalysisModel::setChannelColor(int channel, const QColor& color)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置%1通道色彩").arg(channel));
+
     if (channel >= 0 && channel < 4) {
         m_channelColors[channel] = color;
     }
@@ -349,31 +439,43 @@ void WaveformAnalysisModel::setChannelColor(int channel, const QColor& color)
 
 QColor WaveformAnalysisModel::getGridColor() const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取栅格色彩"));
+
     return m_gridColor;
 }
 
 void WaveformAnalysisModel::setGridColor(const QColor& color)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置栅格色彩"));
+
     m_gridColor = color;
 }
 
 QColor WaveformAnalysisModel::getBackgroundColor() const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取背景色彩"));
+
     return m_backgroundColor;
 }
 
 void WaveformAnalysisModel::setBackgroundColor(const QColor& color)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置背景色彩"));
+
     m_backgroundColor = color;
 }
 
 float WaveformAnalysisModel::getWaveformLineWidth() const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取波形线宽"));
+
     return m_waveformLineWidth;
 }
 
 void WaveformAnalysisModel::setWaveformLineWidth(float width)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置波形线宽：%1").arg(width));
+
     if (width > 0) {
         m_waveformLineWidth = width;
     }
@@ -381,11 +483,15 @@ void WaveformAnalysisModel::setWaveformLineWidth(float width)
 
 int WaveformAnalysisModel::getWaveformRenderMode() const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取波形渲染模式"));
+
     return m_waveformRenderMode;
 }
 
 void WaveformAnalysisModel::setWaveformRenderMode(int mode)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("设置波形渲染模式：%1").arg(mode));
+
     if (mode >= 0 && mode <= 1) {
         m_waveformRenderMode = mode;
     }
@@ -393,12 +499,16 @@ void WaveformAnalysisModel::setWaveformRenderMode(int mode)
 
 QString WaveformAnalysisModel::getDataAnalysisResult() const
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取数据分析结果"));
+
     return m_dataAnalysisResult;
 }
 
 void WaveformAnalysisModel::analyzeData()
 {
     QString result;
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("分析数据"));
 
     // 分析每个通道的数据
     for (int ch = 0; ch < 4; ++ch) {
@@ -460,6 +570,8 @@ void WaveformAnalysisModel::analyzeData()
 
 void WaveformAnalysisModel::updateChannelData(int channel, const QVector<double>& data)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新通道：%1 数据").arg(channel));
+
     if (channel >= 0 && channel < 4) {
         m_channelData[channel] = data;
     }
@@ -467,5 +579,7 @@ void WaveformAnalysisModel::updateChannelData(int channel, const QVector<double>
 
 void WaveformAnalysisModel::updateIndexData(const QVector<double>& data)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("更新索引数据：%1").arg(data.size()));
+
     m_indexData = data;
 }

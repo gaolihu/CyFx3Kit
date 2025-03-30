@@ -8,25 +8,30 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QResizeEvent>
+#include <QShowEvent>
+#include <QMessageBox>
 
 WaveformAnalysisView::WaveformAnalysisView(QWidget* parent)
     : QWidget(parent)
     , ui(new Ui::WaveformAnalysisClass)
+    , m_controller(nullptr)
     , m_isDragging(false)
 {
+    // 设置UI
     ui->setupUi(this);
 
-    // 初始化UI
-    initializeUI();
+    // 设置窗口标志和模态
+    setWindowFlags(Qt::Dialog);
+    setWindowModality(Qt::ApplicationModal);
 
-    // 创建控制器
-    m_controller = std::make_unique<WaveformAnalysisController>(this);
+    // 开启鼠标追踪
+    setMouseTracking(true);
 
-    // 连接信号和槽
+    // 初始化连接
     connectSignals();
 
-    // 初始化控制器
-    m_controller->initialize();
+    // 初始化界面状态
+    initializeUIState();
 
     LOG_INFO("波形分析视图已创建");
 }
@@ -37,29 +42,73 @@ WaveformAnalysisView::~WaveformAnalysisView()
     LOG_INFO("波形分析视图已销毁");
 }
 
-void WaveformAnalysisView::initializeUI()
+void WaveformAnalysisView::setController(WaveformAnalysisController* controller)
 {
-    // 设置窗口标题
-    setWindowTitle("波形分析");
+    m_controller = controller;
+}
 
-    // 设置窗口标志
-    setWindowFlags(Qt::Dialog);
+void WaveformAnalysisView::updateMarkerList(const QVector<int>& markers)
+{
+    // 清空标记列表
+    ui->markerList->clear();
 
-    // 设置窗口模态
-    setWindowModality(Qt::ApplicationModal);
+    // 添加标记项
+    for (int i = 0; i < markers.size(); ++i) {
+        int markerPos = markers[i];
+        QString label = QString("标记点 %1: 位置 %2").arg(i + 1).arg(markerPos);
+        ui->markerList->addItem(label);
+    }
+}
 
-    // 设置窗口大小
-    resize(1000, 700);
+void WaveformAnalysisView::setAnalysisResult(const QString& text)
+{
+    ui->analysisResultText->setText(text);
+}
 
-    // 设置鼠标追踪，以便接收鼠标移动事件
-    setMouseTracking(true);
+void WaveformAnalysisView::setStatusMessage(const QString& message)
+{
+    ui->waveformStatusBar->showMessage(message);
 }
 
 void WaveformAnalysisView::connectSignals()
 {
-    // 连接通道可见性改变信号
+    // 通道复选框
+    connect(ui->channel0Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::onChannelCheckboxToggled);
+    connect(ui->channel1Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::onChannelCheckboxToggled);
+    connect(ui->channel2Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::onChannelCheckboxToggled);
+    connect(ui->channel3Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::onChannelCheckboxToggled);
+
+    // 工具栏动作
+    connect(ui->actionLoadTestData, &QAction::triggered, this, &WaveformAnalysisView::onLoadTestDataTriggered);
+    connect(ui->actionZoomIn, &QAction::triggered, this, &WaveformAnalysisView::onZoomInTriggered);
+    connect(ui->actionZoomOut, &QAction::triggered, this, &WaveformAnalysisView::onZoomOutTriggered);
+    connect(ui->actionZoomReset, &QAction::triggered, this, &WaveformAnalysisView::onZoomResetTriggered);
+    connect(ui->actionStartAnalysis, &QAction::triggered, this, &WaveformAnalysisView::onStartAnalysisTriggered);
+    connect(ui->actionStopAnalysis, &QAction::triggered, this, &WaveformAnalysisView::onStopAnalysisTriggered);
+    connect(ui->actionExportData, &QAction::triggered, this, &WaveformAnalysisView::onExportDataTriggered);
+
+    // 按钮
+    connect(ui->analyzeButton, &QPushButton::clicked, this, &WaveformAnalysisView::onAnalyzeButtonClicked);
+    connect(ui->clearMarkersButton, &QPushButton::clicked, this, &WaveformAnalysisView::onClearMarkersButtonClicked);
+
+    // 垂直缩放滑块
+    connect(ui->verticalScaleSlider, &QSlider::valueChanged, this, &WaveformAnalysisView::onVerticalScaleSliderChanged);
+
+    // 通道可见性变更信号连接到模型
     connect(this, &WaveformAnalysisView::channelVisibilityChanged,
         WaveformAnalysisModel::getInstance(), &WaveformAnalysisModel::setChannelEnabled);
+}
+
+void WaveformAnalysisView::initializeUIState()
+{
+    // 设置状态栏初始消息
+    ui->waveformStatusBar->showMessage("波形分析就绪");
+
+    // 设置分析结果初始文本
+    ui->analysisResultText->clear();
+
+    // 清空标记列表
+    ui->markerList->clear();
 }
 
 void WaveformAnalysisView::paintEvent(QPaintEvent* event)
@@ -161,4 +210,124 @@ void WaveformAnalysisView::resizeEvent(QResizeEvent* event)
 
     // 触发重绘
     update();
+}
+
+void WaveformAnalysisView::showEvent(QShowEvent* event)
+{
+    QWidget::showEvent(event);
+
+    // 通知控制器标签页被激活
+    if (m_controller) {
+        m_controller->handleTabActivated();
+    }
+}
+
+void WaveformAnalysisView::onChannelCheckboxToggled(int state)
+{
+    QCheckBox* sender = qobject_cast<QCheckBox*>(QObject::sender());
+    if (!sender)
+        return;
+
+    int channel = -1;
+    if (sender == ui->channel0Check) channel = 0;
+    else if (sender == ui->channel1Check) channel = 1;
+    else if (sender == ui->channel2Check) channel = 2;
+    else if (sender == ui->channel3Check) channel = 3;
+
+    if (channel != -1) {
+        bool visible = (state == Qt::Checked);
+        emit channelVisibilityChanged(channel, visible);
+        update(); // 触发重绘
+    }
+}
+
+void WaveformAnalysisView::onLoadTestDataTriggered()
+{
+    if (m_controller) {
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("加载测试数据"));
+        m_controller->loadData("test_data.bin", 0, 1000);
+    }
+}
+
+void WaveformAnalysisView::onZoomInTriggered()
+{
+    if (m_controller) {
+        m_controller->zoomIn();
+    }
+}
+
+void WaveformAnalysisView::onZoomOutTriggered()
+{
+    if (m_controller) {
+        m_controller->zoomOut();
+    }
+}
+
+void WaveformAnalysisView::onZoomResetTriggered()
+{
+    if (m_controller) {
+        m_controller->zoomReset();
+    }
+}
+
+void WaveformAnalysisView::onStartAnalysisTriggered()
+{
+    if (m_controller) {
+        m_controller->startAnalysis();
+
+        // 更新UI状态
+        ui->actionStartAnalysis->setEnabled(false);
+        ui->actionStopAnalysis->setEnabled(true);
+        ui->waveformStatusBar->showMessage("波形分析运行中...");
+    }
+}
+
+void WaveformAnalysisView::onStopAnalysisTriggered()
+{
+    if (m_controller) {
+        m_controller->stopAnalysis();
+
+        // 更新UI状态
+        ui->actionStartAnalysis->setEnabled(true);
+        ui->actionStopAnalysis->setEnabled(false);
+        ui->waveformStatusBar->showMessage("波形分析已停止");
+    }
+}
+
+void WaveformAnalysisView::onExportDataTriggered()
+{
+    QMessageBox::information(this, "导出数据", "导出功能即将实现...");
+}
+
+void WaveformAnalysisView::onAnalyzeButtonClicked()
+{
+    WaveformAnalysisModel* model = WaveformAnalysisModel::getInstance();
+    if (model) {
+        model->analyzeData();
+        setAnalysisResult(model->getDataAnalysisResult());
+    }
+}
+
+void WaveformAnalysisView::onClearMarkersButtonClicked()
+{
+    WaveformAnalysisModel* model = WaveformAnalysisModel::getInstance();
+    if (model) {
+        model->clearMarkerPoints();
+        ui->markerList->clear();
+    }
+}
+
+void WaveformAnalysisView::onVerticalScaleSliderChanged(int value)
+{
+    if (m_controller) {
+        // 计算垂直缩放因子 (0.5-2.0)
+        double scaleFactor = 0.5 + (value / 10.0) * 1.5;
+        emit verticalScaleChanged(value);
+
+        // 更新状态栏显示
+        ui->waveformStatusBar->showMessage(QString("垂直缩放: %1").arg(scaleFactor, 0, 'f', 1));
+
+        // 触发重绘
+        update();
+    }
 }

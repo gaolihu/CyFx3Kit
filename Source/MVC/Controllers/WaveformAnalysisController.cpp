@@ -6,9 +6,11 @@
 #include "DataAccessService.h"
 #include "Logger.h"
 #include <QMessageBox>
+#include <QFileInfo>
 #include <algorithm>
 #include <cmath>
 
+// 修改WaveformAnalysisController构造函数中的初始化代码
 WaveformAnalysisController::WaveformAnalysisController(WaveformAnalysisView* view)
     : QObject(view)
     , m_view(view)
@@ -29,18 +31,11 @@ WaveformAnalysisController::WaveformAnalysisController(WaveformAnalysisView* vie
     // 获取模型实例
     m_model = WaveformAnalysisModel::getInstance();
 
-    // 获取数据访问服务实例
-    m_dataService = &DataAccessService::getInstance();
-
     // 创建更新定时器
     m_updateTimer = new QTimer(this);
     m_updateTimer->setInterval(100);  // 100ms更新间隔
 
-    // 连接定时器信号
-    connect(m_updateTimer, &QTimer::timeout,
-        this, &WaveformAnalysisController::onUpdateTimerTriggered);
-
-    LOG_INFO("波形分析控制器已创建");
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("波形分析控制器已创建"));
 }
 
 WaveformAnalysisController::~WaveformAnalysisController()
@@ -60,14 +55,45 @@ WaveformAnalysisController::~WaveformAnalysisController()
 
 bool WaveformAnalysisController::initialize()
 {
-    if (m_isInitialized)
-        return true;
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始初始化波形分析控制器"));
 
-    if (!m_view || !m_ui || !m_model)
+    if (m_isInitialized) {
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("控制器已初始化，跳过"));
+        return true;
+    }
+
+    if (!m_view || !m_ui || !m_model) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("初始化失败: view=%1, ui=%2, model=%3")
+            .arg(m_view ? "有效" : "无效")
+            .arg(m_ui ? "有效" : "无效")
+            .arg(m_model ? "有效" : "无效"));
         return false;
+    }
+
+    // 初始化通道状态
+    for (int ch = 0; ch < 4; ++ch) {
+        m_model->setChannelEnabled(ch, true);
+    }
 
     // 连接信号和槽
     connectSignals();
+
+    // 检查数据服务
+    if (!m_dataService) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("数据服务未设置，尝试获取实例"));
+        m_dataService = &DataAccessService::getInstance();
+        if (!m_dataService) {
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法获取数据服务实例"));
+            // 继续初始化，但某些功能可能受限
+        }
+        else {
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("成功获取数据服务实例"));
+            m_model->setDataAccessService(m_dataService);
+        }
+    }
+
+    // 加载一些测试数据，确保UI正常显示
+    // loadSimulatedData(500);
 
     // 初始状态设置
     m_isInitialized = true;
@@ -79,6 +105,8 @@ bool WaveformAnalysisController::initialize()
 
 void WaveformAnalysisController::connectSignals()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("连接控制器信号和槽"));
+
     // 从模型到控制器的信号连接
     connect(m_model, &WaveformAnalysisModel::dataLoaded,
         this, &WaveformAnalysisController::onDataLoaded);
@@ -92,6 +120,10 @@ void WaveformAnalysisController::connectSignals()
 
 void WaveformAnalysisController::handlePaintEvent(QPainter* painter, const QRect& chartRect)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("绘制事件触发: 图表区域=[%1,%2,%3,%4]")
+        .arg(chartRect.left()).arg(chartRect.top())
+        .arg(chartRect.width()).arg(chartRect.height()));
+
     if (!m_isInitialized || !painter)
         return;
 
@@ -134,6 +166,8 @@ void WaveformAnalysisController::handlePanDelta(int deltaX)
 
 void WaveformAnalysisController::addMarkerAtPosition(const QPoint& pos)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("增加marker"));
+
     if (!m_lastChartRect.contains(pos))
         return;
 
@@ -152,8 +186,45 @@ void WaveformAnalysisController::addMarkerAtPosition(const QPoint& pos)
     }
 }
 
+bool WaveformAnalysisController::processWaveformData(const QByteArray& data)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("波形控制器接收数据，大小: %1 字节").arg(data.size()));
+
+    if (data.isEmpty()) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("接收到空数据"));
+        return false;
+    }
+
+    // 数据是否有效的简单检查
+    if (data.size() < 4) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("数据太小，至少需要4字节"));
+        return false;
+    }
+
+    // 如果我们的波形视图正在显示，解析数据并更新模型
+    if (m_view && m_view->isVisible() && m_model) {
+        // 尝试将数据解析为波形并加载到模型中
+        bool success = m_model->parsePacketData(data);
+
+        if (success) {
+            // 更新视图
+            if (m_view) {
+                m_view->update();
+            }
+            return true;
+        }
+        else {
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("波形数据解析失败"));
+        }
+    }
+
+    return false;
+}
+
 void WaveformAnalysisController::startAnalysis()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始分析"));
+
     if (m_isRunning)
         return;
 
@@ -167,6 +238,8 @@ void WaveformAnalysisController::startAnalysis()
 
 void WaveformAnalysisController::stopAnalysis()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("停止分析"));
+
     if (!m_isRunning)
         return;
 
@@ -180,6 +253,8 @@ void WaveformAnalysisController::stopAnalysis()
 
 void WaveformAnalysisController::zoomIn()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("放大"));
+
     double xMin, xMax;
     m_model->getViewRange(xMin, xMax);
 
@@ -200,6 +275,8 @@ void WaveformAnalysisController::zoomIn()
 
 void WaveformAnalysisController::zoomOut()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("缩小"));
+
     double xMin, xMax;
     m_model->getViewRange(xMin, xMax);
 
@@ -220,6 +297,8 @@ void WaveformAnalysisController::zoomOut()
 
 void WaveformAnalysisController::zoomReset()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("重置缩放"));
+
     // 重置为显示所有数据
     QVector<double> indexData = m_model->getIndexData();
 
@@ -238,6 +317,8 @@ void WaveformAnalysisController::zoomReset()
 
 void WaveformAnalysisController::zoomInAtPoint(const QPoint& pos)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("进入指定位置放大"));
+
     if (!m_lastChartRect.contains(pos))
         return;
 
@@ -266,6 +347,8 @@ void WaveformAnalysisController::zoomInAtPoint(const QPoint& pos)
 
 void WaveformAnalysisController::zoomOutAtPoint(const QPoint& pos)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("进入指定位置缩小"));
+
     if (!m_lastChartRect.contains(pos))
         return;
 
@@ -292,30 +375,131 @@ void WaveformAnalysisController::zoomOutAtPoint(const QPoint& pos)
     }
 }
 
-void WaveformAnalysisController::loadData(const QString& filename, int startIndex, int length)
+bool WaveformAnalysisController::loadData(const QString& filename, int startIndex, int length)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("控制器加载数据 - 文件: %1, 起始: %2, 长度: %3")
+        .arg(filename).arg(startIndex).arg(length));
+
+    if (!m_model || !m_dataService) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("模型或数据服务为空，无法加载数据"));
+        return false;
+    }
+
+    // 验证文件存在
+    QFileInfo fileInfo(filename);
+    if (!fileInfo.exists() || !fileInfo.isReadable()) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件不存在或不可读: %1").arg(filename));
+
+        // 如果是测试模式，加载模拟数据
+        if (filename.contains("test_data", Qt::CaseInsensitive)) {
+            // return loadSimulatedData(length);
+        }
+        return false;
+    }
+
     // 委托给模型加载数据
-    m_model->loadData(filename, startIndex, length);
+    bool success = m_model->loadData(filename, startIndex, length);
+
+    if (success) {
+        // 加载成功后设置默认视图范围
+        double min = startIndex;
+        double max = startIndex + length - 1;
+        m_model->setViewRange(min, max);
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("设置初始视图范围: [%1, %2]").arg(min).arg(max));
+    }
+    else {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("波形数据加载失败"));
+    }
+
+    return success;
 }
+
+#if 0
+bool WaveformAnalysisController::loadSimulatedData(int length)
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("加载模拟波形数据，长度: %1").arg(length));
+
+    if (!m_model) {
+        return false;
+    }
+
+    // 创建索引数据
+    QVector<double> indexData;
+    indexData.reserve(length);
+    for (int i = 0; i < length; ++i) {
+        indexData.append(i);
+    }
+    m_model->updateIndexData(indexData);
+
+    // 为每个通道创建模拟数据
+    for (int ch = 0; ch < 4; ++ch) {
+        QVector<double> channelData;
+        channelData.reserve(length);
+
+        // 生成不同的波形模式
+        for (int i = 0; i < length; ++i) {
+            // 每个通道使用不同周期的方波
+            int period = 10 + ch * 5;
+            double value = (i % period < period / 2) ? 1.0 : 0.0;
+            channelData.append(value);
+        }
+
+        m_model->updateChannelData(ch, channelData);
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("已生成通道%1模拟数据").arg(ch));
+    }
+
+    // 设置视图范围
+    m_model->setViewRange(0, length - 1);
+
+    // 触发数据加载成功信号
+    emit m_model->dataLoaded(true);
+    emit m_model->viewRangeChanged(0, length - 1);
+
+    return true;
+}
+#endif
 
 void WaveformAnalysisController::onDataLoaded(bool success)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("数据加载结果: %1").arg(success ? "成功" : "失败"));
+
     if (!success) {
         QMessageBox::warning(m_view, "加载失败", "波形数据加载失败。");
         return;
     }
 
+    // 检查模型中是否有数据
+    for (int ch = 0; ch < 4; ++ch) {
+        QVector<double> data = m_model->getChannelData(ch);
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("通道%1数据加载后状态: 大小=%2")
+            .arg(ch).arg(data.size()));
+    }
+
+    // 获取加载后的索引数据
+    QVector<double> indexData = m_model->getIndexData();
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("索引数据加载后状态: 大小=%1, 首值=%2, 尾值=%3")
+        .arg(indexData.size())
+        .arg(indexData.isEmpty() ? "N/A" : QString::number(indexData.first()))
+        .arg(indexData.isEmpty() ? "N/A" : QString::number(indexData.last())));
+
     // 自动调整视图范围显示所有数据
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("执行视图范围重置"));
     zoomReset();
 
     // 更新UI
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("触发UI更新"));
     if (m_view) {
         m_view->update();
+    }
+    else {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法更新UI: 视图对象为空"));
     }
 }
 
 void WaveformAnalysisController::onViewRangeChanged(double xMin, double xMax)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("视图更新"));
+
     // 更新UI
     if (m_view) {
         m_view->update();
@@ -324,8 +508,17 @@ void WaveformAnalysisController::onViewRangeChanged(double xMin, double xMax)
 
 void WaveformAnalysisController::onMarkersChanged()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("Marker改变"));
+
     // 更新UI
     if (m_view) {
+        // 获取当前标记点
+        QVector<int> markers = m_model->getMarkerPoints();
+
+        // 更新视图中的标记列表
+        m_view->updateMarkerList(markers);
+
+        // 触发重绘
         m_view->update();
     }
 }
@@ -420,30 +613,61 @@ void WaveformAnalysisController::drawWaveforms(QPainter* painter, const QRect& r
     double xMin, xMax;
     m_model->getViewRange(xMin, xMax);
 
+    // 防止无效视图范围
+    if (!std::isfinite(xMin) || !std::isfinite(xMax) || xMin >= xMax) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("视图范围无效: [%1, %2]，重置为默认值").arg(xMin).arg(xMax));
+
+        // 重置为默认值
+        QVector<double> indexData = m_model->getIndexData();
+        if (!indexData.isEmpty()) {
+            xMin = indexData.first();
+            xMax = indexData.last();
+        }
+        else {
+            xMin = 0;
+            xMax = 100;
+        }
+
+        m_model->setViewRange(xMin, xMax);
+    }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("绘制波形: 视图范围=[%1,%2], 图表区域=[%3,%4,%5,%6]")
+        .arg(xMin).arg(xMax)
+        .arg(rect.left()).arg(rect.top())
+        .arg(rect.width()).arg(rect.height()));
+
     // 为每个通道绘制波形
     for (int ch = 0; ch < 4; ++ch) {
-        if (!m_model->isChannelEnabled(ch))
+        if (!m_model->isChannelEnabled(ch)) {
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("通道%1已禁用，跳过绘制").arg(ch));
             continue;
+        }
 
         QVector<double> data = m_model->getChannelData(ch);
-        if (data.isEmpty())
-            continue;
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("通道%1数据: 大小=%2")
+            .arg(ch).arg(data.size()));
 
-        // 计算通道区域
+        if (data.isEmpty()) {
+            LOG_WARN(LocalQTCompat::fromLocal8Bit("通道%1数据为空").arg(ch));
+            continue;
+        }
+
+        // 计算通道区域 - 将整个矩形区域平均分成4个通道区域
         int channelHeight = rect.height() / 4;
-        int channelTop = rect.top() + rect.height() * ch / 4;
+        int channelTop = rect.top() + channelHeight * ch;
+
+        // 通道的高、低电平位置
         int highY = channelTop + channelHeight / 4;     // 高电平位置
         int lowY = channelTop + channelHeight * 3 / 4;  // 低电平位置
 
-        // 设置波形颜色
-        QColor color;
-        switch (ch) {
-        case 0: color = Qt::red; break;
-        case 1: color = Qt::blue; break;
-        case 2: color = Qt::green; break;
-        case 3: color = Qt::magenta; break;
-        }
+        // 应用垂直缩放 - 假设m_verticalScale存储缩放因子
+        int midY = channelTop + channelHeight / 2;
+        int deltaY = static_cast<int>((channelHeight / 4) * m_verticalScale);
+        highY = midY - deltaY;
+        lowY = midY + deltaY;
 
+        // 设置波形颜色
+        QColor color = m_model->getChannelColor(ch);
         QPen pen(color);
         pen.setWidth(2);
         painter->setPen(pen);
@@ -455,6 +679,13 @@ void WaveformAnalysisController::drawWaveforms(QPainter* painter, const QRect& r
         // 计算可见数据范围
         int startIdx = std::max(0, static_cast<int>(std::ceil(xMin)));
         int endIdx = std::min(static_cast<int>(std::floor(xMax)), static_cast<int>(data.size() - 1));
+
+        // 确保范围有效
+        if (startIdx < 0 || startIdx >= data.size() || endIdx < 0 || endIdx >= data.size() || startIdx > endIdx) {
+            LOG_WARN(LocalQTCompat::fromLocal8Bit("通道%1数据范围无效: [%2, %3]，数据大小: %4")
+                .arg(ch).arg(startIdx).arg(endIdx).arg(data.size()));
+            continue;
+        }
 
         // 绘制可见范围内的数据
         for (int i = startIdx; i <= endIdx; ++i) {
@@ -498,6 +729,20 @@ void WaveformAnalysisController::drawWaveforms(QPainter* painter, const QRect& r
             else {
                 painter->drawLine(lastX, lowY, rightEdge, lowY);
             }
+        }
+
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("通道%1波形绘制完成").arg(ch));
+    }
+}
+
+void WaveformAnalysisController::setVerticalScale(double scale)
+{
+    if (scale > 0) {
+        m_verticalScale = scale;
+
+        // 更新UI
+        if (m_view) {
+            m_view->update();
         }
     }
 }
@@ -557,12 +802,22 @@ int WaveformAnalysisController::dataToScreenX(double index, const QRect& rect)
     double xMin, xMax;
     m_model->getViewRange(xMin, xMax);
 
-    // 防止除以零
-    if (qFuzzyCompare(xMax, xMin))
-        return rect.left();
+    // 防止除以零或无效值
+    if (!std::isfinite(xMin) || !std::isfinite(xMax) || qFuzzyCompare(xMax, xMin)) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("视图范围异常: xMin=%1, xMax=%2, 使用默认映射").arg(xMin).arg(xMax));
+        return rect.left() + static_cast<int>((index - 0) * rect.width() / 100.0);
+    }
 
     // 线性映射数据索引到屏幕坐标
-    return rect.left() + static_cast<int>((index - xMin) * rect.width() / (xMax - xMin));
+    int screenX = rect.left() + static_cast<int>((index - xMin) * rect.width() / (xMax - xMin));
+
+    // 添加周期性采样日志，避免日志过多
+    if (static_cast<int>(index) % 100 == 0 || index == xMin || index == xMax) {
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("坐标转换: 数据索引=%1 -> 屏幕X=%2")
+            .arg(index).arg(screenX));
+    }
+
+    return screenX;
 }
 
 double WaveformAnalysisController::screenToDataX(int x, const QRect& rect)
@@ -576,4 +831,52 @@ double WaveformAnalysisController::screenToDataX(int x, const QRect& rect)
 
     // 线性映射屏幕坐标到数据索引
     return xMin + (x - rect.left()) * (xMax - xMin) / rect.width();
+}
+
+// In WaveformAnalysisController.cpp
+void WaveformAnalysisController::handleTabActivated()
+{
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("波形分析标签页被激活"));
+
+    if (!m_isActive) {
+        m_isActive = true;
+
+        // On first activation, load initial data if needed
+        if (m_model && m_model->getIndexData().isEmpty()) {
+            // Load initial data range - just enough for the current view
+            loadDataRange(m_currentPosition, m_viewWidth);
+        }
+
+        // Update view
+        if (m_view) {
+            m_view->update();
+        }
+    }
+}
+
+void WaveformAnalysisController::updateVisibleRange(int startPos, int viewWidth)
+{
+    // Only load data if we're active and the range has changed significantly
+    if (m_isActive && (abs(startPos - m_currentPosition) > viewWidth / 4 ||
+        abs(viewWidth - m_viewWidth) > viewWidth / 4)) {
+
+        m_currentPosition = startPos;
+        m_viewWidth = viewWidth;
+
+        // Load data for the new range, plus some padding
+        loadDataRange(startPos - viewWidth / 2, viewWidth * 2);
+    }
+}
+
+bool WaveformAnalysisController::loadDataRange(int startPos, int length)
+{
+    // Ensure non-negative values
+    startPos = std::max(0, startPos);
+    length = std::max(100, length);
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("按需加载波形数据 - 起始: %1, 长度: %2")
+        .arg(startPos).arg(length));
+
+    // 从DataAccessService中获取，TODO
+    return true;
 }

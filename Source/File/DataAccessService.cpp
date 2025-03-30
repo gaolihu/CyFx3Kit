@@ -541,9 +541,13 @@ void DataAccessService::resetPerformanceStats()
 {
     m_stats = PerformanceStats();
 }
+
 QVector<double> DataAccessService::getChannelData(const QString& filename, int channel, int startIndex, int length)
 {
     QVector<double> result;
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取通道数据: 文件=%1, 通道=%2, 起始=%3, 长度=%4")
+        .arg(filename).arg(channel).arg(startIndex).arg(length));
 
     if (channel < 0 || channel > 3) {
         LOG_ERROR(QString("无效的通道索引: %1").arg(channel));
@@ -593,13 +597,8 @@ QVector<double> DataAccessService::getChannelData(const QString& filename, int c
         LOG_ERROR(QString("读取通道数据异常: %1").arg(e.what()));
         return result;
     }
-}
 
-QFuture<QVector<double>> DataAccessService::getChannelDataAsync(const QString& filename, int channel, int startIndex, int length)
-{
-    return QtConcurrent::run([this, filename, channel, startIndex, length]() {
-        return getChannelData(filename, channel, startIndex, length);
-        });
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("通道数据获取完成: 大小=%1").arg(result.size()));
 }
 
 QVector<double> DataAccessService::extractChannelData(const QByteArray& data, int channel)
@@ -607,25 +606,46 @@ QVector<double> DataAccessService::extractChannelData(const QByteArray& data, in
     QVector<double> result;
 
     if (data.isEmpty() || channel < 0 || channel > 3) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("提取通道数据失败：无效的数据或通道索引%1").arg(channel));
         return result;
     }
 
     // 为结果分配空间
     result.reserve(data.size());
 
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始提取通道%1数据，数据大小：%2字节")
+        .arg(channel).arg(data.size()));
+
     // 解析数据，提取指定通道的位
     for (int i = 0; i < data.size(); ++i) {
         uint8_t byteValue = static_cast<uint8_t>(data.at(i));
 
-        // 假设每个字节包含4个通道的数据，每个通道占用2位
-        // 实际格式可能需要根据协议调整
-        double value = (byteValue >> (channel * 2)) & 0x03;
+        // 根据通道索引提取不同的位
+        double value = 0.0;
+
+        switch (channel) {
+        case 0: // BYTE0：提取最低2位
+            value = byteValue & 0x03;
+            break;
+        case 1: // BYTE1：提取中间2位
+            value = (byteValue >> 2) & 0x03;
+            break;
+        case 2: // BYTE2：提取高2位
+            value = (byteValue >> 4) & 0x03;
+            break;
+        case 3: // BYTE3：提取最高2位
+            value = (byteValue >> 6) & 0x03;
+            break;
+        }
 
         // 归一化到0-1范围，大于0的值都视为高电平
         value = value > 0 ? 1.0 : 0.0;
 
         result.append(value);
     }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("通道%1数据提取完成，提取了%2个数据点")
+        .arg(channel).arg(result.size()));
 
     return result;
 }

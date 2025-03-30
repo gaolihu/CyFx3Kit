@@ -37,6 +37,30 @@ public:
      */
     Ui::WaveformAnalysisClass* getUi() { return ui; }
 
+    /**
+     * @brief 设置控制器
+     * @param controller 控制器指针
+     */
+    void setController(WaveformAnalysisController* controller);
+
+    /**
+     * @brief 更新标记列表
+     * @param markers 标记点列表
+     */
+    void updateMarkerList(const QVector<int>& markers);
+
+    /**
+     * @brief 设置分析结果文本
+     * @param text 分析结果文本
+     */
+    void setAnalysisResult(const QString& text);
+
+    /**
+     * @brief 设置状态栏消息
+     * @param message 状态消息
+     */
+    void setStatusMessage(const QString& message);
+
 signals:
     /**
      * @brief 通道可见性改变信号
@@ -56,6 +80,12 @@ signals:
      * @param deltaX 水平偏移量
      */
     void panChanged(int deltaX);
+
+    /**
+     * @brief 垂直缩放改变信号
+     * @param value 缩放值
+     */
+    void verticalScaleChanged(int value);
 
 protected:
     /**
@@ -100,21 +130,85 @@ protected:
      */
     void resizeEvent(QResizeEvent* event) override;
 
-private:
     /**
-     * @brief 初始化UI
+     * @brief 显示事件
+     * @param event 显示事件
      */
-    void initializeUI();
+    void showEvent(QShowEvent* event) override;
+
+private slots:
+    /**
+     * @brief 处理通道选择变更
+     * @param state 复选框状态
+     */
+    void onChannelCheckboxToggled(int state);
 
     /**
-     * @brief 连接信号和槽
+     * @brief 处理加载测试数据动作
+     */
+    void onLoadTestDataTriggered();
+
+    /**
+     * @brief 处理放大动作
+     */
+    void onZoomInTriggered();
+
+    /**
+     * @brief 处理缩小动作
+     */
+    void onZoomOutTriggered();
+
+    /**
+     * @brief 处理重置视图动作
+     */
+    void onZoomResetTriggered();
+
+    /**
+     * @brief 处理开始分析动作
+     */
+    void onStartAnalysisTriggered();
+
+    /**
+     * @brief 处理停止分析动作
+     */
+    void onStopAnalysisTriggered();
+
+    /**
+     * @brief 处理导出数据动作
+     */
+    void onExportDataTriggered();
+
+    /**
+     * @brief 处理分析按钮点击
+     */
+    void onAnalyzeButtonClicked();
+
+    /**
+     * @brief 处理清除标记按钮点击
+     */
+    void onClearMarkersButtonClicked();
+
+    /**
+     * @brief 处理垂直缩放滑块变更
+     * @param value 滑块值
+     */
+    void onVerticalScaleSliderChanged(int value);
+
+private:
+    /**
+     * @brief 初始化连接
      */
     void connectSignals();
 
+    /**
+     * @brief 初始化界面状态
+     */
+    void initializeUIState();
+
 private:
-    Ui::WaveformAnalysisClass* ui;                          ///< UI对象
-    std::unique_ptr<WaveformAnalysisController> m_controller; ///< 控制器对象
-    QRect m_chartRect;                                      ///< 图表区域
-    bool m_isDragging;                                      ///< 是否正在拖动
-    QPoint m_lastMousePos;                                  ///< 上次鼠标位置
+    Ui::WaveformAnalysisClass* ui;              ///< UI对象
+    WaveformAnalysisController* m_controller;   ///< 控制器对象
+    QRect m_chartRect;                          ///< 图表区域
+    bool m_isDragging;                          ///< 是否正在拖动
+    QPoint m_lastMousePos;                      ///< 上次鼠标位置
 };
