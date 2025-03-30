@@ -735,7 +735,7 @@ bool ModuleManager::createChannelConfigModule()
         m_channelConfigController->initialize();
 
         // 连接通道配置变更信号
-        connect(m_channelConfigView.get(), &ChannelSelectView::configChanged,
+        connect(m_channelConfigView.get(), &ChannelSelectView::signal_CHN_V_configChanged,
             this, &ModuleManager::signal_channelConfigChanged);
 
         // 标记为已初始化
@@ -801,6 +801,7 @@ bool ModuleManager::createVideoDisplayModule()
         // 获取控制器
         m_videoDisplayController = std::make_shared<VideoDisplayController>(m_videoDisplayView.get());
 
+        m_videoDisplayView->setVidioDisplayController(m_videoDisplayController.get());
         // 初始化控制器
         if (!m_videoDisplayController->initialize()) {
             LOG_ERROR(LocalQTCompat::fromLocal8Bit("初始化视频显示控制器失败"));
@@ -845,12 +846,12 @@ bool ModuleManager::createWaveformAnalysisModule()
         }
 
         // 连接垂直缩放信号
-        connect(m_waveformAnalysisView.get(), &WaveformAnalysisView::verticalScaleChanged,
+        connect(m_waveformAnalysisView.get(), &WaveformAnalysisView::signal_WA_V_verticalScaleChanged,
             [this](int value) {
                 if (m_waveformAnalysisController) {
                     // 将滑块值(1-10)转换为缩放系数(0.5-2.0)
                     double scale = 0.5 + (value / 10.0) * 1.5;
-                    m_waveformAnalysisController->setVerticalScale(scale);
+                    m_waveformAnalysisController->slot_WA_C_setVerticalScale(scale);
                 }
             });
 

@@ -168,47 +168,47 @@ signals:
      * @param actionName 菜单项名称
      * @param enabled 是否启用
      */
-    void menuItemEnabledChanged(const QString& actionName, bool enabled);
+    void signal_MN_M_menuItemEnabledChanged(const QString& actionName, bool enabled);
 
     /**
      * @brief 菜单项可见状态变更信号
      * @param actionName 菜单项名称
      * @param visible 是否可见
      */
-    void menuItemVisibilityChanged(const QString& actionName, bool visible);
+    void signal_MN_M_menuItemVisibilityChanged(const QString& actionName, bool visible);
 
     /**
      * @brief 菜单项文本变更信号
      * @param actionName 菜单项名称
      * @param text 新的文本
      */
-    void menuItemTextChanged(const QString& actionName, const QString& text);
+    void signal_MN_M_menuItemTextChanged(const QString& actionName, const QString& text);
 
     /**
      * @brief 菜单项图标变更信号
      * @param actionName 菜单项名称
      * @param iconPath 新的图标路径
      */
-    void menuItemIconChanged(const QString& actionName, const QString& iconPath);
+    void signal_MN_M_menuItemIconChanged(const QString& actionName, const QString& iconPath);
 
     /**
      * @brief 菜单项快捷键变更信号
      * @param actionName 菜单项名称
      * @param shortcut 新的快捷键
      */
-    void menuItemShortcutChanged(const QString& actionName, const QString& shortcut);
+    void signal_MN_M_menuItemShortcutChanged(const QString& actionName, const QString& shortcut);
 
     /**
      * @brief 菜单项添加信号
      * @param actionName 菜单项名称
      * @param menuType 菜单类型
      */
-    void menuItemAdded(const QString& actionName, MenuItemType menuType);
+    void signal_MN_M_menuItemAdded(const QString& actionName, MenuItemType menuType);
 
     /**
      * @brief 菜单配置变更信号
      */
-    void menuConfigChanged();
+    void signal_MN_M_menuConfigChanged();
 
 private:
     /**

@@ -40,54 +40,54 @@ signals:
      * @param success 是否成功
      * @param message 完成消息
      */
-    void updateCompleted(bool success, const QString& message);
+    void signal_UD_C_updateCompleted(bool success, const QString& message);
 
 private slots:
     /**
      * @brief 处理SOC文件选择
      */
-    void handleSOCFileSelect();
+    void slot_UD_C_handleSOCFileSelect();
 
     /**
      * @brief 处理PHY文件选择
      */
-    void handlePHYFileSelect();
+    void slot_UD_C_handlePHYFileSelect();
 
     /**
      * @brief 处理SOC升级
      */
-    void handleSOCUpdate();
+    void slot_UD_C_handleSOCUpdate();
 
     /**
      * @brief 处理PHY升级
      */
-    void handlePHYUpdate();
+    void slot_UD_C_handlePHYUpdate();
 
     /**
      * @brief 处理模型状态变更
      * @param status 新的状态
      */
-    void handleModelStatusChanged(UpdateStatus status);
+    void slot_UD_C_handleModelStatusChanged(UpdateStatus status);
 
     /**
      * @brief 处理模型进度变更
      * @param progress 新的进度
      */
-    void handleModelProgressChanged(int progress);
+    void slot_UD_C_handleModelProgressChanged(int progress);
 
     /**
      * @brief 处理模型升级完成
      * @param success 是否成功
      * @param message 完成消息
      */
-    void handleModelUpdateCompleted(bool success, const QString& message);
+    void slot_UD_C_handleModelUpdateCompleted(bool success, const QString& message);
 
     /**
      * @brief 处理模型文件路径变更
      * @param deviceType 设备类型
      * @param filePath 新的文件路径
      */
-    void handleModelFilePathChanged(DeviceType deviceType, const QString& filePath);
+    void slot_UD_C_handleModelFilePathChanged(DeviceType deviceType, const QString& filePath);
 
 private:
     /**

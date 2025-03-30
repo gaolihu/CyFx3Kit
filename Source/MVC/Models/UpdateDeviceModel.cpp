@@ -34,7 +34,7 @@ void UpdateDeviceModel::setSOCFilePath(const QString& filePath)
 {
     if (m_socFilePath != filePath) {
         m_socFilePath = filePath;
-        emit filePathChanged(DeviceType::SOC, filePath);
+        emit signal_UD_M_filePathChanged(DeviceType::SOC, filePath);
         LOG_INFO(QString("SOC文件路径已设置: %1").arg(filePath));
     }
 }
@@ -48,7 +48,7 @@ void UpdateDeviceModel::setPHYFilePath(const QString& filePath)
 {
     if (m_phyFilePath != filePath) {
         m_phyFilePath = filePath;
-        emit filePathChanged(DeviceType::PHY, filePath);
+        emit signal_UD_M_filePathChanged(DeviceType::PHY, filePath);
         LOG_INFO(QString("PHY文件路径已设置: %1").arg(filePath));
     }
 }
@@ -67,7 +67,7 @@ void UpdateDeviceModel::setStatus(UpdateStatus status)
 {
     if (m_status != status) {
         m_status = status;
-        emit statusChanged(status);
+        emit signal_UD_M_statusChanged(status);
         LOG_INFO(QString("升级状态已更改为: %1").arg(static_cast<int>(status)));
     }
 }
@@ -94,7 +94,7 @@ void UpdateDeviceModel::setProgress(int progress)
 {
     if (m_progress != progress) {
         m_progress = progress;
-        emit progressChanged(progress);
+        emit signal_UD_M_progressChanged(progress);
 
         // 如果进度到达100%，表示升级完成
         if (progress >= 100 && m_status == UpdateStatus::UPDATING) {
@@ -110,7 +110,7 @@ void UpdateDeviceModel::setProgress(int progress)
             }
 
             setStatusMessage(message);
-            emit updateCompleted(true, message);
+            emit signal_UD_M_updateCompleted(true, message);
         }
     }
 }
@@ -233,7 +233,7 @@ bool UpdateDeviceModel::stopUpdate()
     setStatusMessage(message);
 
     // 发送升级完成信号（失败）
-    emit updateCompleted(false, message);
+    emit signal_UD_M_updateCompleted(false, message);
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("升级过程已停止"));
     return true;

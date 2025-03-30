@@ -41,7 +41,7 @@ void MenuView::initializeMenuBar()
             if (action) {
                 bool connected = connect(action, &QAction::triggered, this,
                     [this, actionName]() {
-                        emit menuActionTriggered(actionName);
+                        emit signal_MN_V_menuActionTriggered(actionName);
                     });
                 if (!connected) {
                     LOG_WARN(LocalQTCompat::fromLocal8Bit("菜单项信号连接失败: %1").arg(actionName));
@@ -99,14 +99,14 @@ QAction* MenuView::addMenuItem(const QString& actionName, MenuItemType menuType,
     m_actions[actionName] = action;
 
     // 连接信号
-    connect(action, &QAction::triggered, this, &MenuView::onMenuAction);
+    connect(action, &QAction::triggered, this, &MenuView::slot_MN_V_onMenuAction);
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("已添加菜单项: %1").arg(actionName));
 
     return action;
 }
 
-void MenuView::slot_setMenuItemEnabled(const QString& actionName, bool enabled)
+void MenuView::slot_MN_V_setMenuItemEnabled(const QString& actionName, bool enabled)
 {
     QAction* action = getMenuAction(actionName);
     if (action) {
@@ -114,7 +114,7 @@ void MenuView::slot_setMenuItemEnabled(const QString& actionName, bool enabled)
     }
 }
 
-void MenuView::slot_setMenuItemVisible(const QString& actionName, bool visible)
+void MenuView::slot_MN_V_setMenuItemVisible(const QString& actionName, bool visible)
 {
     QAction* action = getMenuAction(actionName);
     if (action) {
@@ -122,7 +122,7 @@ void MenuView::slot_setMenuItemVisible(const QString& actionName, bool visible)
     }
 }
 
-void MenuView::slot_setMenuItemText(const QString& actionName, const QString& text)
+void MenuView::slot_MN_V_setMenuItemText(const QString& actionName, const QString& text)
 {
     QAction* action = getMenuAction(actionName);
     if (action) {
@@ -130,7 +130,7 @@ void MenuView::slot_setMenuItemText(const QString& actionName, const QString& te
     }
 }
 
-void MenuView::slot_setMenuItemIcon(const QString& actionName, const QString& iconPath)
+void MenuView::slot_MN_V_setMenuItemIcon(const QString& actionName, const QString& iconPath)
 {
     QAction* action = getMenuAction(actionName);
     if (action && !iconPath.isEmpty()) {
@@ -138,7 +138,7 @@ void MenuView::slot_setMenuItemIcon(const QString& actionName, const QString& ic
     }
 }
 
-void MenuView::slot_setMenuItemShortcut(const QString& actionName, const QString& shortcut)
+void MenuView::slot_MN_V_setMenuItemShortcut(const QString& actionName, const QString& shortcut)
 {
     QAction* action = getMenuAction(actionName);
     if (action && !shortcut.isEmpty()) {
@@ -146,7 +146,7 @@ void MenuView::slot_setMenuItemShortcut(const QString& actionName, const QString
     }
 }
 
-void MenuView::slot_menuItemAdded(const QString& actionName, MenuItemType menuType)
+void MenuView::slot_MN_V_menuItemAdded(const QString& actionName, MenuItemType menuType)
 {
     // 如果菜单项不存在，从模型添加
     if (!m_actions.contains(actionName)) {
@@ -165,19 +165,19 @@ void MenuView::slot_menuItemAdded(const QString& actionName, MenuItemType menuTy
     }
 }
 
-void MenuView::slot_menuConfigChanged()
+void MenuView::slot_MN_V_menuConfigChanged()
 {
     // 同步菜单状态
     syncMenusFromModel();
 }
 
-void MenuView::onMenuAction()
+void MenuView::slot_MN_V_onMenuAction()
 {
     QAction* action = qobject_cast<QAction*>(sender());
     if (action) {
         QString actionName = action->objectName();
         LOG_INFO(LocalQTCompat::fromLocal8Bit("菜单动作触发: %1").arg(actionName));
-        emit menuActionTriggered(actionName);
+        emit signal_MN_V_menuActionTriggered(actionName);
     }
 }
 
@@ -255,26 +255,26 @@ void MenuView::connectModelSignals()
 
     LOG_INFO("连接菜单Model");
     // 连接模型信号到视图槽
-    connect(model, &MenuModel::menuItemEnabledChanged,
-        this, &MenuView::slot_setMenuItemEnabled,
+    connect(model, &MenuModel::signal_MN_M_menuItemEnabledChanged,
+        this, &MenuView::slot_MN_V_setMenuItemEnabled,
         Qt::ConnectionType::QueuedConnection);
-    connect(model, &MenuModel::menuItemVisibilityChanged,
-        this, &MenuView::slot_setMenuItemVisible,
+    connect(model, &MenuModel::signal_MN_M_menuItemVisibilityChanged,
+        this, &MenuView::slot_MN_V_setMenuItemVisible,
         Qt::ConnectionType::QueuedConnection);
-    connect(model, &MenuModel::menuItemTextChanged,
-        this, &MenuView::slot_setMenuItemText,
+    connect(model, &MenuModel::signal_MN_M_menuItemTextChanged,
+        this, &MenuView::slot_MN_V_setMenuItemText,
         Qt::ConnectionType::QueuedConnection);
-    connect(model, &MenuModel::menuItemIconChanged,
-        this, &MenuView::slot_setMenuItemIcon,
+    connect(model, &MenuModel::signal_MN_M_menuItemIconChanged,
+        this, &MenuView::slot_MN_V_setMenuItemIcon,
         Qt::ConnectionType::QueuedConnection);
-    connect(model, &MenuModel::menuItemShortcutChanged,
-        this, &MenuView::slot_setMenuItemShortcut,
+    connect(model, &MenuModel::signal_MN_M_menuItemShortcutChanged,
+        this, &MenuView::slot_MN_V_setMenuItemShortcut,
         Qt::ConnectionType::QueuedConnection);
-    connect(model, &MenuModel::menuItemAdded,
-        this, &MenuView::slot_menuItemAdded,
+    connect(model, &MenuModel::signal_MN_M_menuItemAdded,
+        this, &MenuView::slot_MN_V_menuItemAdded,
         Qt::ConnectionType::QueuedConnection);
-    connect(model, &MenuModel::menuConfigChanged,
-        this, &MenuView::slot_menuConfigChanged,
+    connect(model, &MenuModel::signal_MN_M_menuConfigChanged,
+        this, &MenuView::slot_MN_V_menuConfigChanged,
         Qt::ConnectionType::QueuedConnection);
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("已连接模型信号"));
@@ -377,7 +377,7 @@ QAction* MenuView::createMenuItem(const QString& actionName, MenuItemType menuTy
     m_actions[actionName] = action;
 
     // 连接信号
-    connect(action, &QAction::triggered, this, &MenuView::onMenuAction);
+    connect(action, &QAction::triggered, this, &MenuView::slot_MN_V_onMenuAction);
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("已创建菜单项: %1").arg(actionName));
     return action;

@@ -63,74 +63,74 @@ public slots:
      * @brief 处理抓取类型变更
      * @param index 组合框索引
      */
-    void onCaptureTypeChanged(int index);
+    void slot_CHN_C_onCaptureTypeChanged(int index);
 
     /**
      * @brief 处理时钟PN交换状态变更
      * @param checked 是否选中
      */
-    void onClockPNSwapChanged(bool checked);
+    void slot_CHN_C_onClockPNSwapChanged(bool checked);
 
     /**
      * @brief 处理通道使能状态变更
      * @param channelIndex 通道索引
      * @param enabled 是否使能
      */
-    void onChannelEnableChanged(int channelIndex, bool enabled);
+    void slot_CHN_C_onChannelEnableChanged(int channelIndex, bool enabled);
 
     /**
      * @brief 处理通道PN交换状态变更
      * @param channelIndex 通道索引
      * @param swapped 是否交换
      */
-    void onChannelPNSwapChanged(int channelIndex, bool swapped);
+    void slot_CHN_C_onChannelPNSwapChanged(int channelIndex, bool swapped);
 
     /**
      * @brief 处理通道交换设置变更
      * @param channelIndex 通道索引
      * @param targetChannel 目标通道索引
      */
-    void onChannelSwapChanged(int channelIndex, int targetChannel);
+    void slot_CHN_C_onChannelSwapChanged(int channelIndex, int targetChannel);
 
     /**
      * @brief 处理测试模式开关状态变更
      * @param enabled 是否启用
      */
-    void onTestModeEnabledChanged(bool enabled);
+    void slot_CHN_C_onTestModeEnabledChanged(bool enabled);
 
     /**
      * @brief 处理测试模式类型变更
      * @param index 组合框索引
      */
-    void onTestModeTypeChanged(int index);
+    void slot_CHN_C_onTestModeTypeChanged(int index);
 
     /**
      * @brief 处理视频高度变更
      * @param height 高度值
      */
-    void onVideoHeightChanged(const QString& height);
+    void slot_CHN_C_onVideoHeightChanged(const QString& height);
 
     /**
      * @brief 处理视频宽度变更
      * @param width 宽度值
      */
-    void onVideoWidthChanged(const QString& width);
+    void slot_CHN_C_onVideoWidthChanged(const QString& width);
 
     /**
      * @brief 处理TE值变更
      * @param teValue TE值
      */
-    void onTEValueChanged(const QString& teValue);
+    void slot_CHN_C_onTEValueChanged(const QString& teValue);
 
     /**
      * @brief 确认保存按钮点击处理
      */
-    void onSaveButtonClicked();
+    void slot_CHN_C_onSaveButtonClicked();
 
     /**
      * @brief 取消设置按钮点击处理
      */
-    void onCancelButtonClicked();
+    void slot_CHN_C_onCancelButtonClicked();
 
 private:
     /**

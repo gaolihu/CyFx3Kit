@@ -54,65 +54,65 @@ signals:
     /**
      * @brief SOC文件选择按钮点击信号
      */
-    void socFileSelectClicked();
+    void signal_UD_V_socFileSelectClicked();
 
     /**
      * @brief PHY文件选择按钮点击信号
      */
-    void phyFileSelectClicked();
+    void signal_UD_V_phyFileSelectClicked();
 
     /**
      * @brief SOC升级按钮点击信号
      */
-    void socUpdateClicked();
+    void signal_UD_V_socUpdateClicked();
 
     /**
      * @brief PHY升级按钮点击信号
      */
-    void phyUpdateClicked();
+    void signal_UD_V_phyUpdateClicked();
 
 public slots:
     /**
      * @brief 更新SOC文件路径显示
      * @param filePath 文件路径
      */
-    void updateSOCFilePath(const QString& filePath);
+    void slot_UD_V_updateSOCFilePath(const QString& filePath);
 
     /**
      * @brief 更新PHY文件路径显示
      * @param filePath 文件路径
      */
-    void updatePHYFilePath(const QString& filePath);
+    void slot_UD_V_updatePHYFilePath(const QString& filePath);
 
     /**
      * @brief 更新SOC进度条
      * @param progress 进度值(0-100)
      */
-    void updateSOCProgress(int progress);
+    void slot_UD_V_updateSOCProgress(int progress);
 
     /**
      * @brief 更新PHY进度条
      * @param progress 进度值(0-100)
      */
-    void updatePHYProgress(int progress);
+    void slot_UD_V_updatePHYProgress(int progress);
 
     /**
      * @brief 更新状态提示
      * @param message 状态消息
      */
-    void updateStatusMessage(const QString& message);
+    void slot_UD_V_updateStatusMessage(const QString& message);
 
     /**
      * @brief 更新SOC升级按钮状态
      * @param isUpdating 是否正在升级
      */
-    void updateSOCButtonState(bool isUpdating);
+    void slot_UD_V_updateSOCButtonState(bool isUpdating);
 
     /**
      * @brief 更新PHY升级按钮状态
      * @param isUpdating 是否正在升级
      */
-    void updatePHYButtonState(bool isUpdating);
+    void slot_UD_V_updatePHYButtonState(bool isUpdating);
 
     /**
      * @brief 更新UI状态
@@ -125,22 +125,22 @@ private slots:
     /**
      * @brief SOC文件选择按钮点击处理
      */
-    void onSOCFileOpenButtonClicked();
+    void slot_UD_V_onSOCFileOpenButtonClicked();
 
     /**
      * @brief PHY文件选择按钮点击处理
      */
-    void onPHYFileOpenButtonClicked();
+    void slot_UD_V_onPHYFileOpenButtonClicked();
 
     /**
      * @brief SOC升级按钮点击处理
      */
-    void onSOCUpdateButtonClicked();
+    void slot_UD_V_onSOCUpdateButtonClicked();
 
     /**
      * @brief PHY升级按钮点击处理
      */
-    void onPHYUpdateButtonClicked();
+    void slot_UD_V_onPHYUpdateButtonClicked();
 
 private:
     /**

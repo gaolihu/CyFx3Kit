@@ -84,60 +84,60 @@ public slots:
      * @param actionName 菜单项名称
      * @param enabled 是否启用
      */
-    void slot_setMenuItemEnabled(const QString& actionName, bool enabled);
+    void slot_MN_V_setMenuItemEnabled(const QString& actionName, bool enabled);
 
     /**
      * @brief 设置菜单项可见状态
      * @param actionName 菜单项名称
      * @param visible 是否可见
      */
-    void slot_setMenuItemVisible(const QString& actionName, bool visible);
+    void slot_MN_V_setMenuItemVisible(const QString& actionName, bool visible);
 
     /**
      * @brief 设置菜单项文本
      * @param actionName 菜单项名称
      * @param text 菜单文本
      */
-    void slot_setMenuItemText(const QString& actionName, const QString& text);
+    void slot_MN_V_setMenuItemText(const QString& actionName, const QString& text);
 
     /**
      * @brief 设置菜单项图标
      * @param actionName 菜单项名称
      * @param iconPath 图标路径
      */
-    void slot_setMenuItemIcon(const QString& actionName, const QString& iconPath);
+    void slot_MN_V_setMenuItemIcon(const QString& actionName, const QString& iconPath);
 
     /**
      * @brief 设置菜单项快捷键
      * @param actionName 菜单项名称
      * @param shortcut 快捷键文本
      */
-    void slot_setMenuItemShortcut(const QString& actionName, const QString& shortcut);
+    void slot_MN_V_setMenuItemShortcut(const QString& actionName, const QString& shortcut);
 
     /**
      * @brief 处理新菜单项添加
      * @param actionName 菜单项名称
      * @param menuType 菜单类型
      */
-    void slot_menuItemAdded(const QString& actionName, MenuItemType menuType);
+    void slot_MN_V_menuItemAdded(const QString& actionName, MenuItemType menuType);
 
     /**
      * @brief 处理菜单配置变更
      */
-    void slot_menuConfigChanged();
+    void slot_MN_V_menuConfigChanged();
 
 signals:
     /**
      * @brief 菜单动作触发信号
      * @param actionName 菜单项名称
      */
-    void menuActionTriggered(const QString& actionName);
+    void signal_MN_V_menuActionTriggered(const QString& actionName);
 
 private slots:
     /**
      * @brief 处理菜单动作
      */
-    void onMenuAction();
+    void slot_MN_V_onMenuAction();
 
 private:
     /**

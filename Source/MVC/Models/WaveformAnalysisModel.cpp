@@ -156,8 +156,8 @@ bool WaveformAnalysisModel::loadData(const QString& filename, int startIndex, in
         m_isLoading = false;
 
         // 发送数据加载完成信号
-        emit dataLoaded(!allChannelsEmpty);
-        emit viewRangeChanged(m_xMin, m_xMax);
+        emit signal_WA_M_dataLoaded(!allChannelsEmpty);
+        emit signal_WA_M_viewRangeChanged(m_xMin, m_xMax);
 
         LOG_INFO(LocalQTCompat::fromLocal8Bit("波形数据加载完成: 文件=%1, 起始=%2, 长度=%3")
             .arg(filename).arg(startIndex).arg(length));
@@ -168,7 +168,7 @@ bool WaveformAnalysisModel::loadData(const QString& filename, int startIndex, in
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("加载波形数据异常: %1").arg(e.what()));
 
         // 发送数据加载失败信号
-        emit dataLoaded(false);
+        emit signal_WA_M_dataLoaded(false);
         return false;
     }
 }
@@ -210,7 +210,7 @@ bool WaveformAnalysisModel::loadDataAsync(uint64_t packetIndex)
     catch (const std::exception& e) {
         m_isLoading = false;
         LOG_ERROR(QString("异步加载数据包失败: %1").arg(e.what()));
-        emit dataLoaded(false);
+        emit signal_WA_M_dataLoaded(false);
         return false;
     }
 }
@@ -221,12 +221,12 @@ void WaveformAnalysisModel::processReceivedData(uint64_t timestamp, const QByteA
 
     if (parsePacketData(data)) {
         m_isLoading = false;
-        emit dataLoaded(true);
-        emit viewRangeChanged(m_xMin, m_xMax);
+        emit signal_WA_M_dataLoaded(true);
+        emit signal_WA_M_viewRangeChanged(m_xMin, m_xMax);
     }
     else {
         m_isLoading = false;
-        emit dataLoaded(false);
+        emit signal_WA_M_dataLoaded(false);
     }
 }
 
@@ -303,8 +303,8 @@ bool WaveformAnalysisModel::parsePacketData(const QByteArray& data)
         }
 
         // 发送信号通知数据变化
-        emit dataLoaded(true);
-        emit viewRangeChanged(m_xMin, m_xMax);
+        emit signal_WA_M_dataLoaded(true);
+        emit signal_WA_M_viewRangeChanged(m_xMin, m_xMax);
 
         LOG_INFO(QString("成功解析数据包，数据点数: %1").arg(dataLength));
         return true;
@@ -377,7 +377,7 @@ void WaveformAnalysisModel::setViewRange(double xMin, double xMax)
     m_xMin = xMin;
     m_xMax = xMax;
 
-    emit viewRangeChanged(m_xMin, m_xMax);
+    emit signal_WA_M_viewRangeChanged(m_xMin, m_xMax);
 }
 
 QVector<int> WaveformAnalysisModel::getMarkerPoints() const
@@ -393,7 +393,7 @@ void WaveformAnalysisModel::addMarkerPoint(int index)
 
     if (!m_markerPoints.contains(index)) {
         m_markerPoints.append(index);
-        emit markersChanged();
+        emit signal_WA_M_markersChanged();
     }
 }
 
@@ -404,7 +404,7 @@ void WaveformAnalysisModel::removeMarkerPoint(int index)
     int pos = m_markerPoints.indexOf(index);
     if (pos >= 0) {
         m_markerPoints.removeAt(pos);
-        emit markersChanged();
+        emit signal_WA_M_markersChanged();
     }
 }
 
@@ -414,7 +414,7 @@ void WaveformAnalysisModel::clearMarkerPoints()
 
     if (!m_markerPoints.isEmpty()) {
         m_markerPoints.clear();
-        emit markersChanged();
+        emit signal_WA_M_markersChanged();
     }
 }
 
@@ -446,7 +446,7 @@ void WaveformAnalysisModel::setChannelEnabled(int channel, bool enabled)
     if (channel >= 0 && channel < 4) {
         if (m_channelEnabled[channel] != enabled) {
             m_channelEnabled[channel] = enabled;
-            emit channelStateChanged(channel, enabled);
+            emit signal_WA_M_channelStateChanged(channel, enabled);
         }
     }
 }
@@ -595,7 +595,7 @@ void WaveformAnalysisModel::analyzeData()
     }
 
     m_dataAnalysisResult = result;
-    emit dataAnalysisCompleted(result);
+    emit signal_WA_M_dataAnalysisCompleted(result);
 }
 
 void WaveformAnalysisModel::updateChannelData(int channel, const QVector<double>& data)

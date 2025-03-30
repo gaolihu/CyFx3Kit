@@ -306,7 +306,7 @@ void FX3MainController::connectSignals()
 
     // 连接菜单控制器信号
     if (m_menuController) {
-        connect(m_menuController.get(), &MenuController::menuActionTriggered,
+        connect(m_menuController.get(), &MenuController::signal_MN_C_menuActionTriggered,
             this, [this](const QString& action) {
                 // 处理菜单动作
                 if (action == "startAction") {

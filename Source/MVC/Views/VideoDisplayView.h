@@ -37,6 +37,10 @@ public:
      */
     Ui::VideoDisplayClass* getUi() { return ui; }
 
+    void setVidioDisplayController(VideoDisplayController* controller) {
+        m_controller = controller;
+    }
+
     /**
      * @brief 设置图像参数
      * @param width 图像宽度
@@ -86,14 +90,14 @@ signals:
      * @brief 视频显示状态改变信号
      * @param isRunning 当前是否正在显示视频
      */
-    void videoDisplayStatusChanged(bool isRunning);
+    void signal_VD_V_videoDisplayStatusChanged(bool isRunning);
 
     /**
      * @brief 帧索引变更信号
      * @param index 新的帧索引
      * @param total 总帧数
      */
-    void frameIndexChanged(int index, int total);
+    void signal_VD_V_frameIndexChanged(int index, int total);
 
 protected:
     /**
@@ -121,6 +125,6 @@ private:
     void initializeUI();
 
 private:
-    Ui::VideoDisplayClass* ui;                            ///< UI对象
-    std::unique_ptr<VideoDisplayController> m_controller; ///< 控制器对象
+    Ui::VideoDisplayClass* ui;                  ///< UI对象
+    VideoDisplayController* m_controller;       ///< 控制器对象
 };

@@ -30,7 +30,7 @@ ChannelConfig ChannelSelectModel::getConfig() const
 void ChannelSelectModel::setConfig(const ChannelConfig& config)
 {
     m_config = config;
-    emit configChanged(m_config);
+    emit signal_CHN_M_configChanged(m_config);
     LOG_INFO("通道配置已更新");
 }
 
@@ -101,7 +101,7 @@ bool ChannelSelectModel::loadConfig()
         settings.endGroup();
 
         LOG_INFO("通道配置已从存储加载");
-        emit configChanged(m_config);
+        emit signal_CHN_M_configChanged(m_config);
         return true;
     }
     catch (const std::exception& e) {
@@ -115,7 +115,7 @@ bool ChannelSelectModel::loadConfig()
 void ChannelSelectModel::resetToDefault()
 {
     m_config = createDefaultConfig();
-    emit configChanged(m_config);
+    emit signal_CHN_M_configChanged(m_config);
     LOG_INFO("通道配置已重置为默认值");
 }
 

@@ -222,32 +222,32 @@ signals:
      * @brief 数据加载完成信号
      * @param success 是否成功
      */
-    void dataLoaded(bool success);
+    void signal_WA_M_dataLoaded(bool success);
 
     /**
      * @brief 视图范围改变信号
      * @param xMin 最小索引
      * @param xMax 最大索引
      */
-    void viewRangeChanged(double xMin, double xMax);
+    void signal_WA_M_viewRangeChanged(double xMin, double xMax);
 
     /**
      * @brief 标记点改变信号
      */
-    void markersChanged();
+    void signal_WA_M_markersChanged();
 
     /**
      * @brief 通道状态改变信号
      * @param channel 通道索引
      * @param enabled 是否启用
      */
-    void channelStateChanged(int channel, bool enabled);
+    void signal_WA_M_channelStateChanged(int channel, bool enabled);
 
     /**
      * @brief 数据分析完成信号
      * @param result 分析结果
      */
-    void dataAnalysisCompleted(const QString& result);
+    void signal_WA_M_dataAnalysisCompleted(const QString& result);
 
 private:
     /**

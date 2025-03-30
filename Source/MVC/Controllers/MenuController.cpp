@@ -197,12 +197,12 @@ MenuItemType MenuController::determineMenuType(const QString& actionName)
     return MenuItemType::TOOL;
 }
 
-void MenuController::handleMenuAction(const QString& actionName)
+void MenuController::slot_MN_C_handleMenuAction(const QString& actionName)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("菜单控制器处理动作: %1").arg(actionName));
 
     // 发送信号到主窗口
-    emit menuActionTriggered(actionName);
+    emit signal_MN_C_menuActionTriggered(actionName);
 
     // 特殊处理一些菜单项
     if (actionName == "exitAction") {
@@ -213,7 +213,7 @@ void MenuController::handleMenuAction(const QString& actionName)
     }
 }
 
-void MenuController::handleAppStateChanged(AppState newState, AppState oldState, const QString& reason)
+void MenuController::slot_MN_C_handleAppStateChanged(AppState newState, AppState oldState, const QString& reason)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("应用状态变更触发菜单更新: %1 -> %2, 原因: %3")
         .arg(static_cast<int>(oldState))
@@ -228,8 +228,8 @@ void MenuController::connectSignals()
 {
     // 连接视图信号到控制器槽
     if (m_view) {
-        bool connected = connect(m_view, &MenuView::menuActionTriggered,
-            this, &MenuController::handleMenuAction,
+        bool connected = connect(m_view, &MenuView::signal_MN_V_menuActionTriggered,
+            this, &MenuController::slot_MN_C_handleMenuAction,
             Qt::ConnectionType::QueuedConnection);  // 使用队列连接增强线程安全性
 
         if (!connected) {
@@ -239,7 +239,7 @@ void MenuController::connectSignals()
 
     // 连接应用状态机信号
     bool stateConnected = connect(&AppStateMachine::instance(), &AppStateMachine::stateChanged,
-        this, &MenuController::handleAppStateChanged,
+        this, &MenuController::slot_MN_C_handleAppStateChanged,
         Qt::ConnectionType::QueuedConnection);
 
     if (!stateConnected) {

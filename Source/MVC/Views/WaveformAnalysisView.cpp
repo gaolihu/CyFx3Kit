@@ -73,29 +73,29 @@ void WaveformAnalysisView::setStatusMessage(const QString& message)
 void WaveformAnalysisView::connectSignals()
 {
     // 通道复选框
-    connect(ui->channel0Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::onChannelCheckboxToggled);
-    connect(ui->channel1Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::onChannelCheckboxToggled);
-    connect(ui->channel2Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::onChannelCheckboxToggled);
-    connect(ui->channel3Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::onChannelCheckboxToggled);
+    connect(ui->channel0Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::slot_WA_V_onChannelCheckboxToggled);
+    connect(ui->channel1Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::slot_WA_V_onChannelCheckboxToggled);
+    connect(ui->channel2Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::slot_WA_V_onChannelCheckboxToggled);
+    connect(ui->channel3Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::slot_WA_V_onChannelCheckboxToggled);
 
     // 工具栏动作
-    connect(ui->actionLoadTestData, &QAction::triggered, this, &WaveformAnalysisView::onLoadTestDataTriggered);
-    connect(ui->actionZoomIn, &QAction::triggered, this, &WaveformAnalysisView::onZoomInTriggered);
-    connect(ui->actionZoomOut, &QAction::triggered, this, &WaveformAnalysisView::onZoomOutTriggered);
-    connect(ui->actionZoomReset, &QAction::triggered, this, &WaveformAnalysisView::onZoomResetTriggered);
-    connect(ui->actionStartAnalysis, &QAction::triggered, this, &WaveformAnalysisView::onStartAnalysisTriggered);
-    connect(ui->actionStopAnalysis, &QAction::triggered, this, &WaveformAnalysisView::onStopAnalysisTriggered);
-    connect(ui->actionExportData, &QAction::triggered, this, &WaveformAnalysisView::onExportDataTriggered);
+    connect(ui->actionLoadTestData, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onLoadTestDataTriggered);
+    connect(ui->actionZoomIn, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onZoomInTriggered);
+    connect(ui->actionZoomOut, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onZoomOutTriggered);
+    connect(ui->actionZoomReset, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onZoomResetTriggered);
+    connect(ui->actionStartAnalysis, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onStartAnalysisTriggered);
+    connect(ui->actionStopAnalysis, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onStopAnalysisTriggered);
+    connect(ui->actionExportData, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onExportDataTriggered);
 
     // 按钮
-    connect(ui->analyzeButton, &QPushButton::clicked, this, &WaveformAnalysisView::onAnalyzeButtonClicked);
-    connect(ui->clearMarkersButton, &QPushButton::clicked, this, &WaveformAnalysisView::onClearMarkersButtonClicked);
+    connect(ui->analyzeButton, &QPushButton::clicked, this, &WaveformAnalysisView::slot_WA_V_onAnalyzeButtonClicked);
+    connect(ui->clearMarkersButton, &QPushButton::clicked, this, &WaveformAnalysisView::slot_WA_V_onClearMarkersButtonClicked);
 
     // 垂直缩放滑块
-    connect(ui->verticalScaleSlider, &QSlider::valueChanged, this, &WaveformAnalysisView::onVerticalScaleSliderChanged);
+    connect(ui->verticalScaleSlider, &QSlider::valueChanged, this, &WaveformAnalysisView::slot_WA_V_onVerticalScaleSliderChanged);
 
     // 通道可见性变更信号连接到模型
-    connect(this, &WaveformAnalysisView::channelVisibilityChanged,
+    connect(this, &WaveformAnalysisView::signal_WA_V_channelVisibilityChanged,
         WaveformAnalysisModel::getInstance(), &WaveformAnalysisModel::setChannelEnabled);
 }
 
@@ -185,11 +185,11 @@ void WaveformAnalysisView::wheelEvent(QWheelEvent* event)
         if (m_controller) {
             if (event->angleDelta().y() > 0) {
                 // 向上滚动，放大
-                m_controller->zoomInAtPoint(event->position().toPoint());
+                m_controller->slot_WA_C_zoomInAtPoint(event->position().toPoint());
             }
             else {
                 // 向下滚动，缩小
-                m_controller->zoomOutAtPoint(event->position().toPoint());
+                m_controller->slot_WA_C_zoomOutAtPoint(event->position().toPoint());
             }
         }
 
@@ -218,11 +218,11 @@ void WaveformAnalysisView::showEvent(QShowEvent* event)
 
     // 通知控制器标签页被激活
     if (m_controller) {
-        m_controller->handleTabActivated();
+        m_controller->slot_WA_C_handleTabActivated();
     }
 }
 
-void WaveformAnalysisView::onChannelCheckboxToggled(int state)
+void WaveformAnalysisView::slot_WA_V_onChannelCheckboxToggled(int state)
 {
     QCheckBox* sender = qobject_cast<QCheckBox*>(QObject::sender());
     if (!sender)
@@ -236,44 +236,44 @@ void WaveformAnalysisView::onChannelCheckboxToggled(int state)
 
     if (channel != -1) {
         bool visible = (state == Qt::Checked);
-        emit channelVisibilityChanged(channel, visible);
+        emit signal_WA_V_channelVisibilityChanged(channel, visible);
         update(); // 触发重绘
     }
 }
 
-void WaveformAnalysisView::onLoadTestDataTriggered()
+void WaveformAnalysisView::slot_WA_V_onLoadTestDataTriggered()
 {
     if (m_controller) {
         LOG_INFO(LocalQTCompat::fromLocal8Bit("加载测试数据"));
-        m_controller->loadData("test_data.bin", 0, 1000);
+        m_controller->slot_WA_C_loadData("test_data.bin", 0, 1000);
     }
 }
 
-void WaveformAnalysisView::onZoomInTriggered()
+void WaveformAnalysisView::slot_WA_V_onZoomInTriggered()
 {
     if (m_controller) {
-        m_controller->zoomIn();
+        m_controller->slot_WA_C_zoomIn();
     }
 }
 
-void WaveformAnalysisView::onZoomOutTriggered()
+void WaveformAnalysisView::slot_WA_V_onZoomOutTriggered()
 {
     if (m_controller) {
-        m_controller->zoomOut();
+        m_controller->slot_WA_C_zoomOut();
     }
 }
 
-void WaveformAnalysisView::onZoomResetTriggered()
+void WaveformAnalysisView::slot_WA_V_onZoomResetTriggered()
 {
     if (m_controller) {
-        m_controller->zoomReset();
+        m_controller->slot_WA_C_zoomReset();
     }
 }
 
-void WaveformAnalysisView::onStartAnalysisTriggered()
+void WaveformAnalysisView::slot_WA_V_onStartAnalysisTriggered()
 {
     if (m_controller) {
-        m_controller->startAnalysis();
+        m_controller->slot_WA_C_startAnalysis();
 
         // 更新UI状态
         ui->actionStartAnalysis->setEnabled(false);
@@ -282,10 +282,10 @@ void WaveformAnalysisView::onStartAnalysisTriggered()
     }
 }
 
-void WaveformAnalysisView::onStopAnalysisTriggered()
+void WaveformAnalysisView::slot_WA_V_onStopAnalysisTriggered()
 {
     if (m_controller) {
-        m_controller->stopAnalysis();
+        m_controller->slot_WA_C_stopAnalysis();
 
         // 更新UI状态
         ui->actionStartAnalysis->setEnabled(true);
@@ -294,12 +294,12 @@ void WaveformAnalysisView::onStopAnalysisTriggered()
     }
 }
 
-void WaveformAnalysisView::onExportDataTriggered()
+void WaveformAnalysisView::slot_WA_V_onExportDataTriggered()
 {
     QMessageBox::information(this, "导出数据", "导出功能即将实现...");
 }
 
-void WaveformAnalysisView::onAnalyzeButtonClicked()
+void WaveformAnalysisView::slot_WA_V_onAnalyzeButtonClicked()
 {
     WaveformAnalysisModel* model = WaveformAnalysisModel::getInstance();
     if (model) {
@@ -308,7 +308,7 @@ void WaveformAnalysisView::onAnalyzeButtonClicked()
     }
 }
 
-void WaveformAnalysisView::onClearMarkersButtonClicked()
+void WaveformAnalysisView::slot_WA_V_onClearMarkersButtonClicked()
 {
     WaveformAnalysisModel* model = WaveformAnalysisModel::getInstance();
     if (model) {
@@ -317,12 +317,12 @@ void WaveformAnalysisView::onClearMarkersButtonClicked()
     }
 }
 
-void WaveformAnalysisView::onVerticalScaleSliderChanged(int value)
+void WaveformAnalysisView::slot_WA_V_onVerticalScaleSliderChanged(int value)
 {
     if (m_controller) {
         // 计算垂直缩放因子 (0.5-2.0)
         double scaleFactor = 0.5 + (value / 10.0) * 1.5;
-        emit verticalScaleChanged(value);
+        emit signal_WA_V_verticalScaleChanged(value);
 
         // 更新状态栏显示
         ui->waveformStatusBar->showMessage(QString("垂直缩放: %1").arg(scaleFactor, 0, 'f', 1));

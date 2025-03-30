@@ -17,21 +17,11 @@ VideoDisplayView::VideoDisplayView(QWidget* parent)
 
     initializeUI();
 
-    // 创建控制器
-    m_controller = std::make_unique<VideoDisplayController>(this);
-
-    // 初始化控制器
-    m_controller->initialize();
-
     LOG_INFO("视频显示视图已创建");
 }
 
 VideoDisplayView::~VideoDisplayView()
 {
-    // m_controller 会在 unique_ptr 析构时自动释放，
-    // 但确保在UI释放前释放控制器
-    m_controller.reset();
-
     delete ui;
     LOG_INFO("视频显示视图已销毁");
 }

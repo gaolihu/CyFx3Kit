@@ -30,19 +30,19 @@ bool UpdateDeviceController::initialize()
 void UpdateDeviceController::connectSignals()
 {
     // 连接视图信号到控制器槽
-    connect(m_view, &UpdateDeviceView::socFileSelectClicked, this, &UpdateDeviceController::handleSOCFileSelect);
-    connect(m_view, &UpdateDeviceView::phyFileSelectClicked, this, &UpdateDeviceController::handlePHYFileSelect);
-    connect(m_view, &UpdateDeviceView::socUpdateClicked, this, &UpdateDeviceController::handleSOCUpdate);
-    connect(m_view, &UpdateDeviceView::phyUpdateClicked, this, &UpdateDeviceController::handlePHYUpdate);
+    connect(m_view, &UpdateDeviceView::signal_UD_V_socFileSelectClicked, this, &UpdateDeviceController::slot_UD_C_handleSOCFileSelect);
+    connect(m_view, &UpdateDeviceView::signal_UD_V_phyFileSelectClicked, this, &UpdateDeviceController::slot_UD_C_handlePHYFileSelect);
+    connect(m_view, &UpdateDeviceView::signal_UD_V_socUpdateClicked, this, &UpdateDeviceController::slot_UD_C_handleSOCUpdate);
+    connect(m_view, &UpdateDeviceView::signal_UD_V_phyUpdateClicked, this, &UpdateDeviceController::slot_UD_C_handlePHYUpdate);
 
     // 连接模型信号到控制器槽
-    connect(m_model, &UpdateDeviceModel::statusChanged, this, &UpdateDeviceController::handleModelStatusChanged);
-    connect(m_model, &UpdateDeviceModel::progressChanged, this, &UpdateDeviceController::handleModelProgressChanged);
-    connect(m_model, &UpdateDeviceModel::updateCompleted, this, &UpdateDeviceController::handleModelUpdateCompleted);
-    connect(m_model, &UpdateDeviceModel::filePathChanged, this, &UpdateDeviceController::handleModelFilePathChanged);
+    connect(m_model, &UpdateDeviceModel::signal_UD_M_statusChanged, this, &UpdateDeviceController::slot_UD_C_handleModelStatusChanged);
+    connect(m_model, &UpdateDeviceModel::signal_UD_M_progressChanged, this, &UpdateDeviceController::slot_UD_C_handleModelProgressChanged);
+    connect(m_model, &UpdateDeviceModel::signal_UD_M_updateCompleted, this, &UpdateDeviceController::slot_UD_C_handleModelUpdateCompleted);
+    connect(m_model, &UpdateDeviceModel::signal_UD_M_filePathChanged, this, &UpdateDeviceController::slot_UD_C_handleModelFilePathChanged);
 
     // 转发模型的升级完成信号
-    connect(m_model, &UpdateDeviceModel::updateCompleted, this, &UpdateDeviceController::updateCompleted);
+    connect(m_model, &UpdateDeviceModel::signal_UD_M_updateCompleted, this, &UpdateDeviceController::signal_UD_C_updateCompleted);
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("设备升级控制器信号已连接"));
 }
@@ -58,16 +58,16 @@ void UpdateDeviceController::updateViewState()
     m_view->updateUIState(isUpdating, currentDevice);
 
     // 更新文件路径
-    m_view->updateSOCFilePath(m_model->getSOCFilePath());
-    m_view->updatePHYFilePath(m_model->getPHYFilePath());
+    m_view->slot_UD_V_updateSOCFilePath(m_model->getSOCFilePath());
+    m_view->slot_UD_V_updatePHYFilePath(m_model->getPHYFilePath());
 
     // 更新状态消息
-    m_view->updateStatusMessage(m_model->getStatusMessage());
+    m_view->slot_UD_V_updateStatusMessage(m_model->getStatusMessage());
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("视图状态已更新"));
 }
 
-void UpdateDeviceController::handleSOCFileSelect()
+void UpdateDeviceController::slot_UD_C_handleSOCFileSelect()
 {
     // 显示文件选择对话框
     QString filePath = m_view->showFileSelectDialog(DeviceType::SOC);
@@ -94,7 +94,7 @@ void UpdateDeviceController::handleSOCFileSelect()
     LOG_INFO(QString("SOC文件已选择: %1").arg(filePath));
 }
 
-void UpdateDeviceController::handlePHYFileSelect()
+void UpdateDeviceController::slot_UD_C_handlePHYFileSelect()
 {
     // 显示文件选择对话框
     QString filePath = m_view->showFileSelectDialog(DeviceType::PHY);
@@ -121,7 +121,7 @@ void UpdateDeviceController::handlePHYFileSelect()
     LOG_INFO(QString("PHY文件已选择: %1").arg(filePath));
 }
 
-void UpdateDeviceController::handleSOCUpdate()
+void UpdateDeviceController::slot_UD_C_handleSOCUpdate()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理SOC升级请求"));
 
@@ -164,7 +164,7 @@ void UpdateDeviceController::handleSOCUpdate()
     }
 }
 
-void UpdateDeviceController::handlePHYUpdate()
+void UpdateDeviceController::slot_UD_C_handlePHYUpdate()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理PHY升级请求"));
 
@@ -207,7 +207,7 @@ void UpdateDeviceController::handlePHYUpdate()
     }
 }
 
-void UpdateDeviceController::handleModelStatusChanged(UpdateStatus status)
+void UpdateDeviceController::slot_UD_C_handleModelStatusChanged(UpdateStatus status)
 {
     // 根据状态更新视图
     updateViewState();
@@ -215,25 +215,25 @@ void UpdateDeviceController::handleModelStatusChanged(UpdateStatus status)
     LOG_INFO(QString("处理模型状态变更: %1").arg(static_cast<int>(status)));
 }
 
-void UpdateDeviceController::handleModelProgressChanged(int progress)
+void UpdateDeviceController::slot_UD_C_handleModelProgressChanged(int progress)
 {
     // 根据当前设备类型更新进度条
     DeviceType currentDevice = m_model->getCurrentDeviceType();
 
     if (currentDevice == DeviceType::SOC) {
-        m_view->updateSOCProgress(progress);
+        m_view->slot_UD_V_updateSOCProgress(progress);
     }
     else {
-        m_view->updatePHYProgress(progress);
+        m_view->slot_UD_V_updatePHYProgress(progress);
     }
 
     LOG_INFO(QString("处理模型进度变更: %1%").arg(progress));
 }
 
-void UpdateDeviceController::handleModelUpdateCompleted(bool success, const QString& message)
+void UpdateDeviceController::slot_UD_C_handleModelUpdateCompleted(bool success, const QString& message)
 {
     // 更新状态消息
-    m_view->updateStatusMessage(message);
+    m_view->slot_UD_V_updateStatusMessage(message);
 
     // 更新视图状态
     updateViewState();
@@ -250,14 +250,14 @@ void UpdateDeviceController::handleModelUpdateCompleted(bool success, const QStr
         .arg(message));
 }
 
-void UpdateDeviceController::handleModelFilePathChanged(DeviceType deviceType, const QString& filePath)
+void UpdateDeviceController::slot_UD_C_handleModelFilePathChanged(DeviceType deviceType, const QString& filePath)
 {
     // 更新视图中的文件路径
     if (deviceType == DeviceType::SOC) {
-        m_view->updateSOCFilePath(filePath);
+        m_view->slot_UD_V_updateSOCFilePath(filePath);
     }
     else {
-        m_view->updatePHYFilePath(filePath);
+        m_view->slot_UD_V_updatePHYFilePath(filePath);
     }
 
     // 更新视图状态

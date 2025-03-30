@@ -153,32 +153,32 @@ signals:
      * @brief 配置变更信号
      * @param config 新的视频配置
      */
-    void configChanged(const VideoConfig& config);
+    void signal_VD_M_configChanged(const VideoConfig& config);
 
     /**
      * @brief 帧数据变更信号
      * @param data 新的帧数据
      */
-    void frameDataChanged(const QByteArray& data);
+    void signal_VD_M_frameDataChanged(const QByteArray& data);
 
     /**
      * @brief 渲染图像变更信号
      * @param image 新的渲染图像
      */
-    void renderImageChanged(const QImage& image);
+    void signal_VD_M_renderImageChanged(const QImage& image);
 
     /**
      * @brief 当前帧索引变更信号
      * @param index 新的帧索引
      * @param total 总帧数
      */
-    void currentFrameChanged(int index, int total);
+    void signal_VD_M_currentFrameChanged(int index, int total);
 
     /**
      * @brief 当前索引条目变更信号
      * @param entry 新的索引条目
      */
-    void currentEntryChanged(const PacketIndexEntry& entry);
+    void signal_VD_M_currentEntryChanged(const PacketIndexEntry& entry);
 
 private:
     /**

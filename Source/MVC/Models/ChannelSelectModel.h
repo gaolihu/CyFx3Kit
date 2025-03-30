@@ -70,7 +70,7 @@ signals:
      * @brief 配置变更信号
      * @param config 新的通道配置
      */
-    void configChanged(const ChannelConfig& config);
+    void signal_CHN_M_configChanged(const ChannelConfig& config);
 
 private:
     /**

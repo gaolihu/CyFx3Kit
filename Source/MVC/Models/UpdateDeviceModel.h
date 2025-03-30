@@ -144,27 +144,27 @@ signals:
      * @brief 升级状态变更信号
      * @param status 新的升级状态
      */
-    void statusChanged(UpdateStatus status);
+    void signal_UD_M_statusChanged(UpdateStatus status);
 
     /**
      * @brief 升级进度变更信号
      * @param progress 新的进度值(0-100)
      */
-    void progressChanged(int progress);
+    void signal_UD_M_progressChanged(int progress);
 
     /**
      * @brief 升级完成信号
      * @param success 是否成功
      * @param message 完成消息
      */
-    void updateCompleted(bool success, const QString& message);
+    void signal_UD_M_updateCompleted(bool success, const QString& message);
 
     /**
      * @brief 文件路径变更信号
      * @param deviceType 设备类型
      * @param filePath 新的文件路径
      */
-    void filePathChanged(DeviceType deviceType, const QString& filePath);
+    void signal_UD_M_filePathChanged(DeviceType deviceType, const QString& filePath);
 
 private:
     /**

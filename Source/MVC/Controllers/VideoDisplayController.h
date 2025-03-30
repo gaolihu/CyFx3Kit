@@ -107,134 +107,134 @@ public slots:
     /**
      * @brief 开始按钮点击事件处理
      */
-    void onStartButtonClicked();
+    void slot_VD_C_onStartButtonClicked();
 
     /**
      * @brief 停止按钮点击事件处理
      */
-    void onStopButtonClicked();
+    void slot_VD_C_onStopButtonClicked();
 
     /**
      * @brief 退出按钮点击事件处理
      */
-    void onExitButtonClicked();
+    void slot_VD_C_onExitButtonClicked();
 
     /**
      * @brief 色彩模式改变事件处理
      * @param index 当前选中的色彩模式索引
      */
-    void onColorModeChanged(int index);
+    void slot_VD_C_onColorModeChanged(int index);
 
     /**
      * @brief 数据模式改变事件处理
      * @param index 当前选中的数据模式索引
      */
-    void onDataModeChanged(int index);
+    void slot_VD_C_onDataModeChanged(int index);
 
     /**
      * @brief 色彩排布改变事件处理
      * @param index 当前选中的色彩排布索引
      */
-    void onColorArrangementChanged(int index);
+    void slot_VD_C_onColorArrangementChanged(int index);
 
     /**
      * @brief 虚拟通道改变事件处理
      * @param index 当前选中的虚拟通道索引
      */
-    void onVirtualChannelChanged(int index);
+    void slot_VD_C_onVirtualChannelChanged(int index);
 
     /**
      * @brief 视频高度改变事件处理
      * @param text 高度文本
      */
-    void onVideoHeightChanged(const QString& text);
+    void slot_VD_C_onVideoHeightChanged(const QString& text);
 
     /**
      * @brief 视频宽度改变事件处理
      * @param text 宽度文本
      */
-    void onVideoWidthChanged(const QString& text);
+    void slot_VD_C_onVideoWidthChanged(const QString& text);
 
     /**
      * @brief 命令类型改变事件处理
      * @param index 当前选中的命令类型索引
      */
-    void onCommandTypeChanged(int index);
+    void slot_VD_C_onCommandTypeChanged(int index);
 
     /**
      * @brief 开始时间戳改变事件处理
      * @param text 时间戳文本
      */
-    void onStartTimeChanged(const QString& text);
+    void slot_VD_C_onStartTimeChanged(const QString& text);
 
     /**
      * @brief 结束时间戳改变事件处理
      * @param text 时间戳文本
      */
-    void onEndTimeChanged(const QString& text);
+    void slot_VD_C_onEndTimeChanged(const QString& text);
 
     /**
      * @brief 播放控制按钮点击事件处理
      */
-    void onPlayButtonClicked();
+    void slot_VD_C_onPlayButtonClicked();
 
     /**
      * @brief 暂停按钮点击事件处理
      */
-    void onPauseButtonClicked();
+    void slot_VD_C_onPauseButtonClicked();
 
     /**
      * @brief 下一帧按钮点击事件处理
      */
-    void onNextFrameButtonClicked();
+    void slot_VD_C_onNextFrameButtonClicked();
 
     /**
      * @brief 上一帧按钮点击事件处理
      */
-    void onPrevFrameButtonClicked();
+    void slot_VD_C_onPrevFrameButtonClicked();
 
     /**
      * @brief 速度改变事件处理
      * @param value 速度值
      */
-    void onSpeedChanged(int value);
+    void slot_VD_C_onSpeedChanged(int value);
 
     /**
      * @brief 自动播放定时器超时处理
      */
-    void onPlaybackTimerTimeout();
+    void slot_VD_C_onPlaybackTimerTimeout();
 
 private slots:
     /**
      * @brief 配置变更处理函数
      * @param config 新的视频配置
      */
-    void onConfigChanged(const VideoConfig& config);
+    void slot_VD_C_onConfigChanged(const VideoConfig& config);
 
     /**
      * @brief 帧数据变更处理函数
      * @param data 新的帧数据
      */
-    void onFrameDataChanged(const QByteArray& data);
+    void slot_VD_C_onFrameDataChanged(const QByteArray& data);
 
     /**
      * @brief 渲染图像变更处理函数
      * @param image 新的渲染图像
      */
-    void onRenderImageChanged(const QImage& image);
+    void slot_VD_C_onRenderImageChanged(const QImage& image);
 
     /**
      * @brief 当前帧索引变更处理函数
      * @param index 新的帧索引
      * @param total 总帧数
      */
-    void onCurrentFrameChanged(int index, int total);
+    void slot_VD_C_onCurrentFrameChanged(int index, int total);
 
     /**
      * @brief 当前索引条目变更处理函数
      * @param entry 新的索引条目
      */
-    void onCurrentEntryChanged(const PacketIndexEntry& entry);
+    void slot_VD_C_onCurrentEntryChanged(const PacketIndexEntry& entry);
 
 private:
     /**

@@ -69,67 +69,67 @@ public slots:
     /**
      * @brief 开始分析
      */
-    void startAnalysis();
+    void slot_WA_C_startAnalysis();
 
     /**
      * @brief 停止分析
      */
-    void stopAnalysis();
+    void slot_WA_C_stopAnalysis();
 
     /**
      * @brief 执行测量
      */
-    // void performMeasurement();
+    // void slot_WA_C_performMeasurement();
 
     /**
      * @brief 导出数据
      */
-    // void exportData();
+    // void slot_WA_C_exportData();
 
     /**
      * @brief 放大
      */
-    void zoomIn();
+    void slot_WA_C_zoomIn();
 
     /**
      * @brief 缩小
      */
-    void zoomOut();
+    void slot_WA_C_zoomOut();
 
     /**
      * @brief 重置缩放
      */
-    void zoomReset();
+    void slot_WA_C_zoomReset();
 
     /**
      * @brief 在指定点放大
      * @param pos 鼠标位置
      */
-    void zoomInAtPoint(const QPoint& pos);
+    void slot_WA_C_zoomInAtPoint(const QPoint& pos);
 
     /**
      * @brief 在指定点缩小
      * @param pos 鼠标位置
      */
-    void zoomOutAtPoint(const QPoint& pos);
+    void slot_WA_C_zoomOutAtPoint(const QPoint& pos);
 
     /**
      * @brief 设置水平缩放
      * @param value 滑块值
      */
-    // void setHorizontalScale(int value);
+    // void slot_WA_C_setHorizontalScale(int value);
 
     /**
      * @brief 设置垂直缩放
      * @param value 滑块值
      */
-    void setVerticalScale(double value);
+    void slot_WA_C_setVerticalScale(double value);
 
     /**
      * @brief 设置自动缩放
      * @param enabled 是否启用
      */
-    // void setAutoScale(bool enabled);
+    // void slot_WA_C_setAutoScale(bool enabled);
 
     /**
      * @brief 加载数据
@@ -138,60 +138,60 @@ public slots:
      * @param length 数据长度
      * @return 加载是否成功
      */
-    bool loadData(const QString& filename, int startIndex, int length);
+    bool slot_WA_C_loadData(const QString& filename, int startIndex, int length);
 
-    // bool loadSimulatedData(int length);
+    // bool slot_WA_C_loadSimulatedData(int length);
 
     /**
      * @brief 加载数据包
      * @param packetIndex 数据包索引
      */
-    // void loadDataPacket(uint64_t packetIndex);
+    // void slot_WA_C_loadDataPacket(uint64_t packetIndex);
 
     // Method to handle tab activation
-    void handleTabActivated();
+    void slot_WA_C_handleTabActivated();
 
     // Method to handle visible area change
-    void updateVisibleRange(int startPos, int viewWidth);
+    void slot_WA_C_updateVisibleRange(int startPos, int viewWidth);
 
-    bool loadDataRange(int startPos, int length);
+    bool slot_WA_C_loadDataRange(int startPos, int length);
 
 private slots:
     /**
      * @brief 模型数据加载完成
      * @param success 是否成功
      */
-    void onDataLoaded(bool success);
+    void slot_WA_C_onDataLoaded(bool success);
 
     /**
      * @brief 视图范围改变
      * @param xMin 最小索引
      * @param xMax 最大索引
      */
-    void onViewRangeChanged(double xMin, double xMax);
+    void slot_WA_C_onViewRangeChanged(double xMin, double xMax);
 
     /**
      * @brief 标记点改变
      */
-    void onMarkersChanged();
+    void slot_WA_C_onMarkersChanged();
 
     /**
      * @brief 通道状态改变
      * @param channel 通道索引
      * @param enabled 是否启用
      */
-    void onChannelStateChanged(int channel, bool enabled);
+    void slot_WA_C_onChannelStateChanged(int channel, bool enabled);
 
     /**
      * @brief 数据分析完成
      * @param result 分析结果
      */
-    // void onDataAnalysisCompleted(const QString& result);
+    // void slot_WA_C_onDataAnalysisCompleted(const QString& result);
 
     /**
      * @brief 更新定时器触发
      */
-    void onUpdateTimerTriggered();
+    void slot_WA_C_onUpdateTimerTriggered();
 
 private:
     /**

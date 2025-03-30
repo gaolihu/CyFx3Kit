@@ -50,12 +50,12 @@ void UpdateDeviceView::initializeUI()
 void UpdateDeviceView::connectSignals()
 {
     // 连接文件选择按钮信号
-    connect(ui.updataopen, &QPushButton::clicked, this, &UpdateDeviceView::onSOCFileOpenButtonClicked);
-    connect(ui.pushButton, &QPushButton::clicked, this, &UpdateDeviceView::onPHYFileOpenButtonClicked);
+    connect(ui.updataopen, &QPushButton::clicked, this, &UpdateDeviceView::slot_UD_V_onSOCFileOpenButtonClicked);
+    connect(ui.pushButton, &QPushButton::clicked, this, &UpdateDeviceView::slot_UD_V_onPHYFileOpenButtonClicked);
 
     // 连接升级按钮信号
-    connect(ui.updata_ok, &QPushButton::clicked, this, &UpdateDeviceView::onSOCUpdateButtonClicked);
-    connect(ui.pushButton_2, &QPushButton::clicked, this, &UpdateDeviceView::onPHYUpdateButtonClicked);
+    connect(ui.updata_ok, &QPushButton::clicked, this, &UpdateDeviceView::slot_UD_V_onSOCUpdateButtonClicked);
+    connect(ui.pushButton_2, &QPushButton::clicked, this, &UpdateDeviceView::slot_UD_V_onPHYUpdateButtonClicked);
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("设备升级视图信号已连接"));
 }
@@ -98,7 +98,7 @@ void UpdateDeviceView::showMessageDialog(const QString& title, const QString& me
     }
 }
 
-void UpdateDeviceView::updateSOCFilePath(const QString& filePath)
+void UpdateDeviceView::slot_UD_V_updateSOCFilePath(const QString& filePath)
 {
     ui.lineEdit->setText(filePath);
 
@@ -108,7 +108,7 @@ void UpdateDeviceView::updateSOCFilePath(const QString& filePath)
     LOG_INFO(QString("SOC文件路径已更新到UI: %1").arg(filePath));
 }
 
-void UpdateDeviceView::updatePHYFilePath(const QString& filePath)
+void UpdateDeviceView::slot_UD_V_updatePHYFilePath(const QString& filePath)
 {
     ui.lineEdit_2->setText(filePath);
 
@@ -118,22 +118,22 @@ void UpdateDeviceView::updatePHYFilePath(const QString& filePath)
     LOG_INFO(QString("PHY文件路径已更新到UI: %1").arg(filePath));
 }
 
-void UpdateDeviceView::updateSOCProgress(int progress)
+void UpdateDeviceView::slot_UD_V_updateSOCProgress(int progress)
 {
     ui.progressBar->setValue(progress);
 }
 
-void UpdateDeviceView::updatePHYProgress(int progress)
+void UpdateDeviceView::slot_UD_V_updatePHYProgress(int progress)
 {
     ui.progressBar_2->setValue(progress);
 }
 
-void UpdateDeviceView::updateStatusMessage(const QString& message)
+void UpdateDeviceView::slot_UD_V_updateStatusMessage(const QString& message)
 {
     ui.tishi->setText(message);
 }
 
-void UpdateDeviceView::updateSOCButtonState(bool isUpdating)
+void UpdateDeviceView::slot_UD_V_updateSOCButtonState(bool isUpdating)
 {
     if (isUpdating) {
         ui.updata_ok->setText(LocalQTCompat::fromLocal8Bit("升级中"));
@@ -145,7 +145,7 @@ void UpdateDeviceView::updateSOCButtonState(bool isUpdating)
     ui.updata_ok->setEnabled(!isUpdating && !ui.lineEdit->text().isEmpty());
 }
 
-void UpdateDeviceView::updatePHYButtonState(bool isUpdating)
+void UpdateDeviceView::slot_UD_V_updatePHYButtonState(bool isUpdating)
 {
     if (isUpdating) {
         ui.pushButton_2->setText(LocalQTCompat::fromLocal8Bit("升级中"));
@@ -166,20 +166,20 @@ void UpdateDeviceView::updateUIState(bool isUpdating, DeviceType currentDevice)
     // 根据当前升级设备类型更新按钮状态
     if (isUpdating) {
         if (currentDevice == DeviceType::SOC) {
-            updateSOCButtonState(true);
-            updatePHYButtonState(false);
+            slot_UD_V_updateSOCButtonState(true);
+            slot_UD_V_updatePHYButtonState(false);
             ui.pushButton_2->setEnabled(false);
         }
         else {
-            updatePHYButtonState(true);
-            updateSOCButtonState(false);
+            slot_UD_V_updatePHYButtonState(true);
+            slot_UD_V_updateSOCButtonState(false);
             ui.updata_ok->setEnabled(false);
         }
     }
     else {
         // 不在升级状态，根据是否有文件路径启用按钮
-        updateSOCButtonState(false);
-        updatePHYButtonState(false);
+        slot_UD_V_updateSOCButtonState(false);
+        slot_UD_V_updatePHYButtonState(false);
     }
 
     LOG_INFO(QString("UI状态已更新: 升级中=%1, 设备类型=%2")
@@ -187,26 +187,26 @@ void UpdateDeviceView::updateUIState(bool isUpdating, DeviceType currentDevice)
         .arg(currentDevice == DeviceType::SOC ? "SOC" : "PHY"));
 }
 
-void UpdateDeviceView::onSOCFileOpenButtonClicked()
+void UpdateDeviceView::slot_UD_V_onSOCFileOpenButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("SOC文件选择按钮被点击"));
-    emit socFileSelectClicked();
+    emit signal_UD_V_socFileSelectClicked();
 }
 
-void UpdateDeviceView::onPHYFileOpenButtonClicked()
+void UpdateDeviceView::slot_UD_V_onPHYFileOpenButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("PHY文件选择按钮被点击"));
-    emit phyFileSelectClicked();
+    emit signal_UD_V_phyFileSelectClicked();
 }
 
-void UpdateDeviceView::onSOCUpdateButtonClicked()
+void UpdateDeviceView::slot_UD_V_onSOCUpdateButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("SOC升级按钮被点击"));
-    emit socUpdateClicked();
+    emit signal_UD_V_socUpdateClicked();
 }
 
-void UpdateDeviceView::onPHYUpdateButtonClicked()
+void UpdateDeviceView::slot_UD_V_onPHYUpdateButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("PHY升级按钮被点击"));
-    emit phyUpdateClicked();
+    emit signal_UD_V_phyUpdateClicked();
 }

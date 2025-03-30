@@ -48,7 +48,7 @@ void ChannelSelectView::acceptConfig()
         ChannelConfig config = model->getConfig();
 
         // 发送配置变更信号
-        emit configChanged(config);
+        emit signal_CHN_V_configChanged(config);
     }
 
     LOG_INFO("通道配置已接受");

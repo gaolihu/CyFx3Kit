@@ -215,8 +215,8 @@ void MainUiStateManager::initializeTabBarStyle(QTabWidget* tabWidget)
     QTabBar::close-button {
         image: url(:/icon/res/Picture/close.svg);
         subcontrol-position: right;
-        width: 30px;
-        height: 30px;
+        width: 40px;
+        height: 40px;
     }
 
     /* 关闭按钮 - 悬浮 */

@@ -37,12 +37,12 @@ void VideoDisplayModel::setConfig(const VideoConfig& config)
     if (m_config.width != config.width || m_config.height != config.height) {
         m_renderImage = QImage(config.width, config.height, QImage::Format_RGB888);
         m_renderImage.fill(Qt::black);
-        emit renderImageChanged(m_renderImage);
+        emit signal_VD_M_renderImageChanged(m_renderImage);
     }
 
     // 更新配置
     m_config = config;
-    emit configChanged(m_config);
+    emit signal_VD_M_configChanged(m_config);
 
     LOG_INFO("视频配置已更新");
 }
@@ -55,7 +55,7 @@ QByteArray VideoDisplayModel::getFrameData() const
 void VideoDisplayModel::setFrameData(const QByteArray& data)
 {
     m_frameData = data;
-    emit frameDataChanged(m_frameData);
+    emit signal_VD_M_frameDataChanged(m_frameData);
 }
 
 PacketIndexEntry VideoDisplayModel::getCurrentEntry() const
@@ -66,7 +66,7 @@ PacketIndexEntry VideoDisplayModel::getCurrentEntry() const
 void VideoDisplayModel::setCurrentEntry(const PacketIndexEntry& entry)
 {
     m_currentEntry = entry;
-    emit currentEntryChanged(m_currentEntry);
+    emit signal_VD_M_currentEntryChanged(m_currentEntry);
 }
 
 QImage VideoDisplayModel::getRenderImage() const
@@ -77,7 +77,7 @@ QImage VideoDisplayModel::getRenderImage() const
 void VideoDisplayModel::setRenderImage(const QImage& image)
 {
     m_renderImage = image;
-    emit renderImageChanged(m_renderImage);
+    emit signal_VD_M_renderImageChanged(m_renderImage);
 }
 
 bool VideoDisplayModel::saveConfig()
@@ -131,8 +131,8 @@ bool VideoDisplayModel::loadConfig()
         m_renderImage.fill(Qt::black);
 
         LOG_INFO("视频配置已从存储加载");
-        emit configChanged(m_config);
-        emit renderImageChanged(m_renderImage);
+        emit signal_VD_M_configChanged(m_config);
+        emit signal_VD_M_renderImageChanged(m_renderImage);
         return true;
     }
     catch (const std::exception& e) {
@@ -155,9 +155,9 @@ void VideoDisplayModel::resetToDefault()
     m_loadedFrames.clear();
     m_currentFrameIndex = -1;
 
-    emit configChanged(m_config);
-    emit renderImageChanged(m_renderImage);
-    emit currentFrameChanged(-1, 0);
+    emit signal_VD_M_configChanged(m_config);
+    emit signal_VD_M_renderImageChanged(m_renderImage);
+    emit signal_VD_M_currentFrameChanged(-1, 0);
 
     LOG_INFO("视频配置已重置为默认值");
 }
@@ -170,10 +170,10 @@ void VideoDisplayModel::setLoadedFrames(const QVector<PacketIndexEntry>& entries
     // 如果有帧，设置当前帧索引条目
     if (m_currentFrameIndex >= 0) {
         m_currentEntry = m_loadedFrames[m_currentFrameIndex];
-        emit currentEntryChanged(m_currentEntry);
+        emit signal_VD_M_currentEntryChanged(m_currentEntry);
     }
 
-    emit currentFrameChanged(m_currentFrameIndex, m_loadedFrames.size());
+    emit signal_VD_M_currentFrameChanged(m_currentFrameIndex, m_loadedFrames.size());
 
     LOG_INFO(QString("已加载 %1 个帧").arg(m_loadedFrames.size()));
 }
@@ -199,10 +199,10 @@ bool VideoDisplayModel::setCurrentFrameIndex(int index)
     // 如果索引有效，更新当前索引条目
     if (m_currentFrameIndex >= 0) {
         m_currentEntry = m_loadedFrames[m_currentFrameIndex];
-        emit currentEntryChanged(m_currentEntry);
+        emit signal_VD_M_currentEntryChanged(m_currentEntry);
     }
 
-    emit currentFrameChanged(m_currentFrameIndex, m_loadedFrames.size());
+    emit signal_VD_M_currentFrameChanged(m_currentFrameIndex, m_loadedFrames.size());
 
     LOG_INFO(QString("当前帧索引: %1/%2").arg(m_currentFrameIndex + 1).arg(m_loadedFrames.size()));
     return true;

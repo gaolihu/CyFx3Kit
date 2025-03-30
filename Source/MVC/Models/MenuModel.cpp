@@ -40,7 +40,7 @@ void MenuModel::setMenuItemEnabled(const QString& actionName, bool enabled)
 
     if (m_menuItems[actionName].enabled != enabled) {
         m_menuItems[actionName].enabled = enabled;
-        emit menuItemEnabledChanged(actionName, enabled);
+        emit signal_MN_M_menuItemEnabledChanged(actionName, enabled);
         LOG_INFO(LocalQTCompat::fromLocal8Bit("菜单项状态变更: %1 -> %2")
             .arg(actionName)
             .arg(enabled ? LocalQTCompat::fromLocal8Bit("启用") : LocalQTCompat::fromLocal8Bit("禁用")));
@@ -70,7 +70,7 @@ void MenuModel::setMenuItemVisible(const QString& actionName, bool visible)
 
     if (m_menuItems[actionName].visible != visible) {
         m_menuItems[actionName].visible = visible;
-        emit menuItemVisibilityChanged(actionName, visible);
+        emit signal_MN_M_menuItemVisibilityChanged(actionName, visible);
         LOG_INFO(LocalQTCompat::fromLocal8Bit("菜单项可见性变更: %1 -> %2")
             .arg(actionName)
             .arg(visible ? LocalQTCompat::fromLocal8Bit("可见") : LocalQTCompat::fromLocal8Bit("隐藏")));
@@ -100,7 +100,7 @@ void MenuModel::setMenuItemText(const QString& actionName, const QString& text)
 
     if (m_menuItems[actionName].text != text) {
         m_menuItems[actionName].text = text;
-        emit menuItemTextChanged(actionName, text);
+        emit signal_MN_M_menuItemTextChanged(actionName, text);
         LOG_INFO(LocalQTCompat::fromLocal8Bit("菜单项文本变更: %1 -> \"%2\"")
             .arg(actionName).arg(text));
     }
@@ -129,7 +129,7 @@ void MenuModel::setMenuItemIcon(const QString& actionName, const QString& iconPa
 
     if (m_menuItems[actionName].iconPath != iconPath) {
         m_menuItems[actionName].iconPath = iconPath;
-        emit menuItemIconChanged(actionName, iconPath);
+        emit signal_MN_M_menuItemIconChanged(actionName, iconPath);
         LOG_INFO(LocalQTCompat::fromLocal8Bit("菜单项图标变更: %1 -> \"%2\"")
             .arg(actionName).arg(iconPath));
     }
@@ -158,7 +158,7 @@ void MenuModel::setMenuItemShortcut(const QString& actionName, const QString& sh
 
     if (m_menuItems[actionName].shortcut != shortcut) {
         m_menuItems[actionName].shortcut = shortcut;
-        emit menuItemShortcutChanged(actionName, shortcut);
+        emit signal_MN_M_menuItemShortcutChanged(actionName, shortcut);
         LOG_INFO(LocalQTCompat::fromLocal8Bit("菜单项快捷键变更: %1 -> \"%2\"")
             .arg(actionName).arg(shortcut));
     }
@@ -197,7 +197,7 @@ void MenuModel::addMenuItem(const QString& actionName, MenuItemType menuType,
 
     m_menuItems[actionName] = item;
 
-    emit menuItemAdded(actionName, menuType);
+    emit signal_MN_M_menuItemAdded(actionName, menuType);
     LOG_INFO(LocalQTCompat::fromLocal8Bit("已添加菜单项: %1 (\"%2\")").arg(actionName).arg(text));
 }
 
@@ -309,7 +309,7 @@ bool MenuModel::loadMenuConfig()
 
         settings.endGroup();
 
-        emit menuConfigChanged();
+        emit signal_MN_M_menuConfigChanged();
         LOG_INFO(LocalQTCompat::fromLocal8Bit("菜单配置已从系统设置加载"));
         return true;
     }

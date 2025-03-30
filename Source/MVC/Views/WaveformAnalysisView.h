@@ -67,25 +67,25 @@ signals:
      * @param channel 通道索引
      * @param visible 是否可见
      */
-    void channelVisibilityChanged(int channel, bool visible);
+    void signal_WA_V_channelVisibilityChanged(int channel, bool visible);
 
     /**
      * @brief 缩放改变信号
      * @param zoomFactor 缩放因子
      */
-    void zoomChanged(double zoomFactor);
+    void signal_WA_V_zoomChanged(double zoomFactor);
 
     /**
      * @brief 平移信号
      * @param deltaX 水平偏移量
      */
-    void panChanged(int deltaX);
+    void signal_WA_V_panChanged(int deltaX);
 
     /**
      * @brief 垂直缩放改变信号
      * @param value 缩放值
      */
-    void verticalScaleChanged(int value);
+    void signal_WA_V_verticalScaleChanged(int value);
 
 protected:
     /**
@@ -141,58 +141,58 @@ private slots:
      * @brief 处理通道选择变更
      * @param state 复选框状态
      */
-    void onChannelCheckboxToggled(int state);
+    void slot_WA_V_onChannelCheckboxToggled(int state);
 
     /**
      * @brief 处理加载测试数据动作
      */
-    void onLoadTestDataTriggered();
+    void slot_WA_V_onLoadTestDataTriggered();
 
     /**
      * @brief 处理放大动作
      */
-    void onZoomInTriggered();
+    void slot_WA_V_onZoomInTriggered();
 
     /**
      * @brief 处理缩小动作
      */
-    void onZoomOutTriggered();
+    void slot_WA_V_onZoomOutTriggered();
 
     /**
      * @brief 处理重置视图动作
      */
-    void onZoomResetTriggered();
+    void slot_WA_V_onZoomResetTriggered();
 
     /**
      * @brief 处理开始分析动作
      */
-    void onStartAnalysisTriggered();
+    void slot_WA_V_onStartAnalysisTriggered();
 
     /**
      * @brief 处理停止分析动作
      */
-    void onStopAnalysisTriggered();
+    void slot_WA_V_onStopAnalysisTriggered();
 
     /**
      * @brief 处理导出数据动作
      */
-    void onExportDataTriggered();
+    void slot_WA_V_onExportDataTriggered();
 
     /**
      * @brief 处理分析按钮点击
      */
-    void onAnalyzeButtonClicked();
+    void slot_WA_V_onAnalyzeButtonClicked();
 
     /**
      * @brief 处理清除标记按钮点击
      */
-    void onClearMarkersButtonClicked();
+    void slot_WA_V_onClearMarkersButtonClicked();
 
     /**
      * @brief 处理垂直缩放滑块变更
      * @param value 滑块值
      */
-    void onVerticalScaleSliderChanged(int value);
+    void slot_WA_V_onVerticalScaleSliderChanged(int value);
 
 private:
     /**

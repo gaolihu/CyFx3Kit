@@ -52,14 +52,14 @@ signals:
      * @brief 菜单动作触发信号
      * @param actionName 菜单项名称
      */
-    void menuActionTriggered(const QString& actionName);
+    void signal_MN_C_menuActionTriggered(const QString& actionName);
 
 private slots:
     /**
      * @brief 处理视图菜单动作
      * @param actionName 菜单项名称
      */
-    void handleMenuAction(const QString& actionName);
+    void slot_MN_C_handleMenuAction(const QString& actionName);
 
     /**
      * @brief 处理应用状态变更
@@ -67,7 +67,7 @@ private slots:
      * @param oldState 旧状态
      * @param reason 变更原因
      */
-    void handleAppStateChanged(AppState newState, AppState oldState, const QString& reason);
+    void slot_MN_C_handleAppStateChanged(AppState newState, AppState oldState, const QString& reason);
 
 private:
     /**

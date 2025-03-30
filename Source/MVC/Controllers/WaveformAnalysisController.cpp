@@ -47,7 +47,7 @@ WaveformAnalysisController::~WaveformAnalysisController()
     }
 
     if (m_isRunning) {
-        stopAnalysis();
+        slot_WA_C_stopAnalysis();
     }
 
     LOG_INFO("波形分析控制器已销毁");
@@ -109,14 +109,14 @@ void WaveformAnalysisController::connectSignals()
     LOG_INFO(LocalQTCompat::fromLocal8Bit("连接控制器信号和槽"));
 
     // 从模型到控制器的信号连接
-    connect(m_model, &WaveformAnalysisModel::dataLoaded,
-        this, &WaveformAnalysisController::onDataLoaded);
-    connect(m_model, &WaveformAnalysisModel::viewRangeChanged,
-        this, &WaveformAnalysisController::onViewRangeChanged);
-    connect(m_model, &WaveformAnalysisModel::markersChanged,
-        this, &WaveformAnalysisController::onMarkersChanged);
-    connect(m_model, &WaveformAnalysisModel::channelStateChanged,
-        this, &WaveformAnalysisController::onChannelStateChanged);
+    connect(m_model, &WaveformAnalysisModel::signal_WA_M_dataLoaded,
+        this, &WaveformAnalysisController::slot_WA_C_onDataLoaded);
+    connect(m_model, &WaveformAnalysisModel::signal_WA_M_viewRangeChanged,
+        this, &WaveformAnalysisController::slot_WA_C_onViewRangeChanged);
+    connect(m_model, &WaveformAnalysisModel::signal_WA_M_markersChanged,
+        this, &WaveformAnalysisController::slot_WA_C_onMarkersChanged);
+    connect(m_model, &WaveformAnalysisModel::signal_WA_M_channelStateChanged,
+        this, &WaveformAnalysisController::slot_WA_C_onChannelStateChanged);
 }
 
 void WaveformAnalysisController::handlePaintEvent(QPainter* painter, const QRect& chartRect)
@@ -222,7 +222,7 @@ bool WaveformAnalysisController::processWaveformData(const QByteArray& data)
     return false;
 }
 
-void WaveformAnalysisController::startAnalysis()
+void WaveformAnalysisController::slot_WA_C_startAnalysis()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("开始分析"));
 
@@ -237,7 +237,7 @@ void WaveformAnalysisController::startAnalysis()
     LOG_INFO("波形分析已启动");
 }
 
-void WaveformAnalysisController::stopAnalysis()
+void WaveformAnalysisController::slot_WA_C_stopAnalysis()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("停止分析"));
 
@@ -252,7 +252,7 @@ void WaveformAnalysisController::stopAnalysis()
     LOG_INFO("波形分析已停止");
 }
 
-void WaveformAnalysisController::zoomIn()
+void WaveformAnalysisController::slot_WA_C_zoomIn()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("放大"));
 
@@ -274,7 +274,7 @@ void WaveformAnalysisController::zoomIn()
     }
 }
 
-void WaveformAnalysisController::zoomOut()
+void WaveformAnalysisController::slot_WA_C_zoomOut()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("缩小"));
 
@@ -296,7 +296,7 @@ void WaveformAnalysisController::zoomOut()
     }
 }
 
-void WaveformAnalysisController::zoomReset()
+void WaveformAnalysisController::slot_WA_C_zoomReset()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("重置缩放"));
 
@@ -316,7 +316,7 @@ void WaveformAnalysisController::zoomReset()
     }
 }
 
-void WaveformAnalysisController::zoomInAtPoint(const QPoint& pos)
+void WaveformAnalysisController::slot_WA_C_zoomInAtPoint(const QPoint& pos)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("进入指定位置放大"));
 
@@ -346,7 +346,7 @@ void WaveformAnalysisController::zoomInAtPoint(const QPoint& pos)
     }
 }
 
-void WaveformAnalysisController::zoomOutAtPoint(const QPoint& pos)
+void WaveformAnalysisController::slot_WA_C_zoomOutAtPoint(const QPoint& pos)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("进入指定位置缩小"));
 
@@ -376,7 +376,7 @@ void WaveformAnalysisController::zoomOutAtPoint(const QPoint& pos)
     }
 }
 
-bool WaveformAnalysisController::loadData(const QString& filename, int startIndex, int length)
+bool WaveformAnalysisController::slot_WA_C_loadData(const QString& filename, int startIndex, int length)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("控制器加载数据 - 文件: %1, 起始: %2, 长度: %3")
         .arg(filename).arg(startIndex).arg(length));
@@ -393,7 +393,7 @@ bool WaveformAnalysisController::loadData(const QString& filename, int startInde
 
         // 如果是测试模式，加载模拟数据
         if (filename.contains("test_data", Qt::CaseInsensitive)) {
-            // return loadSimulatedData(length);
+            // return slot_WA_C_loadSimulatedData(length);
         }
         return false;
     }
@@ -416,7 +416,7 @@ bool WaveformAnalysisController::loadData(const QString& filename, int startInde
 }
 
 #if 0
-bool WaveformAnalysisController::loadSimulatedData(int length)
+bool WaveformAnalysisController::slot_WA_C_loadSimulatedData(int length)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("加载模拟波形数据，长度: %1").arg(length));
 
@@ -460,7 +460,7 @@ bool WaveformAnalysisController::loadSimulatedData(int length)
 }
 #endif
 
-void WaveformAnalysisController::onDataLoaded(bool success)
+void WaveformAnalysisController::slot_WA_C_onDataLoaded(bool success)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("数据加载结果: %1").arg(success ? "成功" : "失败"));
 
@@ -485,7 +485,7 @@ void WaveformAnalysisController::onDataLoaded(bool success)
 
     // 自动调整视图范围显示所有数据
     LOG_INFO(LocalQTCompat::fromLocal8Bit("执行视图范围重置"));
-    zoomReset();
+    slot_WA_C_zoomReset();
 
     // 更新UI
     LOG_INFO(LocalQTCompat::fromLocal8Bit("触发UI更新"));
@@ -497,7 +497,7 @@ void WaveformAnalysisController::onDataLoaded(bool success)
     }
 }
 
-void WaveformAnalysisController::onViewRangeChanged(double xMin, double xMax)
+void WaveformAnalysisController::slot_WA_C_onViewRangeChanged(double xMin, double xMax)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("视图更新"));
 
@@ -507,7 +507,7 @@ void WaveformAnalysisController::onViewRangeChanged(double xMin, double xMax)
     }
 }
 
-void WaveformAnalysisController::onMarkersChanged()
+void WaveformAnalysisController::slot_WA_C_onMarkersChanged()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("Marker改变"));
 
@@ -524,7 +524,7 @@ void WaveformAnalysisController::onMarkersChanged()
     }
 }
 
-void WaveformAnalysisController::onChannelStateChanged(int channel, bool enabled)
+void WaveformAnalysisController::slot_WA_C_onChannelStateChanged(int channel, bool enabled)
 {
     // 更新UI
     if (m_view) {
@@ -532,7 +532,7 @@ void WaveformAnalysisController::onChannelStateChanged(int channel, bool enabled
     }
 }
 
-void WaveformAnalysisController::onUpdateTimerTriggered()
+void WaveformAnalysisController::slot_WA_C_onUpdateTimerTriggered()
 {
     // 更新UI
     if (m_view) {
@@ -736,7 +736,7 @@ void WaveformAnalysisController::drawWaveforms(QPainter* painter, const QRect& r
     }
 }
 
-void WaveformAnalysisController::setVerticalScale(double scale)
+void WaveformAnalysisController::slot_WA_C_setVerticalScale(double scale)
 {
     if (scale > 0) {
         m_verticalScale = scale;
@@ -846,8 +846,7 @@ double WaveformAnalysisController::screenToDataX(int x, const QRect& rect)
     return xMin + (x - rect.left()) * (xMax - xMin) / rect.width();
 }
 
-// In WaveformAnalysisController.cpp
-void WaveformAnalysisController::handleTabActivated()
+void WaveformAnalysisController::slot_WA_C_handleTabActivated()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("波形分析标签页被激活"));
 
@@ -857,7 +856,7 @@ void WaveformAnalysisController::handleTabActivated()
         // On first activation, load initial data if needed
         if (m_model && m_model->getIndexData().isEmpty()) {
             // Load initial data range - just enough for the current view
-            loadDataRange(m_currentPosition, m_viewWidth);
+            slot_WA_C_loadDataRange(m_currentPosition, m_viewWidth);
         }
 
         // Update view
@@ -867,7 +866,7 @@ void WaveformAnalysisController::handleTabActivated()
     }
 }
 
-void WaveformAnalysisController::updateVisibleRange(int startPos, int viewWidth)
+void WaveformAnalysisController::slot_WA_C_updateVisibleRange(int startPos, int viewWidth)
 {
     // Only load data if we're active and the range has changed significantly
     if (m_isActive && (abs(startPos - m_currentPosition) > viewWidth / 4 ||
@@ -877,11 +876,11 @@ void WaveformAnalysisController::updateVisibleRange(int startPos, int viewWidth)
         m_viewWidth = viewWidth;
 
         // Load data for the new range, plus some padding
-        loadDataRange(startPos - viewWidth / 2, viewWidth * 2);
+        slot_WA_C_loadDataRange(startPos - viewWidth / 2, viewWidth * 2);
     }
 }
 
-bool WaveformAnalysisController::loadDataRange(int startPos, int length)
+bool WaveformAnalysisController::slot_WA_C_loadDataRange(int startPos, int length)
 {
     // Ensure non-negative values
     startPos = std::max(0, startPos);

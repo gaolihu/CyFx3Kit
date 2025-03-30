@@ -26,7 +26,8 @@ VideoDisplayController::VideoDisplayController(VideoDisplayView* view)
 
     // 创建播放定时器
     m_playbackTimer = new QTimer(this);
-    connect(m_playbackTimer, &QTimer::timeout, this, &VideoDisplayController::onPlaybackTimerTimeout);
+    connect(m_playbackTimer, &QTimer::timeout, this,
+        &VideoDisplayController::slot_VD_C_onPlaybackTimerTimeout);
 
     // 初始化命令类型列表
     m_commandTypes = {
@@ -46,7 +47,7 @@ VideoDisplayController::~VideoDisplayController()
 {
     // 如果视频显示正在运行，停止显示
     if (m_model && m_model->getConfig().isRunning) {
-        onStopButtonClicked();
+        slot_VD_C_onStopButtonClicked();
     }
 
     // 停止播放
@@ -375,7 +376,7 @@ void VideoDisplayController::setAutoPlay(bool enable, int interval)
     updatePlaybackControls();
 }
 
-void VideoDisplayController::onStartButtonClicked()
+void VideoDisplayController::slot_VD_C_onStartButtonClicked()
 {
     if (!m_model || !m_ui) {
         return;
@@ -442,7 +443,7 @@ void VideoDisplayController::onStartButtonClicked()
 
     // 发送状态变更信号
     if (m_view) {
-        emit m_view->videoDisplayStatusChanged(true);
+        emit m_view->signal_VD_V_videoDisplayStatusChanged(true);
     }
 
     LOG_INFO(QString("视频显示已启动: 分辨率=%1x%2").arg(config.width).arg(config.height));
@@ -453,7 +454,7 @@ void VideoDisplayController::onStartButtonClicked()
     }
 }
 
-void VideoDisplayController::onStopButtonClicked()
+void VideoDisplayController::slot_VD_C_onStopButtonClicked()
 {
     if (!m_model) {
         return;
@@ -477,19 +478,19 @@ void VideoDisplayController::onStopButtonClicked()
 
     // 发送状态变更信号
     if (m_view) {
-        emit m_view->videoDisplayStatusChanged(false);
+        emit m_view->signal_VD_V_videoDisplayStatusChanged(false);
     }
 
     LOG_INFO("视频显示已停止");
 }
 
-void VideoDisplayController::onExitButtonClicked()
+void VideoDisplayController::slot_VD_C_onExitButtonClicked()
 {
     LOG_INFO("退出视频显示按钮点击");
 
     // 如果正在运行，先停止
     if (m_model && m_model->getConfig().isRunning) {
-        onStopButtonClicked();
+        slot_VD_C_onStopButtonClicked();
     }
 
     // 关闭窗口
@@ -498,7 +499,7 @@ void VideoDisplayController::onExitButtonClicked()
     }
 }
 
-void VideoDisplayController::onColorModeChanged(int index)
+void VideoDisplayController::slot_VD_C_onColorModeChanged(int index)
 {
     if (m_isBatchUpdate || !m_model) {
         return;
@@ -517,7 +518,7 @@ void VideoDisplayController::onColorModeChanged(int index)
     }
 }
 
-void VideoDisplayController::onDataModeChanged(int index)
+void VideoDisplayController::slot_VD_C_onDataModeChanged(int index)
 {
     if (m_isBatchUpdate || !m_model) {
         return;
@@ -531,7 +532,7 @@ void VideoDisplayController::onDataModeChanged(int index)
     m_model->setConfig(config);
 }
 
-void VideoDisplayController::onColorArrangementChanged(int index)
+void VideoDisplayController::slot_VD_C_onColorArrangementChanged(int index)
 {
     if (m_isBatchUpdate || !m_model) {
         return;
@@ -550,7 +551,7 @@ void VideoDisplayController::onColorArrangementChanged(int index)
     }
 }
 
-void VideoDisplayController::onVirtualChannelChanged(int index)
+void VideoDisplayController::slot_VD_C_onVirtualChannelChanged(int index)
 {
     if (m_isBatchUpdate || !m_model) {
         return;
@@ -564,7 +565,7 @@ void VideoDisplayController::onVirtualChannelChanged(int index)
     m_model->setConfig(config);
 }
 
-void VideoDisplayController::onVideoHeightChanged(const QString& text)
+void VideoDisplayController::slot_VD_C_onVideoHeightChanged(const QString& text)
 {
     if (m_isBatchUpdate || !m_model) {
         return;
@@ -584,7 +585,7 @@ void VideoDisplayController::onVideoHeightChanged(const QString& text)
     }
 }
 
-void VideoDisplayController::onVideoWidthChanged(const QString& text)
+void VideoDisplayController::slot_VD_C_onVideoWidthChanged(const QString& text)
 {
     if (m_isBatchUpdate || !m_model) {
         return;
@@ -604,7 +605,7 @@ void VideoDisplayController::onVideoWidthChanged(const QString& text)
     }
 }
 
-void VideoDisplayController::onCommandTypeChanged(int index)
+void VideoDisplayController::slot_VD_C_onCommandTypeChanged(int index)
 {
     if (m_isBatchUpdate || !m_model || index < 0 || index >= m_commandTypes.size()) {
         return;
@@ -621,7 +622,7 @@ void VideoDisplayController::onCommandTypeChanged(int index)
     m_model->setConfig(config);
 }
 
-void VideoDisplayController::onStartTimeChanged(const QString& text)
+void VideoDisplayController::slot_VD_C_onStartTimeChanged(const QString& text)
 {
     if (m_isBatchUpdate || !m_model) {
         return;
@@ -641,7 +642,7 @@ void VideoDisplayController::onStartTimeChanged(const QString& text)
     }
 }
 
-void VideoDisplayController::onEndTimeChanged(const QString& text)
+void VideoDisplayController::slot_VD_C_onEndTimeChanged(const QString& text)
 {
     if (m_isBatchUpdate || !m_model) {
         return;
@@ -661,7 +662,7 @@ void VideoDisplayController::onEndTimeChanged(const QString& text)
     }
 }
 
-void VideoDisplayController::onPlayButtonClicked()
+void VideoDisplayController::slot_VD_C_onPlayButtonClicked()
 {
     if (!m_model || m_model->getTotalFrames() == 0) {
         return;
@@ -677,7 +678,7 @@ void VideoDisplayController::onPlayButtonClicked()
     setAutoPlay(true);
 }
 
-void VideoDisplayController::onPauseButtonClicked()
+void VideoDisplayController::slot_VD_C_onPauseButtonClicked()
 {
     if (!m_model) {
         return;
@@ -693,7 +694,7 @@ void VideoDisplayController::onPauseButtonClicked()
     setAutoPlay(false);
 }
 
-void VideoDisplayController::onNextFrameButtonClicked()
+void VideoDisplayController::slot_VD_C_onNextFrameButtonClicked()
 {
     if (!m_model) {
         return;
@@ -705,7 +706,7 @@ void VideoDisplayController::onNextFrameButtonClicked()
     moveToNextFrame();
 }
 
-void VideoDisplayController::onPrevFrameButtonClicked()
+void VideoDisplayController::slot_VD_C_onPrevFrameButtonClicked()
 {
     if (!m_model) {
         return;
@@ -717,7 +718,7 @@ void VideoDisplayController::onPrevFrameButtonClicked()
     moveToPreviousFrame();
 }
 
-void VideoDisplayController::onSpeedChanged(int value)
+void VideoDisplayController::slot_VD_C_onSpeedChanged(int value)
 {
     if (m_isBatchUpdate || !m_model) {
         return;
@@ -739,7 +740,7 @@ void VideoDisplayController::onSpeedChanged(int value)
     }
 }
 
-void VideoDisplayController::onPlaybackTimerTimeout()
+void VideoDisplayController::slot_VD_C_onPlaybackTimerTimeout()
 {
     // 移动到下一帧
     if (!moveToNextFrame()) {
@@ -751,7 +752,7 @@ void VideoDisplayController::onPlaybackTimerTimeout()
     }
 }
 
-void VideoDisplayController::onConfigChanged(const VideoConfig& config)
+void VideoDisplayController::slot_VD_C_onConfigChanged(const VideoConfig& config)
 {
     // 更新UI
     m_isBatchUpdate = true;
@@ -767,7 +768,7 @@ void VideoDisplayController::onConfigChanged(const VideoConfig& config)
     }
 }
 
-void VideoDisplayController::onFrameDataChanged(const QByteArray& data)
+void VideoDisplayController::slot_VD_C_onFrameDataChanged(const QByteArray& data)
 {
     // 如果正在运行，更新渲染
     if (m_model && m_model->getConfig().isRunning) {
@@ -775,7 +776,7 @@ void VideoDisplayController::onFrameDataChanged(const QByteArray& data)
     }
 }
 
-void VideoDisplayController::onRenderImageChanged(const QImage& image)
+void VideoDisplayController::slot_VD_C_onRenderImageChanged(const QImage& image)
 {
     // 重绘视图
     if (m_view) {
@@ -783,7 +784,7 @@ void VideoDisplayController::onRenderImageChanged(const QImage& image)
     }
 }
 
-void VideoDisplayController::onCurrentFrameChanged(int index, int total)
+void VideoDisplayController::slot_VD_C_onCurrentFrameChanged(int index, int total)
 {
     // 更新当前帧指示器
     if (m_ui && total > 0) {
@@ -800,7 +801,7 @@ void VideoDisplayController::onCurrentFrameChanged(int index, int total)
     }
 }
 
-void VideoDisplayController::onCurrentEntryChanged(const PacketIndexEntry& entry)
+void VideoDisplayController::slot_VD_C_onCurrentEntryChanged(const PacketIndexEntry& entry)
 {
     if (m_ui) {
         // 更新时间戳显示
@@ -824,76 +825,76 @@ void VideoDisplayController::connectSignals()
 
     // 色彩模式
     connect(m_ui->comboBox_2, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, &VideoDisplayController::onColorModeChanged);
+        this, &VideoDisplayController::slot_VD_C_onColorModeChanged);
 
     // 数据模式
     connect(m_ui->comboBox_3, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, &VideoDisplayController::onDataModeChanged);
+        this, &VideoDisplayController::slot_VD_C_onDataModeChanged);
 
     // 色彩排布
     connect(m_ui->comboBox_4, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, &VideoDisplayController::onColorArrangementChanged);
+        this, &VideoDisplayController::slot_VD_C_onColorArrangementChanged);
 
     // 虚拟通道
     connect(m_ui->comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, &VideoDisplayController::onVirtualChannelChanged);
+        this, &VideoDisplayController::slot_VD_C_onVirtualChannelChanged);
 
     // 视频高度
     connect(m_ui->lineEdit, &QLineEdit::textChanged,
-        this, &VideoDisplayController::onVideoHeightChanged);
+        this, &VideoDisplayController::slot_VD_C_onVideoHeightChanged);
 
     // 视频宽度
     connect(m_ui->lineEdit_2, &QLineEdit::textChanged,
-        this, &VideoDisplayController::onVideoWidthChanged);
+        this, &VideoDisplayController::slot_VD_C_onVideoWidthChanged);
 
     // 命令类型
     connect(m_ui->cmbCommandType, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, &VideoDisplayController::onCommandTypeChanged);
+        this, &VideoDisplayController::slot_VD_C_onCommandTypeChanged);
 
     // 开始时间戳
     connect(m_ui->txtStartTime, &QLineEdit::textChanged,
-        this, &VideoDisplayController::onStartTimeChanged);
+        this, &VideoDisplayController::slot_VD_C_onStartTimeChanged);
 
     // 结束时间戳
     connect(m_ui->txtEndTime, &QLineEdit::textChanged,
-        this, &VideoDisplayController::onEndTimeChanged);
+        this, &VideoDisplayController::slot_VD_C_onEndTimeChanged);
 
     // 播放控制
     connect(m_ui->btnPlay, &QPushButton::clicked,
-        this, &VideoDisplayController::onPlayButtonClicked);
+        this, &VideoDisplayController::slot_VD_C_onPlayButtonClicked);
 
     connect(m_ui->btnPause, &QPushButton::clicked,
-        this, &VideoDisplayController::onPauseButtonClicked);
+        this, &VideoDisplayController::slot_VD_C_onPauseButtonClicked);
 
     connect(m_ui->btnNextFrame, &QPushButton::clicked,
-        this, &VideoDisplayController::onNextFrameButtonClicked);
+        this, &VideoDisplayController::slot_VD_C_onNextFrameButtonClicked);
 
     connect(m_ui->btnPrevFrame, &QPushButton::clicked,
-        this, &VideoDisplayController::onPrevFrameButtonClicked);
+        this, &VideoDisplayController::slot_VD_C_onPrevFrameButtonClicked);
 
     // 播放速度
     connect(m_ui->sliderSpeed, &QSlider::valueChanged,
-        this, &VideoDisplayController::onSpeedChanged);
+        this, &VideoDisplayController::slot_VD_C_onSpeedChanged);
 
     // 连接主要控制按钮
     connect(m_ui->pushButton_2, &QPushButton::clicked,
-        this, &VideoDisplayController::onStartButtonClicked);
+        this, &VideoDisplayController::slot_VD_C_onStartButtonClicked);
     connect(m_ui->pushButton_3, &QPushButton::clicked,
-        this, &VideoDisplayController::onStopButtonClicked);
+        this, &VideoDisplayController::slot_VD_C_onStopButtonClicked);
     connect(m_ui->pushButton, &QPushButton::clicked,
-        this, &VideoDisplayController::onExitButtonClicked);
+        this, &VideoDisplayController::slot_VD_C_onExitButtonClicked);
 
     // 连接模型信号
-    connect(m_model, &VideoDisplayModel::configChanged,
-        this, &VideoDisplayController::onConfigChanged);
-    connect(m_model, &VideoDisplayModel::frameDataChanged,
-        this, &VideoDisplayController::onFrameDataChanged);
-    connect(m_model, &VideoDisplayModel::renderImageChanged,
-        this, &VideoDisplayController::onRenderImageChanged);
-    connect(m_model, &VideoDisplayModel::currentFrameChanged,
-        this, &VideoDisplayController::onCurrentFrameChanged);
-    connect(m_model, &VideoDisplayModel::currentEntryChanged,
-        this, &VideoDisplayController::onCurrentEntryChanged);
+    connect(m_model, &VideoDisplayModel::signal_VD_M_configChanged,
+        this, &VideoDisplayController::slot_VD_C_onConfigChanged);
+    connect(m_model, &VideoDisplayModel::signal_VD_M_frameDataChanged,
+        this, &VideoDisplayController::slot_VD_C_onFrameDataChanged);
+    connect(m_model, &VideoDisplayModel::signal_VD_M_renderImageChanged,
+        this, &VideoDisplayController::slot_VD_C_onRenderImageChanged);
+    connect(m_model, &VideoDisplayModel::signal_VD_M_currentFrameChanged,
+        this, &VideoDisplayController::slot_VD_C_onCurrentFrameChanged);
+    connect(m_model, &VideoDisplayModel::signal_VD_M_currentEntryChanged,
+        this, &VideoDisplayController::slot_VD_C_onCurrentEntryChanged);
 }
 
 void VideoDisplayController::updateUIState()

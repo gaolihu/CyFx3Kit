@@ -112,59 +112,59 @@ void ChannelSelectController::connectSignals()
 
     // 抓取设置
     connect(m_ui->comboBox_5, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, &ChannelSelectController::onCaptureTypeChanged);
+        this, &ChannelSelectController::slot_CHN_C_onCaptureTypeChanged);
     connect(m_ui->CLK_PN, &QCheckBox::toggled,
-        this, &ChannelSelectController::onClockPNSwapChanged);
+        this, &ChannelSelectController::slot_CHN_C_onClockPNSwapChanged);
 
     // 通道使能
     connect(m_ui->CHen_0, &QCheckBox::toggled,
-        this, [this](bool checked) { onChannelEnableChanged(0, checked); });
+        this, [this](bool checked) { slot_CHN_C_onChannelEnableChanged(0, checked); });
     connect(m_ui->CHen_1, &QCheckBox::toggled,
-        this, [this](bool checked) { onChannelEnableChanged(1, checked); });
+        this, [this](bool checked) { slot_CHN_C_onChannelEnableChanged(1, checked); });
     connect(m_ui->CHen_2, &QCheckBox::toggled,
-        this, [this](bool checked) { onChannelEnableChanged(2, checked); });
+        this, [this](bool checked) { slot_CHN_C_onChannelEnableChanged(2, checked); });
     connect(m_ui->CHen_3, &QCheckBox::toggled,
-        this, [this](bool checked) { onChannelEnableChanged(3, checked); });
+        this, [this](bool checked) { slot_CHN_C_onChannelEnableChanged(3, checked); });
 
     // 通道PN交换
     connect(m_ui->PN_0, &QCheckBox::toggled,
-        this, [this](bool checked) { onChannelPNSwapChanged(0, checked); });
+        this, [this](bool checked) { slot_CHN_C_onChannelPNSwapChanged(0, checked); });
     connect(m_ui->PN_1, &QCheckBox::toggled,
-        this, [this](bool checked) { onChannelPNSwapChanged(1, checked); });
+        this, [this](bool checked) { slot_CHN_C_onChannelPNSwapChanged(1, checked); });
     connect(m_ui->PN_2, &QCheckBox::toggled,
-        this, [this](bool checked) { onChannelPNSwapChanged(2, checked); });
+        this, [this](bool checked) { slot_CHN_C_onChannelPNSwapChanged(2, checked); });
     connect(m_ui->PN_3, &QCheckBox::toggled,
-        this, [this](bool checked) { onChannelPNSwapChanged(3, checked); });
+        this, [this](bool checked) { slot_CHN_C_onChannelPNSwapChanged(3, checked); });
 
     // 通道交换
     connect(m_ui->comboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, [this](int index) { onChannelSwapChanged(0, index); });
+        this, [this](int index) { slot_CHN_C_onChannelSwapChanged(0, index); });
     connect(m_ui->comboBox_2, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, [this](int index) { onChannelSwapChanged(1, index); });
+        this, [this](int index) { slot_CHN_C_onChannelSwapChanged(1, index); });
     connect(m_ui->comboBox_3, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, [this](int index) { onChannelSwapChanged(2, index); });
+        this, [this](int index) { slot_CHN_C_onChannelSwapChanged(2, index); });
     connect(m_ui->comboBox_4, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, [this](int index) { onChannelSwapChanged(3, index); });
+        this, [this](int index) { slot_CHN_C_onChannelSwapChanged(3, index); });
 
     // 测试模式
     connect(m_ui->checkBox, &QCheckBox::toggled,
-        this, &ChannelSelectController::onTestModeEnabledChanged);
+        this, &ChannelSelectController::slot_CHN_C_onTestModeEnabledChanged);
     connect(m_ui->comboBox_6, QOverload<int>::of(&QComboBox::currentIndexChanged),
-        this, &ChannelSelectController::onTestModeTypeChanged);
+        this, &ChannelSelectController::slot_CHN_C_onTestModeTypeChanged);
 
     // 视频参数
     connect(m_ui->videoHeigh, &QLineEdit::textChanged,
-        this, &ChannelSelectController::onVideoHeightChanged);
+        this, &ChannelSelectController::slot_CHN_C_onVideoHeightChanged);
     connect(m_ui->videoWidth, &QLineEdit::textChanged,
-        this, &ChannelSelectController::onVideoWidthChanged);
+        this, &ChannelSelectController::slot_CHN_C_onVideoWidthChanged);
     connect(m_ui->TE_Value, &QLineEdit::textChanged,
-        this, &ChannelSelectController::onTEValueChanged);
+        this, &ChannelSelectController::slot_CHN_C_onTEValueChanged);
 
     // 按钮点击
     connect(m_ui->pushButton, &QPushButton::clicked,
-        this, &ChannelSelectController::onSaveButtonClicked);
+        this, &ChannelSelectController::slot_CHN_C_onSaveButtonClicked);
     connect(m_ui->pushButton_2, &QPushButton::clicked,
-        this, &ChannelSelectController::onCancelButtonClicked);
+        this, &ChannelSelectController::slot_CHN_C_onCancelButtonClicked);
 }
 
 void ChannelSelectController::updateUIState()
@@ -322,7 +322,7 @@ void ChannelSelectController::applyUIToModel()
 }
 
 // 槽函数实现
-void ChannelSelectController::onCaptureTypeChanged(int index)
+void ChannelSelectController::slot_CHN_C_onCaptureTypeChanged(int index)
 {
     if (m_isBatchUpdate) {
         return;
@@ -334,7 +334,7 @@ void ChannelSelectController::onCaptureTypeChanged(int index)
     updateUIState();
 }
 
-void ChannelSelectController::onClockPNSwapChanged(bool checked)
+void ChannelSelectController::slot_CHN_C_onClockPNSwapChanged(bool checked)
 {
     if (m_isBatchUpdate) {
         return;
@@ -343,7 +343,7 @@ void ChannelSelectController::onClockPNSwapChanged(bool checked)
     LOG_INFO(QString("时钟PN交换状态已更改为: %1").arg(checked ? "启用" : "禁用"));
 }
 
-void ChannelSelectController::onChannelEnableChanged(int channelIndex, bool enabled)
+void ChannelSelectController::slot_CHN_C_onChannelEnableChanged(int channelIndex, bool enabled)
 {
     if (m_isBatchUpdate) {
         return;
@@ -361,7 +361,7 @@ void ChannelSelectController::onChannelEnableChanged(int channelIndex, bool enab
     }
 }
 
-void ChannelSelectController::onChannelPNSwapChanged(int channelIndex, bool swapped)
+void ChannelSelectController::slot_CHN_C_onChannelPNSwapChanged(int channelIndex, bool swapped)
 {
     if (m_isBatchUpdate) {
         return;
@@ -372,7 +372,7 @@ void ChannelSelectController::onChannelPNSwapChanged(int channelIndex, bool swap
         .arg(swapped ? "启用" : "禁用"));
 }
 
-void ChannelSelectController::onChannelSwapChanged(int channelIndex, int targetChannel)
+void ChannelSelectController::slot_CHN_C_onChannelSwapChanged(int channelIndex, int targetChannel)
 {
     if (m_isBatchUpdate) {
         return;
@@ -383,7 +383,7 @@ void ChannelSelectController::onChannelSwapChanged(int channelIndex, int targetC
         .arg(targetChannel));
 }
 
-void ChannelSelectController::onTestModeEnabledChanged(bool enabled)
+void ChannelSelectController::slot_CHN_C_onTestModeEnabledChanged(bool enabled)
 {
     if (m_isBatchUpdate) {
         return;
@@ -395,7 +395,7 @@ void ChannelSelectController::onTestModeEnabledChanged(bool enabled)
     updateUIState();
 }
 
-void ChannelSelectController::onTestModeTypeChanged(int index)
+void ChannelSelectController::slot_CHN_C_onTestModeTypeChanged(int index)
 {
     if (m_isBatchUpdate) {
         return;
@@ -404,7 +404,7 @@ void ChannelSelectController::onTestModeTypeChanged(int index)
     LOG_INFO(QString("测试模式类型已更改为: %1").arg(index));
 }
 
-void ChannelSelectController::onVideoHeightChanged(const QString& height)
+void ChannelSelectController::slot_CHN_C_onVideoHeightChanged(const QString& height)
 {
     if (m_isBatchUpdate) {
         return;
@@ -413,7 +413,7 @@ void ChannelSelectController::onVideoHeightChanged(const QString& height)
     LOG_INFO(QString("视频高度已更改为: %1").arg(height));
 }
 
-void ChannelSelectController::onVideoWidthChanged(const QString& width)
+void ChannelSelectController::slot_CHN_C_onVideoWidthChanged(const QString& width)
 {
     if (m_isBatchUpdate) {
         return;
@@ -422,7 +422,7 @@ void ChannelSelectController::onVideoWidthChanged(const QString& width)
     LOG_INFO(QString("视频宽度已更改为: %1").arg(width));
 }
 
-void ChannelSelectController::onTEValueChanged(const QString& teValue)
+void ChannelSelectController::slot_CHN_C_onTEValueChanged(const QString& teValue)
 {
     if (m_isBatchUpdate) {
         return;
@@ -431,7 +431,7 @@ void ChannelSelectController::onTEValueChanged(const QString& teValue)
     LOG_INFO(QString("TE值已更改为: %1").arg(teValue));
 }
 
-void ChannelSelectController::onSaveButtonClicked()
+void ChannelSelectController::slot_CHN_C_onSaveButtonClicked()
 {
     LOG_INFO("确认保存按钮点击");
 
@@ -444,7 +444,7 @@ void ChannelSelectController::onSaveButtonClicked()
     }
 }
 
-void ChannelSelectController::onCancelButtonClicked()
+void ChannelSelectController::slot_CHN_C_onCancelButtonClicked()
 {
     LOG_INFO("取消设置按钮点击");
 
