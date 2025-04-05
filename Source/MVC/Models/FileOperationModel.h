@@ -1,4 +1,4 @@
-﻿// Source/MVC/Models/FileSaveModel.h
+﻿// Source/MVC/Models/FileOperationModel.h
 #pragma once
 
 #include <QObject>
@@ -9,7 +9,7 @@
 #include <QMutex>
 #include <atomic>
 #include <memory>
-#include <FileSaveManager.h>
+#include <FileManager.h>
 
 /**
  * @brief 文件保存模型类
@@ -17,7 +17,7 @@
  * 文件保存模型管理所有与文件保存相关的数据和状态，
  * 包括保存参数、状态和统计信息。
  */
-class FileSaveModel : public QObject
+class FileOperationModel : public QObject
 {
     Q_OBJECT
 
@@ -26,7 +26,7 @@ public:
      * @brief 获取单例实例
      * @return 模型实例的引用
      */
-    static FileSaveModel* getInstance();
+    static FileOperationModel* getInstance();
 
     /**
      * @brief 获取保存参数
@@ -168,33 +168,33 @@ private:
     /**
      * @brief 构造函数 (私有)
      */
-    FileSaveModel();
+    FileOperationModel();
 
     /**
      * @brief 析构函数 (私有)
      */
-    ~FileSaveModel();
+    ~FileOperationModel();
 
     /**
      * @brief 禁用拷贝构造函数
      */
-    FileSaveModel(const FileSaveModel&) = delete;
+    FileOperationModel(const FileOperationModel&) = delete;
 
     /**
      * @brief 禁用赋值操作符
      */
-    FileSaveModel& operator=(const FileSaveModel&) = delete;
+    FileOperationModel& operator=(const FileOperationModel&) = delete;
 
     void syncFromManager();
 
-    // 加FileSaveManager事件处理方法
+    // 加FileManager事件处理方法
     void onSaveManagerStatusChanged(SaveStatus status);
     void onSaveManagerProgressUpdated(const SaveStatistics& stats);
     void onSaveManagerCompleted(const QString& path, uint64_t totalBytes);
     void onSaveManagerError(const QString& error);
 
 private:
-    FileSaveManager& m_saveManager;         // 引用FileSaveManager单例
+    FileManager& m_fileManager;         // 引用FileManager单例
     SaveParameters m_parameters;            // 保存参数
     std::atomic<SaveStatus> m_status;       // 当前状态
     SaveStatistics m_statistics;            // 统计信息

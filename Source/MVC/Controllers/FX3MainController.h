@@ -12,7 +12,7 @@
 class FX3MainView;
 class FX3MainModel;
 class MenuController;
-class FileSaveController;
+class FileOperationController;
 class ModuleManager;
 class DeviceView;
 class DeviceController;
@@ -108,7 +108,7 @@ public slots:
     /**
      * @brief 处理文件保存请求
      */
-    void slot_FX3Main_C_handleFileSave();
+    void slot_FX3Main_C_handleFileOperation();
 
     /**
      * @brief 处理数据导出请求

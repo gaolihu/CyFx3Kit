@@ -1,10 +1,10 @@
-﻿// Source/MVC/Controllers/FileSaveController.h
+﻿// Source/MVC/Controllers/FileOperationController.h
 #pragma once
 
 #include <QObject>
 #include <QTimer>
-#include "FileSaveModel.h"
-#include "FileSaveView.h"
+#include "FileOperationModel.h"
+#include "FileOperationView.h"
 #include "DataPacket.h"
 
 class QWidget;
@@ -17,7 +17,7 @@ class QThread;
  * 处理来自界面的用户操作，更新模型数据，控制保存流程。
  * 使用独立工作线程进行异步文件保存以提高响应性能。
  */
-class FileSaveController : public QObject
+class FileOperationController : public QObject
 {
     Q_OBJECT
 
@@ -26,12 +26,12 @@ public:
      * @brief 构造函数
      * @param parent 父对象指针
      */
-    explicit FileSaveController(QObject* parent = nullptr);
+    explicit FileOperationController(QObject* parent = nullptr);
 
     /**
      * @brief 析构函数
      */
-    ~FileSaveController();
+    ~FileOperationController();
 
     /**
      * @brief 初始化控制器
@@ -58,7 +58,7 @@ public:
      * @param parent 父窗口指针
      * @return 文件保存视图指针
      */
-    FileSaveView* createSaveView(QWidget* parent = nullptr);
+    FileOperationView* createSaveView(QWidget* parent = nullptr);
 
     QString getCurrentFileName() const { return m_model->getFullSavePath(); }
 
@@ -206,7 +206,7 @@ private:
      * @brief 连接视图信号
      * @param view 视图对象
      */
-    void connectViewSignals(FileSaveView* view);
+    void connectViewSignals(FileOperationView* view);
 
     /**
      * @brief 连接工作线程信号
@@ -214,8 +214,8 @@ private:
     void connectWorkerSignals();
 
 private:
-    FileSaveModel* m_model;               // 模型引用
-    FileSaveView* m_currentView;          // 当前视图引用
+    FileOperationModel* m_model;          // 模型引用
+    FileOperationView* m_currentView;     // 当前视图引用
     QTimer m_statsUpdateTimer;            // 统计更新定时器
     uint16_t m_currentWidth;              // 当前图像宽度
     uint16_t m_currentHeight;             // 当前图像高度

@@ -16,7 +16,7 @@ WaveformAnalysisController::WaveformAnalysisController(WaveformAnalysisView* vie
     , m_view(view)
     , m_ui(nullptr)
     , m_model(nullptr)
-    , m_dataService(nullptr)
+    , m_dataService(&DataAccessService::getInstance())
     , m_updateTimer(nullptr)
     , m_isRunning(false)
     , m_isInitialized(false)
@@ -370,30 +370,18 @@ void WaveformAnalysisController::slot_WA_C_zoomOutAtPoint(const QPoint& pos)
     }
 }
 
-bool WaveformAnalysisController::slot_WA_C_loadData(const QString& filename, int startIndex, int length)
+bool WaveformAnalysisController::slot_WA_C_loadData(int startIndex, int length)
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("控制器加载数据 - 文件: %1, 起始: %2, 长度: %3")
-        .arg(filename).arg(startIndex).arg(length));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("波形分析控制器加载数据 - 文件: %1, 起始: %2, 长度: %3")
+        .arg(startIndex).arg(length));
 
     if (!m_model || !m_dataService) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("模型或数据服务为空，无法加载数据"));
         return false;
     }
 
-    // 验证文件存在
-    QFileInfo fileInfo(filename);
-    if (!fileInfo.exists() || !fileInfo.isReadable()) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件不存在或不可读: %1").arg(filename));
-
-        // 如果是测试模式，加载模拟数据
-        if (filename.contains("test_data", Qt::CaseInsensitive)) {
-            // return slot_WA_C_loadSimulatedData(length);
-        }
-        return false;
-    }
-
     // 委托给模型加载数据
-    bool success = m_model->loadData(filename, startIndex, length);
+    bool success = m_model->loadData(startIndex, length);
 
     if (success) {
         // 加载成功后设置默认视图范围
@@ -846,13 +834,24 @@ void WaveformAnalysisController::slot_WA_C_handleTabActivated()
 
     if (!m_isActive) {
         m_isActive = true;
+
+        // 确保数据服务已初始化
+        if (!m_dataService) {
+            m_dataService = &DataAccessService::getInstance();
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("标签页激活时初始化数据服务"));
+        }
     }
 
     if (m_isCurrentlyVisible) {
         // 首次激活时，加载初始数据
-        if (m_model && m_model->getIndexData().isEmpty()) {
-            // 加载一个初始范围的数据 - 足够当前视图
-            slot_WA_C_loadDataRange(m_currentPosition, m_viewWidth);
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("当前TAB可见，加载初始数据"));
+
+        // 尝试加载实际数据
+        bool success = slot_WA_C_loadDataRange(m_currentPosition, m_viewWidth);
+
+        // 如果加载失败，使用模拟数据
+        if (!success) {
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("加载实际数据失败"));
         }
 
         // 更新视图
@@ -898,15 +897,8 @@ bool WaveformAnalysisController::loadWaveformDataFromService(int startIndex, int
         return false;
     }
 
-    // 获取当前会话的文件名 TODO
-    QString currentFile;// = m_dataService->getCurrentSessionFileName();
-    if (currentFile.isEmpty()) {
-        LOG_WARN("无法获取当前会话文件名");
-        return false;
-    }
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始从文件加载波形数据 - 文件: %1, 起始: %2, 长度: %3")
-        .arg(currentFile).arg(startIndex).arg(length));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始加载波形数据 - 起始: %1, 长度: %2")
+        .arg(startIndex).arg(length));
 
     // 清除现有数据
     QVector<double> indexData;
@@ -921,7 +913,7 @@ bool WaveformAnalysisController::loadWaveformDataFromService(int startIndex, int
     // 为每个通道加载数据
     for (int ch = 0; ch < 4; ++ch) {
         QVector<double> channelData = m_dataService->getChannelData(
-            currentFile, ch, startIndex, length);
+            ch, startIndex, length);
 
         if (!channelData.isEmpty()) {
             m_model->updateChannelData(ch, channelData);

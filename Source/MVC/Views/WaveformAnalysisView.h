@@ -150,11 +150,6 @@ private slots:
     void slot_WA_V_onChannelCheckboxToggled(int state);
 
     /**
-     * @brief 处理加载测试数据动作
-     */
-    void slot_WA_V_onLoadTestDataTriggered();
-
-    /**
      * @brief 处理放大动作
      */
     void slot_WA_V_onZoomInTriggered();

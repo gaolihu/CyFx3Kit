@@ -5,7 +5,6 @@
 #include "ui_DataAnalysis.h"
 #include "DataAnalysisModel.h"
 #include "IndexGenerator.h"
-#include "DataPacket.h"
 #include "Logger.h"
 
 #include <QFileDialog>
@@ -159,6 +158,8 @@ void DataAnalysisController::initializeTable()
 
 void DataAnalysisController::loadData()
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("数据分析控制器加载数据"));
+
     if (!m_model || !m_view || !m_ui || !m_ui->tableWidget) {
         return;
     }
@@ -574,6 +575,7 @@ void DataAnalysisController::clearData()
 
 bool DataAnalysisController::loadDataFromFile(const QString& filePath)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("数据分析器从文件: %1 加载数据").arg(filePath));
     if (filePath.isEmpty()) {
         return false;
     }
@@ -843,6 +845,8 @@ bool DataAnalysisController::isProcessing() const
 
 void DataAnalysisController::loadDataBatched(const QVector<PacketIndexEntry>& entries, int batchSize)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("数据分析器批量加载数据"));
+
     if (!m_ui || !m_ui->tableWidget) {
         return;
     }

@@ -196,9 +196,9 @@ void FX3MainController::stopAndReleaseResources()
 
 #if 0
     // 2. 停止文件保存（如果正在进行）
-    if (m_fileSaveController && m_fileSaveController->isSaving()) {
+    if (m_fileOperationController && m_fileOperationController->isSaving()) {
         LOG_INFO(LocalQTCompat::fromLocal8Bit("停止文件保存"));
-        m_fileSaveController->stopSaving();
+        m_fileOperationController->stopSaving();
 
         // 短暂等待让保存操作完成
         QThread::msleep(100);
@@ -331,7 +331,7 @@ void FX3MainController::connectSignals()
                     slot_FX3Main_C_handleWaveformAnalysis();
                 }
                 else if (action == "saveAction") {
-                    slot_FX3Main_C_handleFileSave();
+                    slot_FX3Main_C_handleFileOperation();
                 }
                 else if (action == "exportAction") {
                     slot_FX3Main_C_handleDataExport();
@@ -573,7 +573,7 @@ void FX3MainController::slot_FX3Main_C_handleWaveformAnalysis()
     handleModuleDisplay(ModuleManager::ModuleType::WAVEFORM_ANALYSIS);
 }
 
-void FX3MainController::slot_FX3Main_C_handleFileSave()
+void FX3MainController::slot_FX3Main_C_handleFileOperation()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("处理保存文件请求"));
 

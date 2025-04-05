@@ -2,7 +2,7 @@
 #pragma once
 
 #include <memory>
-#include "FileSaveManager.h"
+#include "FileManager.h"
 #include "Logger.h"
 #include <QImage>
 #include <QBuffer>

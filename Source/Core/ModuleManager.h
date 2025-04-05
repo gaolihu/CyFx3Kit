@@ -12,14 +12,14 @@ class ChannelSelectView;
 class DataAnalysisView;
 class VideoDisplayView;
 class WaveformAnalysisView;
-class FileSaveView;
+class FileOperationView;
 class UpdateDeviceView;
 
 class ChannelSelectController;
 class DataAnalysisController;
 class VideoDisplayController;
 class WaveformAnalysisController;
-class FileSaveController;
+class FileOperationController;
 class UpdateDeviceController;
 
 struct ChannelConfig;
@@ -202,7 +202,7 @@ private:
      * @brief 创建文件保存模块
      * @return 是否成功创建
      */
-    bool createFileSaveModule();
+    bool createFileOperationModule();
 
     /**
      * @brief 创建设备更新模块
@@ -245,7 +245,7 @@ private:
     std::unique_ptr<DataAnalysisView> m_dataAnalysisView;
     std::unique_ptr<VideoDisplayView> m_videoDisplayView;
     std::unique_ptr<WaveformAnalysisView> m_waveformAnalysisView;
-    std::unique_ptr<FileSaveView> m_fileSaveView;
+    std::unique_ptr<FileOperationView> m_fileOperationView;
     std::unique_ptr<UpdateDeviceView> m_UpdateDeviceView;
 
     // Module controllers
@@ -253,7 +253,7 @@ private:
     std::shared_ptr<DataAnalysisController> m_dataAnalysisController;
     std::shared_ptr<VideoDisplayController> m_videoDisplayController;
     std::shared_ptr<WaveformAnalysisController> m_waveformAnalysisController;
-    std::shared_ptr<FileSaveController> m_fileSaveController;
+    std::shared_ptr<FileOperationController> m_fileOperationController;
     std::shared_ptr<UpdateDeviceController> m_UpdateDeviceController;
 
     // Module visibility and initialization state
@@ -268,6 +268,6 @@ private:
     int m_dataAnalysisTabIndex{ -1 };
     int m_videoDisplayTabIndex{ -1 };
     int m_waveformAnalysisTabIndex{ -1 };
-    int m_fileSaveTabIndex{ -1 };
+    int m_fileOperationTabIndex{ -1 };
     int m_UpdateDeviceTabIndex{ -1 };
 };

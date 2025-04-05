@@ -542,12 +542,12 @@ void DataAccessService::resetPerformanceStats()
     m_stats = PerformanceStats();
 }
 
-QVector<double> DataAccessService::getChannelData(const QString& filename, int channel, int startIndex, int length)
+QVector<double> DataAccessService::getChannelData(int channel, int startIndex, int length)
 {
     QVector<double> result;
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取通道数据: 文件=%1, 通道=%2, 起始=%3, 长度=%4")
-        .arg(filename).arg(channel).arg(startIndex).arg(length));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取通道数据: 通道=%2, 起始=%3, 长度=%4")
+        .arg(channel).arg(startIndex).arg(length));
 
     if (channel < 0 || channel > 3) {
         LOG_ERROR(QString("无效的通道索引: %1").arg(channel));
@@ -555,27 +555,16 @@ QVector<double> DataAccessService::getChannelData(const QString& filename, int c
     }
 
     try {
-        // 检查文件是否可读
-        if (!isFileReadable(filename)) {
-            LOG_ERROR(QString("文件不可读: %1").arg(filename));
-            return result;
-        }
-
-        // 打开文件
-        QFile* file = getOrOpenFile(filename);
-        if (!file) {
-            LOG_ERROR(QString("无法打开文件: %1").arg(filename));
-            return result;
-        }
-
-        // 读取数据
+        // 文件应该从文件缓存获取, TODO
+        QFile* file = nullptr;
+        LOG_ERROR(QString("需要从文件缓存管理器获取文件描述符"));
+        return {};
         QMutexLocker locker(&m_fileMutex);
 
-        // 定位到起始位置
+        // 定位到文件起始位置
         if (!file->seek(startIndex)) {
-            LOG_ERROR(QString("无法定位到文件偏移位置: %1 在 %2")
-                .arg(startIndex)
-                .arg(filename));
+            LOG_ERROR(QString("无法定位到文件偏移位置: %1")
+                .arg(startIndex));
             return result;
         }
 

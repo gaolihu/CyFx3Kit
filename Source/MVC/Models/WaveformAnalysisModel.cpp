@@ -27,14 +27,6 @@ WaveformAnalysisModel::WaveformAnalysisModel()
         connect(m_dataService, &DataAccessService::signal_DT_ACC_dataReadComplete,
             this, &WaveformAnalysisModel::processReceivedData);
     }
-#if 1
-    // 测试用
-    // 初始化索引数据，确保至少有基本数据
-    m_indexData.resize(100);
-    for (int i = 0; i < 100; i++) {
-        m_indexData[i] = i;
-    }
-#endif
     LOG_INFO("波形分析模型已创建");
 }
 
@@ -66,11 +58,11 @@ void WaveformAnalysisModel::initializeDefaults()
     m_waveformRenderMode = 0; // 线条模式
 }
 
-bool WaveformAnalysisModel::loadData(const QString& filename, int startIndex, int length)
+bool WaveformAnalysisModel::loadData(int startIndex, int length)
 {
     // 静态分析
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始加载波形数据: 文件=%1, 起始=%2, 长度=%3")
-        .arg(filename).arg(startIndex).arg(length));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("开始加载波形数据: 起始=%1, 长度=%2")
+        .arg(startIndex).arg(length));
 
     if (!m_dataService) {
         LOG_ERROR("数据访问服务未设置，尝试获取服务实例");
@@ -107,7 +99,7 @@ bool WaveformAnalysisModel::loadData(const QString& filename, int startIndex, in
             // 调用DataAccessService获取通道数据
             LOG_INFO(LocalQTCompat::fromLocal8Bit("开始获取通道%1数据").arg(channel));
             QVector<double> channelData = m_dataService->getChannelData(
-                filename, channel, startIndex, length);
+                channel, startIndex, length);
 
             if (!channelData.isEmpty()) {
                 m_channelData[channel] = channelData;
@@ -154,8 +146,8 @@ bool WaveformAnalysisModel::loadData(const QString& filename, int startIndex, in
         emit signal_WA_M_dataLoaded(!allChannelsEmpty);
         emit signal_WA_M_viewRangeChanged(m_xMin, m_xMax);
 
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("波形数据加载完成: 文件=%1, 起始=%2, 长度=%3")
-            .arg(filename).arg(startIndex).arg(length));
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("波形数据加载完成: 起始=%2, 长度=%3")
+            .arg(startIndex).arg(length));
         return !allChannelsEmpty;
     }
     catch (const std::exception& e) {
@@ -170,6 +162,8 @@ bool WaveformAnalysisModel::loadData(const QString& filename, int startIndex, in
 
 bool WaveformAnalysisModel::loadDataAsync(uint64_t packetIndex)
 {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("波形分析模型异步加载数据，索引号：%1").arg(packetIndex));
+
     if (!m_dataService) {
         LOG_ERROR("数据访问服务未设置");
         return false;

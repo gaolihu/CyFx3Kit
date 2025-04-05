@@ -1,4 +1,4 @@
-// Source/File/FileSaveManager.h
+// Source/File/FileManager.h
 #pragma once
 
 #include <QObject>
@@ -178,11 +178,11 @@ private:
 };
 
 // 文件保存管理器 - 核心类
-class FileSaveManager : public QObject {
+class FileManager : public QObject {
     Q_OBJECT
 
 public:
-    static FileSaveManager& instance();
+    static FileManager& instance();
 
     // 设置保存参数
     void setSaveParameters(const SaveParameters& params);
@@ -217,6 +217,15 @@ public:
     // 判断是否应该分割文件
     bool shouldSplitFile();
 
+    // 离线操作
+    bool startLoading(const QString& filePath);
+    bool stopLoading();
+    bool isLoading() const;
+    DataPacket getNextPacket();
+    bool hasMorePackets() const;
+    void seekTo(uint64_t position);
+    uint64_t getTotalFileSize() const;
+
     std::unique_ptr<IFileWriter> m_fileWriter;
 
 public slots:
@@ -238,11 +247,18 @@ signals:
     // 保存错误信号
     void signal_FSM_saveError(const QString& error);
 
+    // 离线文件加载相关信号
+    void signal_FSM_loadStarted(const QString& filePath, uint64_t fileSize);
+    void signal_FSM_loadProgress(uint64_t bytesRead, uint64_t totalBytes);
+    void signal_FSM_loadCompleted(const QString& filePath, uint64_t totalBytes);
+    void signal_FSM_loadError(const QString& error);
+    void signal_FSM_newDataAvailable(uint64_t offset, uint64_t size);
+
 private:
-    FileSaveManager();
-    ~FileSaveManager();
-    FileSaveManager(const FileSaveManager&) = delete;
-    FileSaveManager& operator=(const FileSaveManager&) = delete;
+    FileManager();
+    ~FileManager();
+    FileManager(const FileManager&) = delete;
+    FileManager& operator=(const FileManager&) = delete;
 
     // 创建文件名
     QString createFileName(const DataPacket& packet);
@@ -263,6 +279,9 @@ private:
     void resetFileWriter();
 
     void saveDataBatch(const DataPacketBatch& packets);
+
+    // 文件加载线程函数
+    void loadThreadFunction();
 
 private:
     SaveParameters m_saveParams;
@@ -285,4 +304,14 @@ private:
 
     QElapsedTimer m_speedTimer;
     uint64_t m_lastSavedBytes;
+
+    // 离线文件加载相关成员
+    std::atomic<bool> m_loading{ false };
+    QFile m_loadFile;
+    QByteArray m_loadBuffer;
+    uint64_t m_loadPosition{ 0 };
+    uint64_t m_loadFileSize{ 0 };
+    std::mutex m_loadMutex;
+    std::thread m_loadThread;
+    std::queue<DataPacket> m_loadQueue;
 };

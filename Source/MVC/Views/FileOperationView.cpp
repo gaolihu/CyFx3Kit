@@ -1,5 +1,5 @@
-﻿// Source/MVC/Views/FileSaveView.cpp
-#include "FileSaveView.h"
+﻿// Source/MVC/Views/FileOperationView.cpp
+#include "FileOperationView.h"
 #include "ui_SaveFileBox.h"
 #include "Logger.h"
 #include <QVBoxLayout>
@@ -7,7 +7,7 @@
 #include <QDir>
 #include <QSettings>
 
-FileSaveView::FileSaveView(QWidget* parent)
+FileOperationView::FileOperationView(QWidget* parent)
     : QWidget(parent)
     , ui(new Ui::SaveFileBox)
     , m_width(1920)
@@ -27,13 +27,13 @@ FileSaveView::FileSaveView(QWidget* parent)
     LOG_INFO("文件保存视图已创建");
 }
 
-FileSaveView::~FileSaveView()
+FileOperationView::~FileOperationView()
 {
     delete ui;
     LOG_INFO("文件保存视图已销毁");
 }
 
-void FileSaveView::setImageParameters(uint16_t width, uint16_t height, uint8_t format)
+void FileOperationView::setImageParameters(uint16_t width, uint16_t height, uint8_t format)
 {
     m_width = width;
     m_height = height;
@@ -43,12 +43,12 @@ void FileSaveView::setImageParameters(uint16_t width, uint16_t height, uint8_t f
         .arg(width).arg(height).arg(format, 2, 16, QChar('0')));
 }
 
-bool FileSaveView::isSaving() const
+bool FileOperationView::isSaving() const
 {
     return m_saving;
 }
 
-void FileSaveView::prepareForShow()
+void FileOperationView::prepareForShow()
 {
     // 显示窗口前更新界面信息
     // 设置总行数
@@ -57,7 +57,7 @@ void FileSaveView::prepareForShow()
 
     // 设置默认保存路径
     if (ui->pathEdit->text().isEmpty()) {
-        SaveParameters params = FileSaveModel::getInstance()->getSaveParameters();
+        SaveParameters params = FileOperationModel::getInstance()->getSaveParameters();
         ui->pathEdit->setText(params.basePath);
     }
 
@@ -73,7 +73,7 @@ void FileSaveView::prepareForShow()
     updateUIState();
 }
 
-void FileSaveView::slot_FS_V_updateStatusDisplay(SaveStatus status)
+void FileOperationView::slot_FS_V_updateStatusDisplay(SaveStatus status)
 {
     switch (status) {
     case SaveStatus::FS_IDLE:
@@ -114,7 +114,7 @@ void FileSaveView::slot_FS_V_updateStatusDisplay(SaveStatus status)
     ui->displayOptionsGroupBox->setEnabled(!m_saving);
 }
 
-void FileSaveView::slot_FS_V_updateStatisticsDisplay(const SaveStatistics& stats)
+void FileOperationView::slot_FS_V_updateStatisticsDisplay(const SaveStatistics& stats)
 {
     // 更新进度条
     if (stats.progress > 0 && m_saving) {
@@ -142,17 +142,17 @@ void FileSaveView::slot_FS_V_updateStatisticsDisplay(const SaveStatistics& stats
     ui->totalSizeLabel->setText(sizeText);
 }
 
-void FileSaveView::slot_FS_V_onSaveStarted()
+void FileOperationView::slot_FS_V_onSaveStarted()
 {
     slot_FS_V_updateStatusDisplay(SaveStatus::FS_SAVING);
 }
 
-void FileSaveView::slot_FS_V_onSaveStopped()
+void FileOperationView::slot_FS_V_onSaveStopped()
 {
     slot_FS_V_updateStatusDisplay(SaveStatus::FS_IDLE);
 }
 
-void FileSaveView::slot_FS_V_onSaveCompleted(const QString& path, uint64_t totalBytes)
+void FileOperationView::slot_FS_V_onSaveCompleted(const QString& path, uint64_t totalBytes)
 {
     slot_FS_V_updateStatusDisplay(SaveStatus::FS_COMPLETED);
 
@@ -165,7 +165,7 @@ void FileSaveView::slot_FS_V_onSaveCompleted(const QString& path, uint64_t total
         message);
 }
 
-void FileSaveView::slot_FS_V_onSaveError(const QString& error)
+void FileOperationView::slot_FS_V_onSaveError(const QString& error)
 {
     slot_FS_V_updateStatusDisplay(SaveStatus::FS_ERROR);
 
@@ -174,7 +174,7 @@ void FileSaveView::slot_FS_V_onSaveError(const QString& error)
         error);
 }
 
-void FileSaveView::slot_FS_V_onSaveButtonClicked()
+void FileOperationView::slot_FS_V_onSaveButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("保存按钮点击"));
 
@@ -200,7 +200,7 @@ void FileSaveView::slot_FS_V_onSaveButtonClicked()
     emit signal_FS_V_startSaveRequested();
 }
 
-void FileSaveView::slot_FS_V_onCancelButtonClicked()
+void FileOperationView::slot_FS_V_onCancelButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("取消按钮点击"));
 
@@ -221,11 +221,11 @@ void FileSaveView::slot_FS_V_onCancelButtonClicked()
 }
 
 
-void FileSaveView::slot_FS_V_onBrowseFolderButtonClicked()
+void FileOperationView::slot_FS_V_onBrowseFolderButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("选择文件路径按钮点击"));
 
-    QSettings settings("FX3Tool", "FileSavePath");
+    QSettings settings("FX3Tool", "FileOperationPath");
 
     QString lastPath = settings.value("LastSelectedPath", QCoreApplication::applicationDirPath()).toString();
     QString defaultPath = ui->pathEdit->text().isEmpty() ? lastPath : ui->pathEdit->text();
@@ -243,42 +243,42 @@ void FileSaveView::slot_FS_V_onBrowseFolderButtonClicked()
     }
 }
 
-void FileSaveView::slot_FS_V_onSaveRangeRadioButtonToggled(bool checked)
+void FileOperationView::slot_FS_V_onSaveRangeRadioButtonToggled(bool checked)
 {
     ui->rangeFrame->setEnabled(checked);
     updateUIState();
 }
 
-void FileSaveView::setupUI()
+void FileOperationView::setupUI()
 {
     // UI 已由 ui->setupUi(this) 在构造函数中完成初始化
 }
 
-void FileSaveView::connectSignals()
+void FileOperationView::connectSignals()
 {
     // 连接按钮信号
-    connect(ui->saveButton, &QPushButton::clicked, this, &FileSaveView::slot_FS_V_onSaveButtonClicked);
-    connect(ui->cancelButton, &QPushButton::clicked, this, &FileSaveView::slot_FS_V_onCancelButtonClicked);
-    connect(ui->browseFolderButton, &QPushButton::clicked, this, &FileSaveView::slot_FS_V_onBrowseFolderButtonClicked);
+    connect(ui->saveButton, &QPushButton::clicked, this, &FileOperationView::slot_FS_V_onSaveButtonClicked);
+    connect(ui->cancelButton, &QPushButton::clicked, this, &FileOperationView::slot_FS_V_onCancelButtonClicked);
+    connect(ui->browseFolderButton, &QPushButton::clicked, this, &FileOperationView::slot_FS_V_onBrowseFolderButtonClicked);
 
     // 连接单选按钮信号
-    connect(ui->saveRangeRadioButton, &QRadioButton::toggled, this, &FileSaveView::slot_FS_V_onSaveRangeRadioButtonToggled);
+    connect(ui->saveRangeRadioButton, &QRadioButton::toggled, this, &FileOperationView::slot_FS_V_onSaveRangeRadioButtonToggled);
 
     // 连接复选框和其他控件信号以更新UI状态
-    connect(ui->lineRangeCheckBox, &QCheckBox::toggled, this, &FileSaveView::updateUIState);
-    connect(ui->columnRangeCheckBox, &QCheckBox::toggled, this, &FileSaveView::updateUIState);
-    connect(ui->maxBytesPerLineCheckBox, &QCheckBox::toggled, this, &FileSaveView::updateUIState);
-    connect(ui->csvRadioButton, &QRadioButton::toggled, this, &FileSaveView::updateUIState);
-    connect(ui->txtRadioButton, &QRadioButton::toggled, this, &FileSaveView::updateUIState);
-    connect(ui->rawRadioButton, &QRadioButton::toggled, this, &FileSaveView::updateUIState);
-    connect(ui->bmpRadioButton, &QRadioButton::toggled, this, &FileSaveView::updateUIState);
-    connect(ui->splitByLinesRadioButton, &QRadioButton::toggled, this, &FileSaveView::updateUIState);
+    connect(ui->lineRangeCheckBox, &QCheckBox::toggled, this, &FileOperationView::updateUIState);
+    connect(ui->columnRangeCheckBox, &QCheckBox::toggled, this, &FileOperationView::updateUIState);
+    connect(ui->maxBytesPerLineCheckBox, &QCheckBox::toggled, this, &FileOperationView::updateUIState);
+    connect(ui->csvRadioButton, &QRadioButton::toggled, this, &FileOperationView::updateUIState);
+    connect(ui->txtRadioButton, &QRadioButton::toggled, this, &FileOperationView::updateUIState);
+    connect(ui->rawRadioButton, &QRadioButton::toggled, this, &FileOperationView::updateUIState);
+    connect(ui->bmpRadioButton, &QRadioButton::toggled, this, &FileOperationView::updateUIState);
+    connect(ui->splitByLinesRadioButton, &QRadioButton::toggled, this, &FileOperationView::updateUIState);
 }
 
-SaveParameters FileSaveView::collectSaveParameters()
+SaveParameters FileOperationView::collectSaveParameters()
 {
     // 获取当前保存参数
-    SaveParameters params = FileSaveModel::getInstance()->getSaveParameters();
+    SaveParameters params = FileOperationModel::getInstance()->getSaveParameters();
 
     // 更新文件路径
     if (!ui->pathEdit->text().isEmpty()) {
@@ -310,7 +310,7 @@ SaveParameters FileSaveView::collectSaveParameters()
     return params;
 }
 
-void FileSaveView::updateUIState()
+void FileOperationView::updateUIState()
 {
     // 启用/禁用行列范围输入框
     bool enableLineRange = ui->saveRangeRadioButton->isChecked() && ui->lineRangeCheckBox->isChecked();

@@ -429,5 +429,5 @@ private:
     int m_dataAnalysisTabIndex;     ///< 数据分析标签索引
     int m_videoDisplayTabIndex;     ///< 视频显示标签索引
     int m_waveformTabIndex;         ///< 波形分析标签索引
-    int m_fileSaveTabIndex;         ///< 文件保存标签索引
+    int m_fileOperationTabIndex;    ///< 文件操作标签索引
 };

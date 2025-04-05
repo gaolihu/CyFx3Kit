@@ -1,4 +1,4 @@
-﻿// Source/MVC/Views/FileSaveView.h
+﻿// Source/MVC/Views/FileOperationView.h
 #pragma once
 
 #include <QWidget>
@@ -7,7 +7,7 @@
 #include <QProgressBar>
 #include <QFileDialog>
 #include <QMessageBox>
-#include "FileSaveModel.h"
+#include "FileOperationModel.h"
 
 namespace Ui {
     class SaveFileBox;
@@ -17,9 +17,9 @@ namespace Ui {
  * @brief 文件保存视图类
  *
  * 提供文件保存的完整用户界面，包括设置选项和状态显示
- * 整合了原FileSaveDialogView和FileSavePanelView的功能
+ * 整合了原FileOperationDialogView和FileOperationPanelView的功能
  */
-class FileSaveView : public QWidget
+class FileOperationView : public QWidget
 {
     Q_OBJECT
 
@@ -28,12 +28,12 @@ public:
      * @brief 构造函数
      * @param parent 父窗口指针
      */
-    explicit FileSaveView(QWidget* parent = nullptr);
+    explicit FileOperationView(QWidget* parent = nullptr);
 
     /**
      * @brief 析构函数
      */
-    ~FileSaveView();
+    ~FileOperationView();
 
     /**
      * @brief 设置图像参数

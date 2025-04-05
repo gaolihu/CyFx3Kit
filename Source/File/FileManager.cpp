@@ -1,6 +1,6 @@
-// Source/File/FileSaveManager.cpp
+// Source/File/FileManager.cpp
 
-#include "FileSaveManager.h"
+#include "FileManager.h"
 #include "Logger.h"
 #include "DataConverters.h"
 #include <QDir>
@@ -11,13 +11,13 @@
 #include <future>
 #include <chrono>
 
-FileSaveManager& FileSaveManager::instance()
+FileManager& FileManager::instance()
 {
-    static FileSaveManager instance;
+    static FileManager instance;
     return instance;
 }
 
-FileSaveManager::FileSaveManager()
+FileManager::FileManager()
     : m_running(false)
     , m_paused(false)
     , m_useAsyncWriter(true)
@@ -56,12 +56,12 @@ FileSaveManager::FileSaveManager()
     LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存管理器已创建"));
 }
 
-FileSaveManager::~FileSaveManager()
+FileManager::~FileManager()
 {
     stopSaving();
 }
 
-void FileSaveManager::setSaveParameters(const SaveParameters& params)
+void FileManager::setSaveParameters(const SaveParameters& params)
 {
     std::lock_guard<std::mutex> lock(m_paramsMutex);
 
@@ -87,12 +87,12 @@ void FileSaveManager::setSaveParameters(const SaveParameters& params)
     }
 }
 
-const SaveParameters& FileSaveManager::getSaveParameters() const
+const SaveParameters& FileManager::getSaveParameters() const
 {
     return m_saveParams;
 }
 
-void FileSaveManager::setUseAsyncWriter(bool useAsync)
+void FileManager::setUseAsyncWriter(bool useAsync)
 {
     // 如果保存正在进行中不允许切换
     if (m_running) {
@@ -108,7 +108,7 @@ void FileSaveManager::setUseAsyncWriter(bool useAsync)
     }
 }
 
-bool FileSaveManager::createNewFile(const DataPacket& packet) {
+bool FileManager::createNewFile(const DataPacket& packet) {
     // 创建文件名
     QString filename = createFileName(packet);
     QString fullPath = m_statistics.savePath + "/" + filename;
@@ -143,7 +143,7 @@ bool FileSaveManager::createNewFile(const DataPacket& packet) {
     return true;
 }
 
-bool FileSaveManager::shouldSplitFile() {
+bool FileManager::shouldSplitFile() {
     if (!m_fileWriter->isOpen()) {
         return true;  // 如果文件未打开，需要创建新文件
     }
@@ -171,7 +171,150 @@ bool FileSaveManager::shouldSplitFile() {
     return false;
 }
 
-void FileSaveManager::resetFileWriter()
+bool FileManager::startLoading(const QString& filePath) {
+    std::lock_guard<std::mutex> lock(m_loadMutex);
+
+    if (m_loading) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("已经有文件正在加载中，请先停止当前加载"));
+        return false;
+    }
+
+    // 打开文件
+    m_loadFile.setFileName(filePath);
+    if (!m_loadFile.open(QIODevice::ReadOnly)) {
+        QString error = LocalQTCompat::fromLocal8Bit("无法打开文件: ") + filePath + " - " + m_loadFile.errorString();
+        LOG_ERROR(error);
+        emit signal_FSM_loadError(error);
+        return false;
+    }
+
+    // 初始化加载状态
+    m_loadPosition = 0;
+    m_loadFileSize = m_loadFile.size();
+    m_loading = true;
+
+    // 清空加载队列
+    std::queue<DataPacket> empty;
+    std::swap(m_loadQueue, empty);
+
+    // 分配初始缓冲区
+    const size_t INITIAL_BUFFER_SIZE = 4 * 1024 * 1024; // 4MB
+    m_loadBuffer.resize(static_cast<int>(std::min(INITIAL_BUFFER_SIZE, static_cast<size_t>(m_loadFileSize))));
+
+    // 启动加载线程
+    try {
+        m_loadThread = std::thread(&FileManager::loadThreadFunction, this);
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("文件加载线程已启动"));
+
+        // 发送开始加载信号
+        emit signal_FSM_loadStarted(filePath, m_loadFileSize);
+        return true;
+    }
+    catch (const std::exception& e) {
+        m_loading = false;
+        m_loadFile.close();
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("启动加载线程失败: ") + QString(e.what()));
+        emit signal_FSM_loadError(LocalQTCompat::fromLocal8Bit("启动加载线程失败: ") + QString(e.what()));
+        return false;
+    }
+}
+
+void FileManager::loadThreadFunction() {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("加载线程已启动"));
+
+    // 设置较低线程优先级，避免影响主线程响应
+    QThread::currentThread()->setPriority(QThread::LowPriority);
+
+    // 每次读取的大小
+    const size_t READ_CHUNK_SIZE = 1024 * 1024; // 1MB
+
+    // 每个数据包的最大大小
+    const size_t MAX_PACKET_SIZE = 64 * 1024; // 64KB
+
+    // 上次进度通知时的位置
+    uint64_t lastProgressPosition = 0;
+
+    try {
+        while (m_loading && m_loadPosition < m_loadFileSize) {
+            // 确定当前需要读取的大小
+            size_t bytesToRead = std::min(READ_CHUNK_SIZE, static_cast<size_t>(m_loadFileSize - m_loadPosition));
+
+            // 调整缓冲区大小（如果需要）
+            if (m_loadBuffer.size() < static_cast<int>(bytesToRead)) {
+                m_loadBuffer.resize(static_cast<int>(bytesToRead));
+            }
+
+            // 读取数据
+            {
+                std::lock_guard<std::mutex> lock(m_loadMutex);
+                if (!m_loadFile.seek(m_loadPosition)) {
+                    throw std::runtime_error(LocalQTCompat::fromLocal8Bit("无法定位到文件位置: ").toStdString() +
+                        std::to_string(m_loadPosition) + " - " +
+                        m_loadFile.errorString().toStdString());
+                }
+
+                qint64 bytesRead = m_loadFile.read(m_loadBuffer.data(), bytesToRead);
+                if (bytesRead <= 0) {
+                    throw std::runtime_error(LocalQTCompat::fromLocal8Bit("读取文件数据失败: ").toStdString() +
+                        m_loadFile.errorString().toStdString());
+                }
+
+                // 更新位置
+                m_loadPosition += bytesRead;
+
+                // 将数据分割成数据包并添加到队列
+                for (qint64 offset = 0; offset < bytesRead; offset += MAX_PACKET_SIZE) {
+                    qint64 packetSize = std::min(static_cast<qint64>(MAX_PACKET_SIZE),
+                        bytesRead - offset);
+
+                    // 创建数据包
+                    DataPacket packet;
+
+                    // 为数据包分配内存并复制数据
+                    uint8_t* packetData = new uint8_t[packetSize];
+                    std::memcpy(packetData, m_loadBuffer.data() + offset, packetSize);
+
+                    // 设置数据包属性
+                    // packet.setData(packetData, packetSize);
+                    packet.timestamp = QDateTime::currentMSecsSinceEpoch() * 1000000; // 当前时间（纳秒）
+
+                    // 添加到队列
+                    m_loadQueue.push(packet);
+                }
+
+                // 通知有新数据可用
+                emit signal_FSM_newDataAvailable(m_loadPosition - bytesRead, bytesRead);
+            }
+
+            // 发送进度通知（每5%发送一次）
+            double progressPercentage = static_cast<double>(m_loadPosition) / m_loadFileSize;
+            double lastProgressPercentage = static_cast<double>(lastProgressPosition) / m_loadFileSize;
+            if (progressPercentage - lastProgressPercentage >= 0.05 || m_loadPosition == m_loadFileSize) {
+                emit signal_FSM_loadProgress(m_loadPosition, m_loadFileSize);
+                lastProgressPosition = m_loadPosition;
+            }
+
+            // 避免CPU占用过高
+            if (m_loadQueue.size() > 1000) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+        }
+
+        // 加载完成
+        if (m_loadPosition >= m_loadFileSize) {
+            LOG_INFO(LocalQTCompat::fromLocal8Bit("文件加载完成"));
+            emit signal_FSM_loadCompleted(m_loadFile.fileName(), m_loadFileSize);
+        }
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件加载异常: ") + QString(e.what()));
+        emit signal_FSM_loadError(LocalQTCompat::fromLocal8Bit("文件加载异常: ") + QString(e.what()));
+    }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("加载线程已退出"));
+}
+
+void FileManager::resetFileWriter()
 {
     if (m_useAsyncWriter) {
         m_fileWriter = std::make_unique<WriterFileAsync>();
@@ -183,7 +326,7 @@ void FileSaveManager::resetFileWriter()
     }
 }
 
-void FileSaveManager::saveDataBatch(const DataPacketBatch& packets)
+void FileManager::saveDataBatch(const DataPacketBatch& packets)
 {
     if (packets.empty()) {
         return;
@@ -262,7 +405,7 @@ void FileSaveManager::saveDataBatch(const DataPacketBatch& packets)
     }
 }
 
-bool FileSaveManager::startSaving()
+bool FileManager::startSaving()
 {
     if (m_running) {
         LOG_WARN(LocalQTCompat::fromLocal8Bit("保存已在进行中"));
@@ -310,7 +453,7 @@ bool FileSaveManager::startSaving()
 
     // 启动保存线程
     try {
-        m_saveThread = std::thread(&FileSaveManager::saveThreadFunction, this);
+        m_saveThread = std::thread(&FileManager::saveThreadFunction, this);
         LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存线程已启动"));
 
         // 发送状态更新信号
@@ -325,7 +468,7 @@ bool FileSaveManager::startSaving()
     }
 }
 
-bool FileSaveManager::stopSaving()
+bool FileManager::stopSaving()
 {
     if (!m_running) {
         return true;
@@ -383,7 +526,7 @@ bool FileSaveManager::stopSaving()
     return true;
 }
 
-bool FileSaveManager::pauseSaving(bool pause)
+bool FileManager::pauseSaving(bool pause)
 {
     if (!m_running) {
         LOG_WARN(LocalQTCompat::fromLocal8Bit("未进行保存，无法暂停/恢复"));
@@ -415,13 +558,13 @@ bool FileSaveManager::pauseSaving(bool pause)
     return true;
 }
 
-SaveStatistics FileSaveManager::getStatistics()
+SaveStatistics FileManager::getStatistics()
 {
     std::lock_guard<std::mutex> lock(m_statsMutex);
     return m_statistics;
 }
 
-void FileSaveManager::registerConverter(FileFormat format, std::shared_ptr<IDataConverter> converter)
+void FileManager::registerConverter(FileFormat format, std::shared_ptr<IDataConverter> converter)
 {
     if (!converter) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("尝试注册空转换器"));
@@ -432,7 +575,7 @@ void FileSaveManager::registerConverter(FileFormat format, std::shared_ptr<IData
     LOG_INFO(LocalQTCompat::fromLocal8Bit("已注册格式转换器: %1").arg(static_cast<int>(format)));
 }
 
-QStringList FileSaveManager::getSupportedFormats() const
+QStringList FileManager::getSupportedFormats() const
 {
     QStringList formats;
 
@@ -444,7 +587,7 @@ QStringList FileSaveManager::getSupportedFormats() const
     return formats;
 }
 
-void FileSaveManager::slot_FSM_processDataPacket(const DataPacket& packet)
+void FileManager::slot_FSM_processDataPacket(const DataPacket& packet)
 {
     if (!m_running) {
         LOG_ERROR("Not running");
@@ -466,7 +609,7 @@ void FileSaveManager::slot_FSM_processDataPacket(const DataPacket& packet)
     m_dataReady.notify_one();
 }
 
-void FileSaveManager::slot_FSM_processDataBatch(const DataPacketBatch& packets)
+void FileManager::slot_FSM_processDataBatch(const DataPacketBatch& packets)
 {
     if (!m_running || packets.empty()) {
         return;
@@ -497,7 +640,7 @@ void FileSaveManager::slot_FSM_processDataBatch(const DataPacketBatch& packets)
     m_dataReady.notify_one();
 }
 
-QString FileSaveManager::createFileName(const DataPacket& packet)
+QString FileManager::createFileName(const DataPacket& packet)
 {
     std::lock_guard<std::mutex> lock(m_paramsMutex);
 
@@ -549,7 +692,7 @@ QString FileSaveManager::createFileName(const DataPacket& packet)
     return filename;
 }
 
-bool FileSaveManager::createSaveDirectory()
+bool FileManager::createSaveDirectory()
 {
     std::lock_guard<std::mutex> lock(m_paramsMutex);
 
@@ -631,7 +774,7 @@ bool FileSaveManager::createSaveDirectory()
     return true;
 }
 
-void FileSaveManager::updateStatistics(uint64_t bytesWritten)
+void FileManager::updateStatistics(uint64_t bytesWritten)
 {
     std::lock_guard<std::mutex> lock(m_statsMutex);
 
@@ -657,7 +800,7 @@ void FileSaveManager::updateStatistics(uint64_t bytesWritten)
     }
 }
 
-bool FileSaveManager::saveMetadata()
+bool FileManager::saveMetadata()
 {
     if (!m_saveParams.saveMetadata) {
         return true;
@@ -696,7 +839,7 @@ bool FileSaveManager::saveMetadata()
 }
 
 // #define FILE_SAVE_DBG
-void FileSaveManager::saveThreadFunction()
+void FileManager::saveThreadFunction()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("保存线程已启动"));
 

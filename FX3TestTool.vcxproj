@@ -125,7 +125,7 @@
     <ClCompile Include="Source\Core\USBDevice.cpp" />
     <ClCompile Include="Source\File\WriterFileAsync.cpp" />
     <ClCompile Include="Source\File\DataCacheManager.cpp" />
-    <ClCompile Include="Source\File\FileSaveManager.cpp" />
+    <ClCompile Include="Source\File\FileManager.cpp" />
     <ClCompile Include="Source\File\WriterFileStandard.cpp" />
     <ClCompile Include="Source\Main\main.cpp" />
     <ClCompile Include="Source\MVC\Controllers\ChannelSelectController.cpp" />
@@ -136,11 +136,11 @@
     <ClCompile Include="Source\MVC\Controllers\UpdateDeviceController.cpp" />
     <ClCompile Include="Source\MVC\Controllers\VideoDisplayController.cpp" />
     <ClCompile Include="Source\MVC\Controllers\WaveformAnalysisController.cpp" />
-    <ClCompile Include="Source\MVC\Controllers\FileSaveController.cpp" />
+    <ClCompile Include="Source\MVC\Controllers\FileOperationController.cpp" />
     <ClCompile Include="Source\MVC\Models\ChannelSelectModel.cpp" />
     <ClCompile Include="Source\MVC\Models\DataAnalysisModel.cpp" />
     <ClCompile Include="Source\MVC\Models\DeviceModel.cpp" />
-    <ClCompile Include="Source\MVC\Models\FileSaveModel.cpp" />
+    <ClCompile Include="Source\MVC\Models\FileOperationModel.cpp" />
     <ClCompile Include="Source\MVC\Models\FX3MainModel.cpp" />
     <ClCompile Include="Source\MVC\Models\MenuModel.cpp" />
     <ClCompile Include="Source\MVC\Models\UpdateDeviceModel.cpp" />
@@ -150,7 +150,7 @@
     <ClCompile Include="Source\MVC\Views\DataAnalysisView.cpp" />
     <ClCompile Include="Source\MVC\Views\DataVisualization.cpp" />
     <ClCompile Include="Source\MVC\Views\DeviceView.cpp" />
-    <ClCompile Include="Source\MVC\Views\FileSaveView.cpp" />
+    <ClCompile Include="Source\MVC\Views\FileOperationView.cpp" />
     <ClCompile Include="Source\MVC\Views\FX3MainView.cpp" />
     <ClCompile Include="Source\MVC\Views\MenuView.cpp" />
     <ClCompile Include="Source\MVC\Views\UpdateDeviceView.cpp" />
@@ -167,15 +167,15 @@
     <QtMoc Include="Source\MVC\Controllers\VideoDisplayController.h" />
     <QtMoc Include="Source\MVC\Controllers\WaveformAnalysisController.h" />
     <QtMoc Include="Source\MVC\Controllers\DataAnalysisController.h" />
-    <QtMoc Include="Source\MVC\Controllers\FileSaveController.h" />
+    <QtMoc Include="Source\MVC\Controllers\FileOperationController.h" />
     <QtMoc Include="Source\Analysis\IndexGenerator.h" />
     <QtMoc Include="Source\Analysis\DataAccessService.h" />
+    <ClInclude Include="Source\Analysis\DataPacket.h" />
     <ClInclude Include="Source\Analysis\IIndexAccess.h" />
-    <ClInclude Include="Source\Core\DataPacket.h" />
     <QtMoc Include="Source\MVC\Controllers\DeviceController.h" />
     <QtMoc Include="Source\MVC\Models\ChannelSelectModel.h" />
     <QtMoc Include="Source\MVC\Models\DataAnalysisModel.h" />
-    <QtMoc Include="Source\MVC\Models\FileSaveModel.h" />
+    <QtMoc Include="Source\MVC\Models\FileOperationModel.h" />
     <QtMoc Include="Source\MVC\Models\FX3MainModel.h" />
     <QtMoc Include="Source\MVC\Models\UpdateDeviceModel.h" />
     <QtMoc Include="Source\MVC\Models\VideoDisplayModel.h" />
@@ -191,7 +191,7 @@
     <ClInclude Include="Source\Core\DeviceState.h" />
     <ClInclude Include="Source\Core\DeviceTransferStats.h" />
     <QtMoc Include="Source\Core\ModuleManager.h" />
-    <QtMoc Include="Source\MVC\Views\FileSaveView.h" />
+    <QtMoc Include="Source\MVC\Views\FileOperationView.h" />
     <QtMoc Include="Source\Core\MainUiStateManager.h" />
     <QtMoc Include="Source\MVC\Views\DataVisualization.h" />
     <ClInclude Include="Source\MVC\Views\IDeviceView.h" />
@@ -211,7 +211,7 @@
     <QtMoc Include="Source\Core\FX3DeviceManager.h" />
     <QtMoc Include="Source\Core\USBDevice.h" />
     <ClInclude Include="Source\File\DataConverters.h" />
-    <QtMoc Include="Source\File\FileSaveManager.h" />
+    <QtMoc Include="Source\File\FileManager.h" />
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="resource\Resource.qrc" />

@@ -27,7 +27,7 @@ MainUiStateManager::MainUiStateManager(Ui::FX3ToolMainWin& ui, QObject* parent)
     , m_dataAnalysisTabIndex(-1)
     , m_videoDisplayTabIndex(-1)
     , m_waveformTabIndex(-1)
-    , m_fileSaveTabIndex(-1)
+    , m_fileOperationTabIndex(-1)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("UI状态处理器已创建"));
 
@@ -76,7 +76,7 @@ bool MainUiStateManager::initializeTabManagement(QTabWidget* mainTabWidget)
     m_dataAnalysisTabIndex = -1;
     m_videoDisplayTabIndex = -1;
     m_waveformTabIndex = -1;
-    m_fileSaveTabIndex = -1;
+    m_fileOperationTabIndex = -1;
 
     // 设置默认标签页为日志
     m_mainTabWidget->setCurrentIndex(0);

@@ -12,8 +12,8 @@
 #include "VideoDisplayController.h"
 #include "WaveformAnalysisView.h"
 #include "WaveformAnalysisController.h"
-#include "FileSaveView.h"
-#include "FileSaveController.h"
+#include "FileOperationView.h"
+#include "FileOperationController.h"
 #include "UpdateDeviceView.h"
 #include "UpdateDeviceController.h"
 #include "Logger.h"
@@ -65,7 +65,7 @@ bool ModuleManager::initialize()
         m_dataAnalysisTabIndex = -1;
         m_videoDisplayTabIndex = -1;
         m_waveformAnalysisTabIndex = -1;
-        m_fileSaveTabIndex = -1;
+        m_fileOperationTabIndex = -1;
         m_UpdateDeviceTabIndex = -1;
 
         LOG_INFO(LocalQTCompat::fromLocal8Bit("模块管理器初始化完成"));
@@ -103,8 +103,8 @@ void ModuleManager::prepareForShutdown()
         m_waveformAnalysisController.reset();
     }
 
-    if (m_fileSaveController) {
-        m_fileSaveController.reset();
+    if (m_fileOperationController) {
+        m_fileOperationController.reset();
     }
 
     if (m_UpdateDeviceController) {
@@ -241,26 +241,26 @@ bool ModuleManager::showModule(ModuleType type)
 
         case ModuleType::FILE_OPTIONS:
             if (!m_moduleInitialized[type]) {
-                if (!createFileSaveModule()) {
+                if (!createFileOperationModule()) {
                     return false;
                 }
             }
 
-            if (m_mainView && m_fileSaveView) {
-                if (m_fileSaveTabIndex >= 0) {
-                    m_mainView->showModuleTab(m_fileSaveTabIndex,
-                        m_fileSaveView.get(),
+            if (m_mainView && m_fileOperationView) {
+                if (m_fileOperationTabIndex >= 0) {
+                    m_mainView->showModuleTab(m_fileOperationTabIndex,
+                        m_fileOperationView.get(),
                         LocalQTCompat::fromLocal8Bit("文件保存"));
                 }
                 else {
-                    m_fileSaveTabIndex = -1;
-                    m_mainView->addModuleToMainTab(m_fileSaveView.get(),
+                    m_fileOperationTabIndex = -1;
+                    m_mainView->addModuleToMainTab(m_fileOperationView.get(),
                         LocalQTCompat::fromLocal8Bit("文件保存"),
-                        m_fileSaveTabIndex);
+                        m_fileOperationTabIndex);
                 }
 
                 // 更新映射表（显示已有标签页）
-                updateTabIndexMapping(m_fileSaveTabIndex, type);
+                updateTabIndexMapping(m_fileOperationTabIndex, type);
 
                 m_moduleVisibility[type] = true;
                 emit signal_moduleVisibilityChanged(type, true);
@@ -374,11 +374,11 @@ void ModuleManager::closeModule(ModuleType type)
             break;
 
         case ModuleType::FILE_OPTIONS:
-            if (m_mainView && m_fileSaveTabIndex >= 0) {
+            if (m_mainView && m_fileOperationTabIndex >= 0) {
                 int oldIndex = m_channelConfigTabIndex;
-                m_mainView->removeModuleTab(m_fileSaveTabIndex);
+                m_mainView->removeModuleTab(m_fileOperationTabIndex);
                 removeTabIndexMapping(oldIndex);
-                m_fileSaveTabIndex = -1;
+                m_fileOperationTabIndex = -1;
                 m_moduleVisibility[type] = false;
                 emit signal_moduleVisibilityChanged(type, false);
             }
@@ -514,7 +514,7 @@ void ModuleManager::notifyDeviceConnection(bool connected)
     }
 
     // 通知文件保存模块
-    if (m_moduleInitialized[ModuleType::FILE_OPTIONS] && m_fileSaveController) {
+    if (m_moduleInitialized[ModuleType::FILE_OPTIONS] && m_fileOperationController) {
         // 文件保存模块可能不需要直接响应设备连接状态
     }
 
@@ -544,20 +544,20 @@ void ModuleManager::notifyTransferState(bool transferring)
     }
 
     // 通知文件保存模块
-    if (m_moduleInitialized[ModuleType::FILE_OPTIONS] && m_fileSaveController) {
+    if (m_moduleInitialized[ModuleType::FILE_OPTIONS] && m_fileOperationController) {
         // 假设控制器提供了传输状态通知方法，实际上可能是开始或停止保存
         if (transferring) {
             // 仅在设置了自动保存时才自动开始保存
-            // bool autoSave = FileSaveModel::getInstance()->getOption("autoSaveOnTransfer", false).toBool();
+            // bool autoSave = FileOperationModel::getInstance()->getOption("autoSaveOnTransfer", false).toBool();
             // if (autoSave) {
-            //     m_fileSaveController->startSaving();
+            //     m_fileOperationController->startSaving();
             // }
         }
         else {
             // 传输停止时可能需要停止保存
-            // bool autoStop = FileSaveModel::getInstance()->getOption("autoStopOnTransferEnd", false).toBool();
-            // if (autoStop && m_fileSaveController->isSaving()) {
-            //     m_fileSaveController->stopSaving();
+            // bool autoStop = FileOperationModel::getInstance()->getOption("autoStopOnTransferEnd", false).toBool();
+            // if (autoStop && m_fileOperationController->isSaving()) {
+            //     m_fileOperationController->stopSaving();
             // }
         }
     }
@@ -624,7 +624,7 @@ void ModuleManager::handleModuleTabClosed(int index)
         break;
 
     case ModuleType::FILE_OPTIONS:
-        m_fileSaveTabIndex = -1;
+        m_fileOperationTabIndex = -1;
         m_moduleVisibility[moduleType] = false;
         break;
 
@@ -653,31 +653,31 @@ void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
     }
 
     if (m_moduleInitialized[ModuleType::FILE_OPTIONS]) {
-        if (m_fileSaveController) {
+        if (m_fileOperationController) {
             // 必须实时保存文件，这是数据分析、视频显示的基础
-            if (m_fileSaveController->isSaving()) {
+            if (m_fileOperationController->isSaving()) {
 #if 0
                 LOG_INFO(QString("保存状态：正在保存中，处理%1个数据包").arg(packets.size()));
 #endif
                 // 处理所有数据包
                 for (const auto& packet : packets) {
-                    m_fileSaveController->slot_FS_C_processDataPacket(packet);
+                    m_fileOperationController->slot_FS_C_processDataPacket(packet);
                 }
             }
             else {
                 // 检查是否启用了自动保存
-                bool autoSave = m_fileSaveController->slot_FS_C_isAutoSaveEnabled();
+                bool autoSave = m_fileOperationController->slot_FS_C_isAutoSaveEnabled();
                 if (autoSave) {
                     LOG_INFO("自动保存已启用，启动保存");
 
                     // 将文件目录设置到数据分析模块中
-                    m_dataAnalysisController->setDataSource(m_fileSaveController->getCurrentFileName());
+                    m_dataAnalysisController->setDataSource(m_fileOperationController->getCurrentFileName());
 
-                    if (m_fileSaveController->slot_FS_C_startSaving()) {
+                    if (m_fileOperationController->slot_FS_C_startSaving()) {
                         // 延迟100ms确保保存状态已更新
                         QTimer::singleShot(100, [this, packets]() {
                             for (const auto& packet : packets) {
-                                m_fileSaveController->slot_FS_C_processDataPacket(packet);
+                                m_fileOperationController->slot_FS_C_processDataPacket(packet);
                             }
                             });
                     }
@@ -883,40 +883,40 @@ bool ModuleManager::createWaveformAnalysisModule()
     }
 }
 
-bool ModuleManager::createFileSaveModule()
+bool ModuleManager::createFileOperationModule()
 {
     try {
         LOG_INFO(LocalQTCompat::fromLocal8Bit("创建文件保存模块"));
 
         // 创建视图
-        m_fileSaveView = std::make_unique<FileSaveView>(m_mainView);
+        m_fileOperationView = std::make_unique<FileOperationView>(m_mainView);
 
         // 获取控制器（可能已经是一个单例或需要参数）
-        m_fileSaveController = std::make_shared<FileSaveController>(m_mainView);
+        m_fileOperationController = std::make_shared<FileOperationController>(m_mainView);
 
         // 初始化控制器
-        if (!m_fileSaveController->initialize()) {
+        if (!m_fileOperationController->initialize()) {
             LOG_ERROR(LocalQTCompat::fromLocal8Bit("初始化文件保存控制器失败"));
             throw std::runtime_error("初始化文件保存控制器失败");
         }
 
         // 连接视图与控制器的信号
-        connect(m_fileSaveView.get(), &FileSaveView::signal_FS_V_startSaveRequested,
-            m_fileSaveController.get(), &FileSaveController::slot_FS_C_startSaving);
-        connect(m_fileSaveView.get(), &FileSaveView::signal_FS_V_stopSaveRequested,
-            m_fileSaveController.get(), &FileSaveController::slot_FS_C_stopSaving);
-        connect(m_fileSaveView.get(), &FileSaveView::signal_FS_V_saveParametersChanged,
-            m_fileSaveController.get(), &FileSaveController::slot_FS_C_onViewParametersChanged);
+        connect(m_fileOperationView.get(), &FileOperationView::signal_FS_V_startSaveRequested,
+            m_fileOperationController.get(), &FileOperationController::slot_FS_C_startSaving);
+        connect(m_fileOperationView.get(), &FileOperationView::signal_FS_V_stopSaveRequested,
+            m_fileOperationController.get(), &FileOperationController::slot_FS_C_stopSaving);
+        connect(m_fileOperationView.get(), &FileOperationView::signal_FS_V_saveParametersChanged,
+            m_fileOperationController.get(), &FileOperationController::slot_FS_C_onViewParametersChanged);
 
         // 连接控制器到视图的信号
-        connect(m_fileSaveController.get(), &FileSaveController::signal_FS_C_saveStarted,
-            m_fileSaveView.get(), &FileSaveView::slot_FS_V_onSaveStarted);
-        connect(m_fileSaveController.get(), &FileSaveController::signal_FS_C_saveStopped,
-            m_fileSaveView.get(), &FileSaveView::slot_FS_V_onSaveStopped);
-        connect(m_fileSaveController.get(), &FileSaveController::signal_FS_C_saveCompleted,
-            m_fileSaveView.get(), &FileSaveView::slot_FS_V_onSaveCompleted);
-        connect(m_fileSaveController.get(), &FileSaveController::signal_FS_C_saveError,
-            m_fileSaveView.get(), &FileSaveView::slot_FS_V_onSaveError);
+        connect(m_fileOperationController.get(), &FileOperationController::signal_FS_C_saveStarted,
+            m_fileOperationView.get(), &FileOperationView::slot_FS_V_onSaveStarted);
+        connect(m_fileOperationController.get(), &FileOperationController::signal_FS_C_saveStopped,
+            m_fileOperationView.get(), &FileOperationView::slot_FS_V_onSaveStopped);
+        connect(m_fileOperationController.get(), &FileOperationController::signal_FS_C_saveCompleted,
+            m_fileOperationView.get(), &FileOperationView::slot_FS_V_onSaveCompleted);
+        connect(m_fileOperationController.get(), &FileOperationController::signal_FS_C_saveError,
+            m_fileOperationView.get(), &FileOperationView::slot_FS_V_onSaveError);
 
         // 标记为已初始化
         m_moduleInitialized[ModuleType::FILE_OPTIONS] = true;
@@ -928,8 +928,8 @@ bool ModuleManager::createFileSaveModule()
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("创建文件保存模块异常: %1").arg(e.what()));
 
         // 清理失败的资源
-        m_fileSaveView.reset();
-        m_fileSaveController.reset();
+        m_fileOperationView.reset();
+        m_fileOperationController.reset();
 
         return false;
     }
@@ -1021,7 +1021,7 @@ ModuleManager::ModuleType ModuleManager::findModuleTypeByTabIndex(int index) con
     else if (index == m_waveformAnalysisTabIndex) {
         return ModuleType::WAVEFORM_ANALYSIS;
     }
-    else if (index == m_fileSaveTabIndex) {
+    else if (index == m_fileOperationTabIndex) {
         return ModuleType::FILE_OPTIONS;
     }
     else if (index == m_UpdateDeviceTabIndex) {
@@ -1041,7 +1041,7 @@ void ModuleManager::updateTabIndicesAfterClose(int closedIndex)
     if (m_dataAnalysisTabIndex > closedIndex) m_dataAnalysisTabIndex--;
     if (m_videoDisplayTabIndex > closedIndex) m_videoDisplayTabIndex--;
     if (m_waveformAnalysisTabIndex > closedIndex) m_waveformAnalysisTabIndex--;
-    if (m_fileSaveTabIndex > closedIndex) m_fileSaveTabIndex--;
+    if (m_fileOperationTabIndex > closedIndex) m_fileOperationTabIndex--;
     if (m_UpdateDeviceTabIndex > closedIndex) m_UpdateDeviceTabIndex--;
 
     // 更新映射表中的索引

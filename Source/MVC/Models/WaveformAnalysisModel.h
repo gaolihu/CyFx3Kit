@@ -28,12 +28,11 @@ public:
 
     /**
      * @brief 加载指定文件的数据
-     * @param filename 文件名
      * @param startIndex 起始索引
      * @param length 数据长度
      * @return 是否加载成功
      */
-    bool loadData(const QString& filename, int startIndex, int length);
+    bool loadData(int startIndex, int length);
 
     /**
      * @brief 异步加载波形数据

@@ -1,48 +1,48 @@
-﻿// Source/MVC/Models/FileSaveModel.cpp
-#include "FileSaveModel.h"
+﻿// Source/MVC/Models/FileOperationModel.cpp
+#include "FileOperationModel.h"
 #include "Logger.h"
 #include <QSettings>
 #include <QDir>
 #include <QDate>
 
-FileSaveModel* FileSaveModel::getInstance()
+FileOperationModel* FileOperationModel::getInstance()
 {
-    static FileSaveModel s;
+    static FileOperationModel s;
     return &s;
 }
 
-FileSaveModel::FileSaveModel()
+FileOperationModel::FileOperationModel()
     : QObject(nullptr)
-    , m_saveManager(FileSaveManager::instance())
+    , m_fileManager(FileManager::instance())
     , m_status(SaveStatus::FS_IDLE)
 {
-    // 将FileSaveManager的信号连接到Model的信号
-    connect(&m_saveManager, &FileSaveManager::signal_FSM_saveStatusChanged,
-        this, &FileSaveModel::onSaveManagerStatusChanged);
-    connect(&m_saveManager, &FileSaveManager::signal_FSM_saveProgressUpdated,
-        this, &FileSaveModel::onSaveManagerProgressUpdated);
-    connect(&m_saveManager, &FileSaveManager::signal_FSM_saveCompleted,
-        this, &FileSaveModel::onSaveManagerCompleted);
-    connect(&m_saveManager, &FileSaveManager::signal_FSM_saveError,
-        this, &FileSaveModel::onSaveManagerError);
+    // 将FileManager的信号连接到Model的信号
+    connect(&m_fileManager, &FileManager::signal_FSM_saveStatusChanged,
+        this, &FileOperationModel::onSaveManagerStatusChanged);
+    connect(&m_fileManager, &FileManager::signal_FSM_saveProgressUpdated,
+        this, &FileOperationModel::onSaveManagerProgressUpdated);
+    connect(&m_fileManager, &FileManager::signal_FSM_saveCompleted,
+        this, &FileOperationModel::onSaveManagerCompleted);
+    connect(&m_fileManager, &FileManager::signal_FSM_saveError,
+        this, &FileOperationModel::onSaveManagerError);
 
     // 从Manager同步初始状态
     syncFromManager();
     LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存模型已创建"));
 }
 
-FileSaveModel::~FileSaveModel()
+FileOperationModel::~FileOperationModel()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存模型已销毁"));
 }
 
-SaveParameters FileSaveModel::getSaveParameters() const
+SaveParameters FileOperationModel::getSaveParameters() const
 {
     QMutexLocker locker(&m_dataMutex);
     return m_parameters;
 }
 
-void FileSaveModel::setSaveParameters(const SaveParameters& parameters)
+void FileOperationModel::setSaveParameters(const SaveParameters& parameters)
 {
     // 创建一个参数副本
     SaveParameters modifiedParams = parameters;
@@ -50,8 +50,8 @@ void FileSaveModel::setSaveParameters(const SaveParameters& parameters)
     // 始终强制使用RAW格式
     modifiedParams.format = FileFormat::RAW;
 
-    // 将修改后的参数传递给FileSaveManager
-    m_saveManager.setSaveParameters(modifiedParams);
+    // 将修改后的参数传递给FileManager
+    m_fileManager.setSaveParameters(modifiedParams);
 
     // 同步状态
     syncFromManager();
@@ -60,61 +60,61 @@ void FileSaveModel::setSaveParameters(const SaveParameters& parameters)
     LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存参数已更新，已强制设置为RAW格式"));
 }
 
-bool FileSaveModel::startSaving()
+bool FileOperationModel::startSaving()
 {
-    return m_saveManager.startSaving();
+    return m_fileManager.startSaving();
 }
 
-bool FileSaveModel::stopSaving()
+bool FileOperationModel::stopSaving()
 {
-    return m_saveManager.stopSaving();
+    return m_fileManager.stopSaving();
 }
 
-void FileSaveModel::processDataPacket(const DataPacket& packet)
+void FileOperationModel::processDataPacket(const DataPacket& packet)
 {
-    m_saveManager.slot_FSM_processDataPacket(packet);
+    m_fileManager.slot_FSM_processDataPacket(packet);
 }
 
-// 同步FileSaveManager的状态到Model
-void FileSaveModel::syncFromManager()
+// 同步FileManager的状态到Model
+void FileOperationModel::syncFromManager()
 {
-    m_parameters = m_saveManager.getSaveParameters();
-    SaveStatistics stats = m_saveManager.getStatistics();
+    m_parameters = m_fileManager.getSaveParameters();
+    SaveStatistics stats = m_fileManager.getStatistics();
     updateStatistics(stats);
     setStatus(stats.status);
 }
 
-// FileSaveManager信号处理函数
-void FileSaveModel::onSaveManagerStatusChanged(SaveStatus status)
+// FileManager信号处理函数
+void FileOperationModel::onSaveManagerStatusChanged(SaveStatus status)
 {
     setStatus(status);
 }
 
-void FileSaveModel::onSaveManagerProgressUpdated(const SaveStatistics& stats)
+void FileOperationModel::onSaveManagerProgressUpdated(const SaveStatistics& stats)
 {
     updateStatistics(stats);
 }
 
-void FileSaveModel::onSaveManagerCompleted(const QString& path, uint64_t totalBytes)
+void FileOperationModel::onSaveManagerCompleted(const QString& path, uint64_t totalBytes)
 {
     // 更新状态并转发信号
     setStatus(SaveStatus::FS_COMPLETED);
     emit signal_FS_M_saveCompleted(path, totalBytes);
 }
 
-void FileSaveModel::onSaveManagerError(const QString& error)
+void FileOperationModel::onSaveManagerError(const QString& error)
 {
     // 更新状态并转发信号
     setStatus(SaveStatus::FS_ERROR);
     emit signal_FS_M_saveError(error);
 }
 
-SaveStatus FileSaveModel::getStatus() const
+SaveStatus FileOperationModel::getStatus() const
 {
     return m_status.load();
 }
 
-void FileSaveModel::setStatus(SaveStatus status)
+void FileOperationModel::setStatus(SaveStatus status)
 {
     SaveStatus oldStatus = m_status.exchange(status);
 
@@ -131,13 +131,13 @@ void FileSaveModel::setStatus(SaveStatus status)
     }
 }
 
-SaveStatistics FileSaveModel::getStatistics() const
+SaveStatistics FileOperationModel::getStatistics() const
 {
     QMutexLocker locker(&m_dataMutex);
     return m_statistics;
 }
 
-void FileSaveModel::updateStatistics(const SaveStatistics& statistics)
+void FileOperationModel::updateStatistics(const SaveStatistics& statistics)
 {
     {
         QMutexLocker locker(&m_dataMutex);
@@ -147,7 +147,7 @@ void FileSaveModel::updateStatistics(const SaveStatistics& statistics)
     emit signal_FS_M_statisticsUpdated(statistics);
 }
 
-void FileSaveModel::resetStatistics()
+void FileOperationModel::resetStatistics()
 {
     SaveStatistics statistics;
     statistics.startTime = QDateTime::currentDateTime();
@@ -157,7 +157,7 @@ void FileSaveModel::resetStatistics()
     LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存统计已重置"));
 }
 
-QString FileSaveModel::getFullSavePath() const
+QString FileOperationModel::getFullSavePath() const
 {
     QMutexLocker locker(&m_dataMutex);
 
@@ -172,19 +172,19 @@ QString FileSaveModel::getFullSavePath() const
     return path;
 }
 
-QVariant FileSaveModel::getOption(const QString& key, const QVariant& defaultValue) const
+QVariant FileOperationModel::getOption(const QString& key, const QVariant& defaultValue) const
 {
     QMutexLocker locker(&m_dataMutex);
     return m_parameters.options.value(key, defaultValue);
 }
 
-void FileSaveModel::setOption(const QString& key, const QVariant& value)
+void FileOperationModel::setOption(const QString& key, const QVariant& value)
 {
     QMutexLocker locker(&m_dataMutex);
     m_parameters.options[key] = value;
 }
 
-void FileSaveModel::setImageParameters(uint16_t width, uint16_t height, uint8_t format)
+void FileOperationModel::setImageParameters(uint16_t width, uint16_t height, uint8_t format)
 {
     QMutexLocker locker(&m_dataMutex);
     m_parameters.options["width"] = width;
@@ -195,21 +195,21 @@ void FileSaveModel::setImageParameters(uint16_t width, uint16_t height, uint8_t 
         .arg(width).arg(height).arg(format, 2, 16, QChar('0')));
 }
 
-void FileSaveModel::setUseAsyncWriter(bool use)
+void FileOperationModel::setUseAsyncWriter(bool use)
 {
     m_useAsyncWriter = use;
     LOG_INFO(LocalQTCompat::fromLocal8Bit("异步文件写入模式: %1").arg(use ? "已启用" : "已禁用"));
 }
 
-bool FileSaveModel::isUsingAsyncWriter() const
+bool FileOperationModel::isUsingAsyncWriter() const
 {
     return m_useAsyncWriter;
 }
 
-bool FileSaveModel::saveConfigToSettings()
+bool FileOperationModel::saveConfigToSettings()
 {
     try {
-        QSettings settings("FX3Tool", "FileSaveSettings");
+        QSettings settings("FX3Tool", "FileOperationSettings");
         QMutexLocker locker(&m_dataMutex);
 
         // 保存基本设置
@@ -239,10 +239,10 @@ bool FileSaveModel::saveConfigToSettings()
     }
 }
 
-bool FileSaveModel::loadConfigFromSettings()
+bool FileOperationModel::loadConfigFromSettings()
 {
     try {
-        QSettings settings("FX3Tool", "FileSaveSettings");
+        QSettings settings("FX3Tool", "FileOperationSettings");
         SaveParameters params;
 
         // 加载基本设置
@@ -275,7 +275,7 @@ bool FileSaveModel::loadConfigFromSettings()
     }
 }
 
-void FileSaveModel::resetToDefault()
+void FileOperationModel::resetToDefault()
 {
     SaveParameters params;
 

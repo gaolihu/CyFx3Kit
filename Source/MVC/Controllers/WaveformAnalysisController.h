@@ -135,12 +135,11 @@ public slots:
 
     /**
      * @brief 加载数据
-     * @param filename 文件名
      * @param startIndex 起始索引
      * @param length 数据长度
      * @return 加载是否成功
      */
-    bool slot_WA_C_loadData(const QString& filename, int startIndex, int length);
+    bool slot_WA_C_loadData(int startIndex, int length);
 
     // bool slot_WA_C_loadSimulatedData(int length);
 

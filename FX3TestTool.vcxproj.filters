@@ -59,7 +59,7 @@
     <ClCompile Include="Source\File\DataCacheManager.cpp">
       <Filter>Source Files\File</Filter>
     </ClCompile>
-    <ClCompile Include="Source\File\FileSaveManager.cpp">
+    <ClCompile Include="Source\File\FileManager.cpp">
       <Filter>Source Files\File</Filter>
     </ClCompile>
     <ClCompile Include="Source\File\WriterFileStandard.cpp">
@@ -89,7 +89,7 @@
     <ClCompile Include="Source\MVC\Controllers\DataAnalysisController.cpp">
       <Filter>Source Files\MVC\Controllers</Filter>
     </ClCompile>
-    <ClCompile Include="Source\MVC\Controllers\FileSaveController.cpp">
+    <ClCompile Include="Source\MVC\Controllers\FileOperationController.cpp">
       <Filter>Source Files\MVC\Controllers</Filter>
     </ClCompile>
     <ClCompile Include="Source\MVC\Models\ChannelSelectModel.cpp">
@@ -98,7 +98,7 @@
     <ClCompile Include="Source\MVC\Models\DataAnalysisModel.cpp">
       <Filter>Source Files\MVC\Models</Filter>
     </ClCompile>
-    <ClCompile Include="Source\MVC\Models\FileSaveModel.cpp">
+    <ClCompile Include="Source\MVC\Models\FileOperationModel.cpp">
       <Filter>Source Files\MVC\Models</Filter>
     </ClCompile>
     <ClCompile Include="Source\MVC\Models\FX3MainModel.cpp">
@@ -158,7 +158,7 @@
     <ClCompile Include="Source\Core\ModuleManager.cpp">
       <Filter>Source Files\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\MVC\Views\FileSaveView.cpp">
+    <ClCompile Include="Source\MVC\Views\FileOperationView.cpp">
       <Filter>Source Files\MVC\Views</Filter>
     </ClCompile>
     <ClCompile Include="Source\Core\MainUiStateManager.cpp">
@@ -190,7 +190,7 @@
     <QtMoc Include="Source\Core\USBDevice.h">
       <Filter>Source Files\Core</Filter>
     </QtMoc>
-    <QtMoc Include="Source\File\FileSaveManager.h">
+    <QtMoc Include="Source\File\FileManager.h">
       <Filter>Source Files\File</Filter>
     </QtMoc>
     <QtMoc Include="Source\Utils\Logger.h">
@@ -217,7 +217,7 @@
     <QtMoc Include="Source\MVC\Controllers\DataAnalysisController.h">
       <Filter>Source Files\MVC\Controllers</Filter>
     </QtMoc>
-    <QtMoc Include="Source\MVC\Controllers\FileSaveController.h">
+    <QtMoc Include="Source\MVC\Controllers\FileOperationController.h">
       <Filter>Source Files\MVC\Controllers</Filter>
     </QtMoc>
     <QtMoc Include="Source\MVC\Models\ChannelSelectModel.h">
@@ -226,7 +226,7 @@
     <QtMoc Include="Source\MVC\Models\DataAnalysisModel.h">
       <Filter>Source Files\MVC\Models</Filter>
     </QtMoc>
-    <QtMoc Include="Source\MVC\Models\FileSaveModel.h">
+    <QtMoc Include="Source\MVC\Models\FileOperationModel.h">
       <Filter>Source Files\MVC\Models</Filter>
     </QtMoc>
     <QtMoc Include="Source\MVC\Models\FX3MainModel.h">
@@ -283,7 +283,7 @@
     <QtMoc Include="Source\Core\ModuleManager.h">
       <Filter>Source Files\Core</Filter>
     </QtMoc>
-    <QtMoc Include="Source\MVC\Views\FileSaveView.h">
+    <QtMoc Include="Source\MVC\Views\FileOperationView.h">
       <Filter>Source Files\MVC\Views</Filter>
     </QtMoc>
     <QtMoc Include="Source\Core\MainUiStateManager.h">
@@ -315,9 +315,6 @@
     <ClInclude Include="Source\Utils\ThreadHelper.h">
       <Filter>Source Files\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Core\DataPacket.h">
-      <Filter>Source Files\Core</Filter>
-    </ClInclude>
     <ClInclude Include="Source\MVC\Views\IDeviceView.h">
       <Filter>Source Files\MVC\Views</Filter>
     </ClInclude>
@@ -328,6 +325,9 @@
       <Filter>Source Files\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Analysis\IIndexAccess.h">
+      <Filter>Source Files\Analysis</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Analysis\DataPacket.h">
       <Filter>Source Files\Analysis</Filter>
     </ClInclude>
   </ItemGroup>

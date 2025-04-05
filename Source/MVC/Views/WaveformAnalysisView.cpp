@@ -79,7 +79,6 @@ void WaveformAnalysisView::connectSignals()
     connect(ui->channel3Check, &QCheckBox::stateChanged, this, &WaveformAnalysisView::slot_WA_V_onChannelCheckboxToggled);
 
     // 工具栏动作
-    connect(ui->actionLoadTestData, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onLoadTestDataTriggered);
     connect(ui->actionZoomIn, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onZoomInTriggered);
     connect(ui->actionZoomOut, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onZoomOutTriggered);
     connect(ui->actionZoomReset, &QAction::triggered, this, &WaveformAnalysisView::slot_WA_V_onZoomResetTriggered);
@@ -247,14 +246,6 @@ void WaveformAnalysisView::slot_WA_V_onChannelCheckboxToggled(int state)
         bool visible = (state == Qt::Checked);
         emit signal_WA_V_channelVisibilityChanged(channel, visible);
         update(); // 触发重绘
-    }
-}
-
-void WaveformAnalysisView::slot_WA_V_onLoadTestDataTriggered()
-{
-    if (m_controller) {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("加载测试数据"));
-        m_controller->slot_WA_C_loadData("test_data.bin", 0, 1000);
     }
 }
 
