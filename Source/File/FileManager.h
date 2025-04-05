@@ -221,10 +221,46 @@ public:
     bool startLoading(const QString& filePath);
     bool stopLoading();
     bool isLoading() const;
+    QString getCurrentFileName() const;
     DataPacket getNextPacket();
-    bool hasMorePackets() const;
+    bool hasMorePackets();
     void seekTo(uint64_t position);
-    uint64_t getTotalFileSize() const;
+    uint64_t getTotalFileSize();
+
+    /**
+     * @brief 处理批量数据
+     * @param batchData 批量数据
+     * @param offset 文件偏移
+     * @param batchId 批次ID
+     */
+    void processBatchData(const QByteArray& batchData, uint64_t offset, uint32_t batchId);
+
+    /**
+     * @brief 读取指定范围的文件数据
+     * @param filePath 文件路径
+     * @param startOffset 起始偏移
+     * @param size 数据大小
+     * @return 读取的数据
+     */
+    QByteArray readFileRange(const QString& filePath, uint64_t startOffset, uint64_t size);
+
+    /**
+     * @brief 从当前加载的文件中读取指定范围的数据
+     * @param startOffset 起始偏移
+     * @param size 数据大小
+     * @return 读取的数据
+     */
+    QByteArray readLoadedFileRange(uint64_t startOffset, uint64_t size);
+
+    /**
+     * @brief 异步读取指定范围的文件数据
+     * @param filePath 文件路径
+     * @param startOffset 起始偏移
+     * @param size 数据大小
+     * @param requestId 请求ID，用于关联响应
+     * @return 是否成功启动异步读取
+     */
+    bool readFileRangeAsync(const QString& filePath, uint64_t startOffset, uint64_t size, uint32_t requestId);
 
     std::unique_ptr<IFileWriter> m_fileWriter;
 
@@ -253,6 +289,21 @@ signals:
     void signal_FSM_loadCompleted(const QString& filePath, uint64_t totalBytes);
     void signal_FSM_loadError(const QString& error);
     void signal_FSM_newDataAvailable(uint64_t offset, uint64_t size);
+
+    /**
+     * @brief 异步数据读取完成信号
+     * @param data 读取的数据
+     * @param startOffset 起始偏移
+     * @param requestId 请求ID
+     */
+    void signal_FSM_dataReadCompleted(const QByteArray& data, uint64_t startOffset, uint32_t requestId);
+
+    /**
+     * @brief 异步数据读取错误信号
+     * @param error 错误信息
+     * @param requestId 请求ID
+     */
+    void signal_FSM_dataReadError(const QString& error, uint32_t requestId);
 
 private:
     FileManager();
@@ -283,6 +334,9 @@ private:
     // 文件加载线程函数
     void loadThreadFunction();
 
+    // 异步读取线程函数
+    void dataReadThreadFunction(const QString& filePath, uint64_t startOffset, uint64_t size, uint32_t requestId);
+
 private:
     SaveParameters m_saveParams;
     SaveStatistics m_statistics;
@@ -305,9 +359,14 @@ private:
     QElapsedTimer m_speedTimer;
     uint64_t m_lastSavedBytes;
 
+    std::mutex m_readMutex;
+    std::atomic<bool> m_asyncReadRunning{ false };
+    std::thread m_asyncReadThread;
+
     // 离线文件加载相关成员
     std::atomic<bool> m_loading{ false };
-    QFile m_loadFile;
+    QFile m_currentFile;
+    QString m_currentFilePath;
     QByteArray m_loadBuffer;
     uint64_t m_loadPosition{ 0 };
     uint64_t m_loadFileSize{ 0 };

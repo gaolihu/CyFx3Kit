@@ -12,6 +12,8 @@
 #include <memory>
 #include "IIndexAccess.h"
 
+class FileOperationController;
+
 /**
  * @brief 数据访问服务，提供统一的文件和索引访问接口
  */
@@ -174,6 +176,10 @@ public:
      */
     WaveformData readWaveformData(uint64_t packetIndex);
 
+    void setFileOperationController(FileOperationController* controller) {
+        m_fileOperationController = controller;
+    }
+
 signals:
     /**
      * @brief 数据读取完成信号
@@ -233,4 +239,7 @@ private:
 
     // 生成缓存键
     QString generateCacheKey(const QString& filename, uint64_t offset, uint32_t size);
+
+    // 文件操作控制器
+    FileOperationController* m_fileOperationController{ nullptr };
 };

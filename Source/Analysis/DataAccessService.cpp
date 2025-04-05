@@ -1,5 +1,6 @@
 ﻿// Source/Analysis/DataAccessService.cpp
 #include "DataAccessService.h"
+#include "FileOperationController.h"
 #include "Logger.h"
 #include <QtConcurrent/QtConcurrent>
 #include <QElapsedTimer>
@@ -546,7 +547,7 @@ QVector<double> DataAccessService::getChannelData(int channel, int startIndex, i
 {
     QVector<double> result;
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取通道数据: 通道=%2, 起始=%3, 长度=%4")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取通道数据: 通道=%1, 起始=%2, 长度=%3")
         .arg(channel).arg(startIndex).arg(length));
 
     if (channel < 0 || channel > 3) {
@@ -555,39 +556,28 @@ QVector<double> DataAccessService::getChannelData(int channel, int startIndex, i
     }
 
     try {
-        // 文件应该从文件缓存获取, TODO
-        QFile* file = nullptr;
-        LOG_ERROR(QString("需要从文件缓存管理器获取文件描述符"));
-        return {};
         QMutexLocker locker(&m_fileMutex);
 
-        // 定位到文件起始位置
-        if (!file->seek(startIndex)) {
-            LOG_ERROR(QString("无法定位到文件偏移位置: %1")
-                .arg(startIndex));
-            return result;
+        if (m_fileOperationController) {
+            // 使用文件操作控制器获取数据
+            QByteArray data = m_fileOperationController->slot_FS_C_getWaveformData(startIndex, startIndex + length);
+            if (!data.isEmpty()) {
+                return extractChannelData(data, channel);
+            }
+            else {
+                LOG_ERROR(LocalQTCompat::fromLocal8Bit("通过FileOperationController获取的数据为空"));
+            }
         }
-
-        // 读取指定长度的数据
-        QByteArray data = file->read(length);
-
-        if (data.size() < length) {
-            LOG_WARN(QString("读取的数据长度小于请求长度: %1 < %2")
-                .arg(data.size())
-                .arg(length));
+        else {
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("FileOperationController未设置"));
         }
-
-        // 提取指定通道的数据
-        result = extractChannelData(data, channel);
-
-        return result;
     }
     catch (const std::exception& e) {
         LOG_ERROR(QString("读取通道数据异常: %1").arg(e.what()));
-        return result;
     }
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("通道数据获取完成: 大小=%1").arg(result.size()));
+    return result;
 }
 
 QVector<double> DataAccessService::extractChannelData(const QByteArray& data, int channel)

@@ -132,6 +132,82 @@ public:
     void processDataPacket(const DataPacket& packet);
     void processDataBatch(const DataPacketBatch& packets);
 
+    /**
+     * @brief 开始加载文件
+     * @param filePath 文件路径
+     * @return 加载结果，true表示成功
+     */
+    bool startLoading(const QString& filePath);
+
+    /**
+     * @brief 停止加载文件
+     * @return 停止结果，true表示成功
+     */
+    bool stopLoading();
+
+    /**
+     * @brief 是否正在加载文件
+     * @return 是否正在加载
+     */
+    bool isLoading() const;
+
+    /**
+     * @brief 获取下一个数据包
+     * @return 数据包
+     */
+    DataPacket getNextPacket();
+
+    /**
+     * @brief 是否还有更多数据包
+     * @return 是否还有数据包
+     */
+    bool hasMorePackets() const;
+
+    /**
+     * @brief 定位到指定位置
+     * @param position 文件位置
+     */
+    void seekTo(uint64_t position);
+
+    /**
+     * @brief 获取文件总大小
+     * @return 文件大小
+     */
+    uint64_t getTotalFileSize() const;
+
+    /**
+     * @brief 读取指定范围的文件数据
+     * @param filePath 文件路径
+     * @param startOffset 起始偏移
+     * @param size 数据大小
+     * @return 读取的数据
+     */
+    QByteArray readFileRange(const QString& filePath, uint64_t startOffset, uint64_t size);
+
+    /**
+     * @brief 从当前加载的文件中读取指定范围的数据
+     * @param startOffset 起始偏移
+     * @param size 数据大小
+     * @return 读取的数据
+     */
+    QByteArray readLoadedFileRange(uint64_t startOffset, uint64_t size);
+
+    /**
+     * @brief 异步读取指定范围的文件数据
+     * @param filePath 文件路径
+     * @param startOffset 起始偏移
+     * @param size 数据大小
+     * @param requestId 请求ID，用于关联响应
+     * @return 是否成功启动异步读取
+     */
+    bool readFileRangeAsync(const QString& filePath, uint64_t startOffset, uint64_t size, uint32_t requestId);
+
+    /**
+     * @brief 获取当前加载文件的名称
+     * @return 文件名
+     */
+    QString getCurrentFileName() const;
+
 signals:
     /**
      * @brief 参数变更信号
@@ -164,6 +240,55 @@ signals:
      */
     void signal_FS_M_saveError(const QString& error);
 
+    /**
+     * @brief 加载开始信号
+     * @param filePath 文件路径
+     * @param fileSize 文件大小
+     */
+    void signal_FS_M_loadStarted(const QString& filePath, uint64_t fileSize);
+
+    /**
+     * @brief 加载进度信号
+     * @param bytesRead 已读取字节数
+     * @param totalBytes 总字节数
+     */
+    void signal_FS_M_loadProgress(uint64_t bytesRead, uint64_t totalBytes);
+
+    /**
+     * @brief 加载完成信号
+     * @param filePath 文件路径
+     * @param totalBytes 总字节数
+     */
+    void signal_FS_M_loadCompleted(const QString& filePath, uint64_t totalBytes);
+
+    /**
+     * @brief 加载错误信号
+     * @param error 错误消息
+     */
+    void signal_FS_M_loadError(const QString& error);
+
+    /**
+     * @brief 新数据可用信号
+     * @param offset 文件偏移
+     * @param size 数据大小
+     */
+    void signal_FS_M_newDataAvailable(uint64_t offset, uint64_t size);
+
+    /**
+     * @brief 异步数据读取完成信号
+     * @param data 读取的数据
+     * @param startOffset 起始偏移
+     * @param requestId 请求ID
+     */
+    void signal_FS_M_dataReadCompleted(const QByteArray& data, uint64_t startOffset, uint32_t requestId);
+
+    /**
+     * @brief 异步数据读取错误信号
+     * @param error 错误信息
+     * @param requestId 请求ID
+     */
+    void signal_FS_M_dataReadError(const QString& error, uint32_t requestId);
+
 private:
     /**
      * @brief 构造函数 (私有)
@@ -194,7 +319,8 @@ private:
     void onSaveManagerError(const QString& error);
 
 private:
-    FileManager& m_fileManager;         // 引用FileManager单例
+    FileManager& m_fileManager;             // 引用FileManager单例
+    QString m_loadedFilePath;               // 当前加载的文件路径
     SaveParameters m_parameters;            // 保存参数
     std::atomic<SaveStatus> m_status;       // 当前状态
     SaveStatistics m_statistics;            // 统计信息

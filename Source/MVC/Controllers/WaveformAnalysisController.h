@@ -10,6 +10,7 @@ class WaveformAnalysisView;
 namespace Ui { class WaveformAnalysisClass; }
 class WaveformAnalysisModel;
 class DataAccessService;
+class FileOperationController;
 
 /**
  * @brief 波形分析控制器类
@@ -66,6 +67,10 @@ public:
     bool processWaveformData(const QByteArray& data);
 
     void setTabVisible(bool visible);
+
+    void setFileOperationController(FileOperationController* controller) {
+        m_fileOperationController = controller;
+    }
 
 public slots:
     /**
@@ -277,6 +282,9 @@ private:
     Ui::WaveformAnalysisClass* m_ui;        ///< UI对象
     WaveformAnalysisModel* m_model;         ///< 模型对象
     DataAccessService* m_dataService;       ///< 数据访问服务
+
+    // 文件操作控制器
+    FileOperationController* m_fileOperationController{ nullptr };
 
     QTimer* m_updateTimer;                  ///< 更新定时器
     bool m_isRunning;                       ///< 是否正在运行

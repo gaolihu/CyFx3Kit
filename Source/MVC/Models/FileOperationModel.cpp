@@ -26,6 +26,24 @@ FileOperationModel::FileOperationModel()
     connect(&m_fileManager, &FileManager::signal_FSM_saveError,
         this, &FileOperationModel::onSaveManagerError);
 
+    // 加载相关信号连接
+    connect(&m_fileManager, &FileManager::signal_FSM_loadStarted,
+        this, &FileOperationModel::signal_FS_M_loadStarted);
+    connect(&m_fileManager, &FileManager::signal_FSM_loadProgress,
+        this, &FileOperationModel::signal_FS_M_loadProgress);
+    connect(&m_fileManager, &FileManager::signal_FSM_loadCompleted,
+        this, &FileOperationModel::signal_FS_M_loadCompleted);
+    connect(&m_fileManager, &FileManager::signal_FSM_loadError,
+        this, &FileOperationModel::signal_FS_M_loadError);
+    connect(&m_fileManager, &FileManager::signal_FSM_newDataAvailable,
+        this, &FileOperationModel::signal_FS_M_newDataAvailable);
+
+    // 数据读取相关信号连接
+    connect(&m_fileManager, &FileManager::signal_FSM_dataReadCompleted,
+        this, &FileOperationModel::signal_FS_M_dataReadCompleted);
+    connect(&m_fileManager, &FileManager::signal_FSM_dataReadError,
+        this, &FileOperationModel::signal_FS_M_dataReadError);
+
     // 从Manager同步初始状态
     syncFromManager();
     LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存模型已创建"));
@@ -73,6 +91,60 @@ bool FileOperationModel::stopSaving()
 void FileOperationModel::processDataPacket(const DataPacket& packet)
 {
     m_fileManager.slot_FSM_processDataPacket(packet);
+}
+
+bool FileOperationModel::startLoading(const QString& filePath) {
+    if (m_fileManager.startLoading(filePath)) {
+        m_loadedFilePath = filePath;
+        return true;
+    }
+    return false;
+}
+
+bool FileOperationModel::stopLoading() {
+    return m_fileManager.stopLoading();
+}
+
+bool FileOperationModel::isLoading() const {
+    return m_fileManager.isLoading();
+}
+
+DataPacket FileOperationModel::getNextPacket() {
+    return m_fileManager.getNextPacket();
+}
+
+bool FileOperationModel::hasMorePackets() const {
+    return m_fileManager.hasMorePackets();
+}
+
+void FileOperationModel::seekTo(uint64_t position) {
+    m_fileManager.seekTo(position);
+}
+
+uint64_t FileOperationModel::getTotalFileSize() const {
+    return m_fileManager.getTotalFileSize();
+}
+
+QByteArray FileOperationModel::readFileRange(const QString& filePath, uint64_t startOffset, uint64_t size) {
+    return m_fileManager.readFileRange(filePath, startOffset, size);
+}
+
+QByteArray FileOperationModel::readLoadedFileRange(uint64_t startOffset, uint64_t size) {
+    return m_fileManager.readLoadedFileRange(startOffset, size);
+}
+
+bool FileOperationModel::readFileRangeAsync(const QString& filePath, uint64_t startOffset, uint64_t size, uint32_t requestId) {
+    return m_fileManager.readFileRangeAsync(filePath, startOffset, size, requestId);
+}
+
+QString FileOperationModel::getCurrentFileName() const {
+    // 返回当前加载的文件名
+    if (m_fileManager.isLoading()) {
+        return m_loadedFilePath;
+    }
+    else {
+        return m_fileManager.getCurrentFileName();
+    }
 }
 
 // 同步FileManager的状态到Model

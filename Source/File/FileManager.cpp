@@ -180,9 +180,10 @@ bool FileManager::startLoading(const QString& filePath) {
     }
 
     // 打开文件
-    m_loadFile.setFileName(filePath);
-    if (!m_loadFile.open(QIODevice::ReadOnly)) {
-        QString error = LocalQTCompat::fromLocal8Bit("无法打开文件: ") + filePath + " - " + m_loadFile.errorString();
+    m_currentFilePath = filePath;
+    m_currentFile.setFileName(filePath);
+    if (!m_currentFile.open(QIODevice::ReadOnly)) {
+        QString error = LocalQTCompat::fromLocal8Bit("无法打开文件: ") + filePath + " - " + m_currentFile.errorString();
         LOG_ERROR(error);
         emit signal_FSM_loadError(error);
         return false;
@@ -190,7 +191,7 @@ bool FileManager::startLoading(const QString& filePath) {
 
     // 初始化加载状态
     m_loadPosition = 0;
-    m_loadFileSize = m_loadFile.size();
+    m_loadFileSize = m_currentFile.size();
     m_loading = true;
 
     // 清空加载队列
@@ -212,11 +213,90 @@ bool FileManager::startLoading(const QString& filePath) {
     }
     catch (const std::exception& e) {
         m_loading = false;
-        m_loadFile.close();
+        m_currentFile.close();
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("启动加载线程失败: ") + QString(e.what()));
         emit signal_FSM_loadError(LocalQTCompat::fromLocal8Bit("启动加载线程失败: ") + QString(e.what()));
         return false;
     }
+}
+
+bool FileManager::stopLoading() {
+    std::lock_guard<std::mutex> lock(m_loadMutex);
+
+    if (!m_loading) {
+        return true;
+    }
+
+    m_loading = false;
+
+    // 关闭文件
+    if (m_currentFile.isOpen()) {
+        m_currentFile.close();
+    }
+
+    // 等待加载线程结束
+    if (m_loadThread.joinable()) {
+        m_loadThread.join();
+    }
+
+    // 清空加载队列
+    std::queue<DataPacket> empty;
+    std::swap(m_loadQueue, empty);
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件加载已停止"));
+    return true;
+}
+
+bool FileManager::isLoading() const {
+    return m_loading;
+}
+
+QString FileManager::getCurrentFileName() const {
+    return m_currentFilePath;
+}
+
+DataPacket FileManager::getNextPacket() {
+    std::lock_guard<std::mutex> lock(m_loadMutex);
+
+    if (m_loadQueue.empty()) {
+        // 返回空数据包
+        return DataPacket();
+    }
+
+    DataPacket packet = std::move(m_loadQueue.front());
+    m_loadQueue.pop();
+    return packet;
+}
+
+bool FileManager::hasMorePackets() {
+    std::lock_guard<std::mutex> lock(m_loadMutex);
+    return !m_loadQueue.empty() || m_loadPosition < m_loadFileSize;
+}
+
+void FileManager::seekTo(uint64_t position) {
+    std::lock_guard<std::mutex> lock(m_loadMutex);
+
+    if (!m_loading || !m_currentFile.isOpen()) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法定位：文件未加载"));
+        return;
+    }
+
+    // 确保位置有效
+    position = std::min(position, m_loadFileSize);
+
+    // 设置加载位置
+    m_loadPosition = position;
+
+    // 清空加载队列
+    std::queue<DataPacket> empty;
+    std::swap(m_loadQueue, empty);
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("文件定位到: %1").arg(position));
+}
+
+uint64_t FileManager::getTotalFileSize() {
+    std::lock_guard<std::mutex> lock(m_loadMutex);
+    return m_loadFileSize;
 }
 
 void FileManager::loadThreadFunction() {
@@ -247,16 +327,16 @@ void FileManager::loadThreadFunction() {
             // 读取数据
             {
                 std::lock_guard<std::mutex> lock(m_loadMutex);
-                if (!m_loadFile.seek(m_loadPosition)) {
+                if (!m_currentFile.seek(m_loadPosition)) {
                     throw std::runtime_error(LocalQTCompat::fromLocal8Bit("无法定位到文件位置: ").toStdString() +
                         std::to_string(m_loadPosition) + " - " +
-                        m_loadFile.errorString().toStdString());
+                        m_currentFile.errorString().toStdString());
                 }
 
-                qint64 bytesRead = m_loadFile.read(m_loadBuffer.data(), bytesToRead);
+                qint64 bytesRead = m_currentFile.read(m_loadBuffer.data(), bytesToRead);
                 if (bytesRead <= 0) {
                     throw std::runtime_error(LocalQTCompat::fromLocal8Bit("读取文件数据失败: ").toStdString() +
-                        m_loadFile.errorString().toStdString());
+                        m_currentFile.errorString().toStdString());
                 }
 
                 // 更新位置
@@ -303,7 +383,7 @@ void FileManager::loadThreadFunction() {
         // 加载完成
         if (m_loadPosition >= m_loadFileSize) {
             LOG_INFO(LocalQTCompat::fromLocal8Bit("文件加载完成"));
-            emit signal_FSM_loadCompleted(m_loadFile.fileName(), m_loadFileSize);
+            emit signal_FSM_loadCompleted(m_currentFile.fileName(), m_loadFileSize);
         }
     }
     catch (const std::exception& e) {
@@ -312,6 +392,204 @@ void FileManager::loadThreadFunction() {
     }
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("加载线程已退出"));
+}
+
+void FileManager::processBatchData(const QByteArray& batchData, uint64_t offset, uint32_t batchId) {
+    if (!m_running) {
+        return;
+    }
+
+    // 创建批次数据包
+    DataPacketBatch batch;
+
+    // 计算每个包的大小
+    const size_t MAX_PACKET_SIZE = 64 * 1024; // 64KB
+    size_t remainingSize = batchData.size();
+    size_t currentOffset = 0;
+
+    // 将大块数据拆分为多个适当大小的数据包
+    while (remainingSize > 0) {
+        size_t packetSize = std::min(remainingSize, MAX_PACKET_SIZE);
+
+        // 创建数据包
+        DataPacket packet;
+        std::vector<uint8_t> packetData(packetSize);
+
+        // 复制数据
+        memcpy(packetData.data(), batchData.constData() + currentOffset, packetSize);
+        packet.data = std::make_shared<std::vector<uint8_t>>(std::move(packetData));
+
+        // 设置包元数据
+        packet.timestamp = QDateTime::currentMSecsSinceEpoch() * 1000000; // 当前时间（纳秒）
+        packet.offsetInFile = offset + currentOffset;
+        packet.batchId = batchId;
+        packet.packetIndex = batch.size();
+
+        // 添加到批次
+        batch.push_back(std::move(packet));
+
+        // 更新进度
+        currentOffset += packetSize;
+        remainingSize -= packetSize;
+    }
+
+    // 设置批次完成标志
+    if (!batch.empty()) {
+        batch.back().isBatchComplete = true;
+    }
+
+    // 处理批次
+    slot_FSM_processDataBatch(batch);
+}
+
+QByteArray FileManager::readFileRange(const QString& filePath, uint64_t startOffset, uint64_t size) {
+    QFile file(filePath);
+
+    if (!file.open(QIODevice::ReadOnly)) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法打开文件进行读取: %1 - %2")
+            .arg(filePath)
+            .arg(file.errorString()));
+        return QByteArray();
+    }
+
+    // 获取文件大小
+    uint64_t fileSize = file.size();
+
+    // 验证偏移范围
+    if (startOffset >= fileSize) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("读取偏移超出文件大小: %1 >= %2")
+            .arg(startOffset)
+            .arg(fileSize));
+        file.close();
+        return QByteArray();
+    }
+
+    // 调整读取大小
+    uint64_t actualSize = std::min(size, fileSize - startOffset);
+
+    // 定位到指定位置
+    if (!file.seek(startOffset)) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法定位到文件位置 %1: %2")
+            .arg(startOffset)
+            .arg(file.errorString()));
+        file.close();
+        return QByteArray();
+    }
+
+    // 读取数据
+    QByteArray data = file.read(actualSize);
+    file.close();
+
+    if (static_cast<uint64_t>(data.size()) != actualSize) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("读取数据不完整: 请求 %1 字节，实际读取 %2 字节")
+            .arg(actualSize)
+            .arg(data.size()));
+    }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("成功从文件 %1 读取 %2 字节数据, 偏移: %3")
+        .arg(filePath)
+        .arg(data.size())
+        .arg(startOffset));
+
+    return data;
+}
+
+QByteArray FileManager::readLoadedFileRange(uint64_t startOffset, uint64_t size) {
+    std::lock_guard<std::mutex> lock(m_loadMutex);
+
+    if (!m_loading || !m_currentFile.isOpen()) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法读取: 文件未加载"));
+        return QByteArray();
+    }
+
+    // 验证偏移范围
+    if (startOffset >= m_loadFileSize) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("读取偏移超出文件大小: %1 >= %2")
+            .arg(startOffset)
+            .arg(m_loadFileSize));
+        return QByteArray();
+    }
+
+    // 调整读取大小
+    uint64_t actualSize = std::min(size, m_loadFileSize - startOffset);
+
+    // 定位到指定位置
+    if (!m_currentFile.seek(startOffset)) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法定位到文件位置 %1: %2")
+            .arg(startOffset)
+            .arg(m_currentFile.errorString()));
+        return QByteArray();
+    }
+
+    // 读取数据
+    QByteArray data = m_currentFile.read(actualSize);
+
+    if (static_cast<uint64_t>(data.size()) != actualSize) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("读取数据不完整: 请求 %1 字节，实际读取 %2 字节")
+            .arg(actualSize)
+            .arg(data.size()));
+    }
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("成功从当前加载文件读取 %1 字节数据, 偏移: %2")
+        .arg(data.size())
+        .arg(startOffset));
+
+    return data;
+}
+
+bool FileManager::readFileRangeAsync(const QString& filePath, uint64_t startOffset, uint64_t size, uint32_t requestId) {
+    // 检查是否已有异步读取任务在运行
+    if (m_asyncReadRunning) {
+        LOG_WARN(LocalQTCompat::fromLocal8Bit("已有异步读取任务在运行，请等待完成"));
+        emit signal_FSM_dataReadError(LocalQTCompat::fromLocal8Bit("已有异步读取任务在运行，请等待完成"), requestId);
+        return false;
+    }
+
+    // 检查文件存在性
+    if (!QFile::exists(filePath)) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件不存在: %1").arg(filePath));
+        emit signal_FSM_dataReadError(LocalQTCompat::fromLocal8Bit("文件不存在"), requestId);
+        return false;
+    }
+
+    // 启动异步读取线程
+    try {
+        m_asyncReadRunning = true;
+        m_asyncReadThread = std::thread(&FileManager::dataReadThreadFunction, this, filePath, startOffset, size, requestId);
+
+        // 分离线程，使其独立运行
+        m_asyncReadThread.detach();
+
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("已启动异步读取任务，请求ID: %1").arg(requestId));
+        return true;
+    }
+    catch (const std::exception& e) {
+        m_asyncReadRunning = false;
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("启动异步读取线程失败: %1").arg(e.what()));
+        emit signal_FSM_dataReadError(LocalQTCompat::fromLocal8Bit("启动异步读取线程失败"), requestId);
+        return false;
+    }
+}
+
+void FileManager::dataReadThreadFunction(const QString& filePath, uint64_t startOffset, uint64_t size, uint32_t requestId) {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("异步读取线程已启动，请求ID: %1").arg(requestId));
+
+    try {
+        // 读取数据
+        QByteArray data = readFileRange(filePath, startOffset, size);
+
+        // 发送读取完成信号
+        emit signal_FSM_dataReadCompleted(data, startOffset, requestId);
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("异步读取异常: %1").arg(e.what()));
+        emit signal_FSM_dataReadError(LocalQTCompat::fromLocal8Bit("异步读取异常: ") + e.what(), requestId);
+    }
+
+    // 重置运行标志
+    m_asyncReadRunning = false;
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("异步读取线程已完成，请求ID: %1").arg(requestId));
 }
 
 void FileManager::resetFileWriter()
@@ -919,11 +1197,11 @@ void FileManager::saveThreadFunction()
                         filename = filename.replace(QRegularExpression("\\.[^.]+$"), ".raw");
                     }
 
-                    QString fullPath = m_statistics.savePath + "/" + filename;
+                    m_currentFilePath = m_statistics.savePath + "/" + filename;
 
-                    if (!m_fileWriter->open(fullPath)) {
+                    if (!m_fileWriter->open(m_currentFilePath)) {
                         throw std::runtime_error(LocalQTCompat::fromLocal8Bit("无法打开文件: %1 - %2")
-                            .arg(fullPath)
+                            .arg(m_currentFilePath)
                             .arg(m_fileWriter->getLastError()).toStdString());
                     }
 
@@ -936,7 +1214,7 @@ void FileManager::saveThreadFunction()
                         m_statistics.currentFileStartTime = QDateTime::currentDateTime();
                     }
 
-                    LOG_INFO(LocalQTCompat::fromLocal8Bit("已创建新文件: %1").arg(fullPath));
+                    LOG_INFO(LocalQTCompat::fromLocal8Bit("已创建新文件: %1").arg(m_currentFilePath));
                 }
 
                 // 直接写入原始数据

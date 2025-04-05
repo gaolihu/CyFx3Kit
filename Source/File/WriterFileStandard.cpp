@@ -26,21 +26,44 @@ bool WriterFileStandard::write(const QByteArray& data) {
         return false;
     }
 
-    qint64 written = m_file.write(data);
-    if (written != data.size()) {
-        m_lastError = m_file.errorString();
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件写入错误: %1").arg(m_lastError));
-        return false;
-    }
+    // 使用批量写入以提高性能
+    static const int BUFFER_SIZE = 4 * 1024 * 1024; // 4MB缓冲区
+    static QByteArray writeBuffer;
 
-    // 刷新文件，确保数据立即写入磁盘
-    m_file.flush();
+    // 添加到缓冲区
+    writeBuffer.append(data);
+
+    // 如果缓冲区超过阈值，进行写入
+    if (writeBuffer.size() >= BUFFER_SIZE) {
+        qint64 written = m_file.write(writeBuffer);
+        if (written != writeBuffer.size()) {
+            m_lastError = m_file.errorString();
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件写入错误: %1").arg(m_lastError));
+            writeBuffer.clear();
+            return false;
+        }
+
+        writeBuffer.clear();
+    }
 
     return true;
 }
 
 bool WriterFileStandard::close() {
     if (m_isOpen) {
+        // 写入剩余缓冲区数据
+        static QByteArray& writeBuffer = *new QByteArray(); // 使用静态引用以访问前一个方法的静态变量
+
+        if (!writeBuffer.isEmpty()) {
+            qint64 written = m_file.write(writeBuffer);
+            if (written != writeBuffer.size()) {
+                m_lastError = m_file.errorString();
+                LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件关闭前写入剩余数据错误: %1").arg(m_lastError));
+            }
+
+            writeBuffer.clear();
+        }
+
         m_file.flush();
         m_file.close();
         m_isOpen = false;

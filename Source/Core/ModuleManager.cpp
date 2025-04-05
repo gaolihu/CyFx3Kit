@@ -866,6 +866,11 @@ bool ModuleManager::createWaveformAnalysisModule()
                 }
             });
 
+        // 建立波形分析控制器对文件操作控制器的引用
+        if (m_waveformAnalysisController && m_fileOperationController) {
+            m_waveformAnalysisController->setFileOperationController(m_fileOperationController.get());
+        }
+
         // 标记为已初始化
         m_moduleInitialized[ModuleType::WAVEFORM_ANALYSIS] = true;
 
@@ -899,6 +904,10 @@ bool ModuleManager::createFileOperationModule()
             LOG_ERROR(LocalQTCompat::fromLocal8Bit("初始化文件保存控制器失败"));
             throw std::runtime_error("初始化文件保存控制器失败");
         }
+
+        // 建立DataAccessService与FileOperationController的关联
+        DataAccessService::getInstance().setFileOperationController(m_fileOperationController.get());
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("已设置DataAccessService的文件操作控制器引用"));
 
         // 连接视图与控制器的信号
         connect(m_fileOperationView.get(), &FileOperationView::signal_FS_V_startSaveRequested,

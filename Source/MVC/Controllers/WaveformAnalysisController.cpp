@@ -922,7 +922,7 @@ bool WaveformAnalysisController::loadWaveformDataFromService(int startIndex, int
                 .arg(ch).arg(channelData.size()));
         }
         else {
-            LOG_WARN(LocalQTCompat::fromLocal8Bit("通道%1数据加载失败或为空").arg(ch));
+            LOG_ERROR(LocalQTCompat::fromLocal8Bit("通道%1数据加载失败或为空").arg(ch));
         }
     }
 
