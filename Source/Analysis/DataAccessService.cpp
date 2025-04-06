@@ -682,11 +682,11 @@ QByteArray DataAccessService::readRawData(int startIndex, int length) {
         .arg(startIndex).arg(length));
 
     if (!m_fileOperationController) {
-        LOG_ERROR(LocalQTCompat::fromLocal8Bit("FileOperationController未设置"));
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("没有文件操作控制器，没有数据，还没开始采集，当然没有数据"));
         return QByteArray();
     }
 
-    // Use the file operation controller to read the raw data
+    // 从文件操作控制器读取原始数据
     QByteArray data = m_fileOperationController->slot_FO_C_getWaveformData(startIndex, startIndex + length);
 
     if (data.isEmpty()) {

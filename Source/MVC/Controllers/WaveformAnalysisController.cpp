@@ -99,9 +99,6 @@ bool WaveformAnalysisController::initialize()
     // 连接信号和槽
     connectSignals();
 
-    // 生成初始测试数据
-    generateMockData();
-
     // 设置视图范围并通知界面更新
     m_model->setViewRange(0, 999);
     if (m_glWidget) {
@@ -860,6 +857,8 @@ void WaveformAnalysisController::ensureDataConsistency()
 {
     if (!m_model) return;
 
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("确保数据一致性"));
+
     // 检查所有通道数据长度
     int maxLength = 0;
     for (int ch = 0; ch < 4; ++ch) {
@@ -891,76 +890,4 @@ void WaveformAnalysisController::ensureDataConsistency()
         m_model->updateIndexData(newIndexData);
         LOG_INFO(LocalQTCompat::fromLocal8Bit("已生成 %1 个新索引数据点").arg(newIndexData.size()));
     }
-}
-
-void WaveformAnalysisController::generateMockData()
-{
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("生成测试波形数据"));
-
-    // 生成测试用的索引数据
-    const int dataPoints = 1000;
-    QVector<double> indexData;
-    indexData.reserve(dataPoints);
-    for (int i = 0; i < dataPoints; ++i) {
-        indexData.append(i);
-    }
-
-    // 更新索引数据到模型
-    m_model->updateIndexData(indexData);
-
-    // 为每个通道生成不同模式的测试数据
-    for (int ch = 0; ch < 4; ++ch) {
-        if (!m_model->isChannelEnabled(ch)) continue;
-
-        QVector<double> channelData;
-        channelData.reserve(dataPoints);
-
-        // 为不同通道生成不同特征的数据
-        switch (ch) {
-        case 0: // 通道0：方波 (0和1交替)
-            for (int i = 0; i < dataPoints; ++i) {
-                channelData.append((i / 25) % 2 ? 1.0 : 0.0);
-            }
-            break;
-
-        case 1: // 通道1：方波 (0和1交替，但频率不同)
-            for (int i = 0; i < dataPoints; ++i) {
-                channelData.append((i / 50) % 2 ? 1.0 : 0.0);
-            }
-            break;
-
-        case 2: // 通道2：脉冲波形
-            for (int i = 0; i < dataPoints; ++i) {
-                channelData.append(i % 100 < 10 ? 1.0 : 0.0);
-            }
-            break;
-
-        case 3: // 通道3：复杂的脉冲序列
-            for (int i = 0; i < dataPoints; ++i) {
-                if (i % 120 < 10) {
-                    channelData.append(1.0);
-                }
-                else if ((i + 40) % 120 < 5) {
-                    channelData.append(1.0);
-                }
-                else {
-                    channelData.append(0.0);
-                }
-            }
-            break;
-        }
-
-        // 更新通道数据到模型
-        m_model->updateChannelData(ch, channelData);
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("已为通道 %1 生成 %2 个测试数据点")
-            .arg(ch).arg(channelData.size()));
-    }
-
-    // 设置初始视图范围
-    m_model->setViewRange(0, dataPoints - 1);
-
-    // 发送数据加载成功信号，触发界面更新
-    emit m_model->signal_WA_M_dataLoaded(true);
-
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("测试数据生成完成"));
 }

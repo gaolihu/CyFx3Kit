@@ -225,11 +225,6 @@ private:
      */
     void ensureDataConsistency();
 
-    /**
-     * @brief 生成模拟测试数据
-     */
-    void generateMockData();
-
 private:
     WaveformAnalysisView* m_view;                   ///< 视图对象
     Ui::WaveformAnalysisClass* m_ui;                ///< UI对象

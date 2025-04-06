@@ -193,11 +193,12 @@ void WaveformGLWidget::slot_WF_GL_handleMouseMove(const QPoint& pos, Qt::MouseBu
             // 处理平移
             slot_WF_GL_handlePanEvent(delta);
         }
-    }
 
-    // 记录事件处理
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("OpenGL控件处理鼠标移动 - 位置: (%1, %2), 按钮: %3")
-        .arg(pos.x()).arg(pos.y()).arg(static_cast<int>(buttons)));
+        // 记录拖拽事件
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("OpenGL控件处理鼠标移动 - 位置: (%1, %2), 按钮: %3")
+            .arg(pos.x()).arg(pos.y()).arg(static_cast<int>(buttons)));
+    }
+    // 普通移动不用管
 }
 
 void WaveformGLWidget::slot_WF_GL_handleMouseRelease(const QPoint& pos, Qt::MouseButton button)

@@ -317,7 +317,7 @@ QVector<double> WaveformAnalysisModel::getChannelData(int channel) const
 
 QVector<double> WaveformAnalysisModel::getIndexData() const
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取索引数据，数据大小：%1").arg(m_indexData.size()));
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取索引数据，数据大小：%1，没有数据是正常的，不要见怪").arg(m_indexData.size()));
 
     return m_indexData;
 }

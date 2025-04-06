@@ -60,8 +60,7 @@ WaveformAnalysisView::WaveformAnalysisView(QWidget* parent)
     m_glWidget->setAttribute(Qt::WA_OpaquePaintEvent, true);
     m_glWidget->setAttribute(Qt::WA_NoSystemBackground, true);
 
-    // 重要修改：允许鼠标事件直接传递到GLWidget
-    // 不要设置WA_TransparentForMouseEvents，让GLWidget接收鼠标事件
+    // 允许鼠标事件直接传递到GLWidget
     m_glWidget->setAttribute(Qt::WA_TransparentForMouseEvents, false);
 
     // 确保正确显示
@@ -94,7 +93,6 @@ void WaveformAnalysisView::setController(WaveformAnalysisController* controller)
 
     // 将控制器设置到OpenGL控件
     if (m_glWidget && m_controller) {
-        // m_glWidget->setController(m_controller);
         LOG_INFO(LocalQTCompat::fromLocal8Bit("已将控制器设置到OpenGL控件"));
     }
 }
@@ -148,20 +146,14 @@ void WaveformAnalysisView::connectSignals()
     connect(ui->verticalScaleSlider, &QSlider::valueChanged, this, &WaveformAnalysisView::slot_WA_V_onVerticalScaleSliderChanged);
 
     // 通道可见性变更信号连接到模型
-    connect(this, &WaveformAnalysisView::signal_WA_V_channelVisibilityChanged,
-        WaveformAnalysisModel::getInstance(), &WaveformAnalysisModel::setChannelEnabled);
+    connect(this, &WaveformAnalysisView::signal_WA_V_channelVisibilityChanged, WaveformAnalysisModel::getInstance(), &WaveformAnalysisModel::setChannelEnabled);
 
     if (m_glWidget) {
-        connect(this, &WaveformAnalysisView::signal_WA_V_glMousePressed,
-            m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMousePress);
-        connect(this, &WaveformAnalysisView::signal_WA_V_glMouseMoved,
-            m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMouseMove);
-        connect(this, &WaveformAnalysisView::signal_WA_V_glMouseReleased,
-            m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMouseRelease);
-        connect(this, &WaveformAnalysisView::signal_WA_V_glMouseDoubleClicked,
-            m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMouseDoubleClick);
-        connect(this, &WaveformAnalysisView::signal_WA_V_glWheelScrolled,
-            m_glWidget, &WaveformGLWidget::slot_WF_GL_handleWheelScroll);
+        connect(this, &WaveformAnalysisView::signal_WA_V_glMousePressed, m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMousePress);
+        connect(this, &WaveformAnalysisView::signal_WA_V_glMouseMoved, m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMouseMove);
+        connect(this, &WaveformAnalysisView::signal_WA_V_glMouseReleased, m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMouseRelease);
+        connect(this, &WaveformAnalysisView::signal_WA_V_glMouseDoubleClicked, m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMouseDoubleClick);
+        connect(this, &WaveformAnalysisView::signal_WA_V_glWheelScrolled, m_glWidget, &WaveformGLWidget::slot_WF_GL_handleWheelScroll);
     }
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("信号和槽连接完成"));
@@ -184,7 +176,6 @@ void WaveformAnalysisView::paintEvent(QPaintEvent* event)
     // 首先让基类处理绘制
     QWidget::paintEvent(event);
 
-    // 仅在DEBUG构建中显示详细日志
 #ifdef QT_DEBUG
     LOG_INFO(LocalQTCompat::fromLocal8Bit("paintEvent - 事件矩形: (%1, %2, %3, %4)")
         .arg(event->rect().x())
@@ -223,7 +214,7 @@ void WaveformAnalysisView::mousePressEvent(QMouseEvent* event)
         return;
     }
 
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("鼠标按下在图表区域内 - 位置: (%1, %2)")
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("鼠标在图表区域内点击 - 位置: (%1, %2)")
         .arg(event->pos().x())
         .arg(event->pos().y()));
 
