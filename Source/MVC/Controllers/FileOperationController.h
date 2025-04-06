@@ -67,92 +67,92 @@ public slots:
      * @brief 启动保存
      * @return 启动结果，true表示成功
      */
-    bool slot_FS_C_startSaving();
+    bool slot_FO_C_startSaving();
 
     /**
      * @brief 停止保存
      * @return 停止结果，true表示成功
      */
-    bool slot_FS_C_stopSaving();
+    bool slot_FO_C_stopSaving();
 
     /**
      * @brief 显示设置视图
      * @param parent 父窗口指针
      */
-    void slot_FS_C_showSettings(QWidget* parent = nullptr);
+    void slot_FO_C_showSettings(QWidget* parent = nullptr);
 
     /**
      * @brief 处理数据包
      * @param packet 数据包
      */
-    void slot_FS_C_processDataPacket(const DataPacket& packet);
+    void slot_FO_C_processDataPacket(const DataPacket& packet);
 
     /**
      * @brief 处理数据包批次
      * @param packets 数据包批次
      */
-    void slot_FS_C_processDataBatch(const DataPacketBatch& packets);
+    void slot_FO_C_processDataBatch(const DataPacketBatch& packets);
 
     /**
      * @brief 是否启用自动保存
      * @return 是否启用自动保存
      */
-    bool slot_FS_C_isAutoSaveEnabled() const;
+    bool slot_FO_C_isAutoSaveEnabled() const;
 
     /**
      * @brief 设置是否启用自动保存
      * @param enabled 启用状态
      */
-    void slot_FS_C_setAutoSaveEnabled(bool enabled);
+    void slot_FO_C_setAutoSaveEnabled(bool enabled);
 
     /**
      * @brief 处理视图保存参数变更
      * @param parameters 新的保存参数
      */
-    void slot_FS_C_onViewParametersChanged(const SaveParameters& parameters);
+    void slot_FO_C_onViewParametersChanged(const SaveParameters& parameters);
 
     /**
      * @brief 开始加载文件
      * @param filePath 文件路径
      * @return 加载结果，true表示成功
      */
-    bool slot_FS_C_startLoading(const QString& filePath);
+    bool slot_FO_C_startLoading(const QString& filePath);
 
     /**
      * @brief 停止加载文件
      * @return 停止结果，true表示成功
      */
-    bool slot_FS_C_stopLoading();
+    bool slot_FO_C_stopLoading();
 
     /**
      * @brief 是否正在加载文件
      * @return 是否正在加载
      */
-    bool slot_FS_C_isLoading() const;
+    bool slot_FO_C_isLoading() const;
 
     /**
      * @brief 获取下一个数据包
      * @return 数据包
      */
-    DataPacket slot_FS_C_getNextPacket();
+    DataPacket slot_FO_C_getNextPacket();
 
     /**
      * @brief 是否还有更多数据包
      * @return 是否还有数据包
      */
-    bool slot_FS_C_hasMorePackets() const;
+    bool slot_FO_C_hasMorePackets() const;
 
     /**
      * @brief 定位到指定位置
      * @param position 文件位置
      */
-    void slot_FS_C_seekTo(uint64_t position);
+    void slot_FO_C_seekTo(uint64_t position);
 
     /**
      * @brief 获取文件总大小
      * @return 文件大小
      */
-    uint64_t slot_FS_C_getTotalFileSize() const;
+    uint64_t slot_FO_C_getTotalFileSize() const;
 
     /**
      * @brief 获取指定范围的文件数据
@@ -160,7 +160,7 @@ public slots:
      * @param size 数据大小
      * @return 文件数据
      */
-    QByteArray slot_FS_C_getFileData(uint64_t startOffset, uint64_t size);
+    QByteArray slot_FO_C_getFileData(uint64_t startOffset, uint64_t size);
 
     /**
  * @brief 读取指定范围的文件数据
@@ -169,7 +169,7 @@ public slots:
  * @param size 数据大小
  * @return 读取的数据
  */
-    QByteArray slot_FS_C_readFileRange(const QString& filePath, uint64_t startOffset, uint64_t size);
+    QByteArray slot_FO_C_readFileRange(const QString& filePath, uint64_t startOffset, uint64_t size);
 
     /**
      * @brief 从当前加载的文件中读取指定范围的数据
@@ -177,7 +177,7 @@ public slots:
      * @param size 数据大小
      * @return 读取的数据
      */
-    QByteArray slot_FS_C_readLoadedFileRange(uint64_t startOffset, uint64_t size);
+    QByteArray slot_FO_C_readLoadedFileRange(uint64_t startOffset, uint64_t size);
 
     /**
      * @brief 异步读取指定范围的文件数据
@@ -187,7 +187,7 @@ public slots:
      * @param requestId 请求ID，用于关联响应，可选参数，默认生成
      * @return 请求ID，可用于匹配响应
      */
-    uint32_t slot_FS_C_readFileRangeAsync(const QString& filePath, uint64_t startOffset, uint64_t size, uint32_t requestId = 0);
+    uint32_t slot_FO_C_readFileRangeAsync(const QString& filePath, uint64_t startOffset, uint64_t size, uint32_t requestId = 0);
 
     /**
      * @brief 波形分析数据查询接口 - 获取指定范围的原始数据
@@ -195,65 +195,65 @@ public slots:
      * @param endOffset 结束偏移
      * @return 读取的数据
      */
-    QByteArray slot_FS_C_getWaveformData(uint64_t startOffset, uint64_t endOffset);
+    QByteArray slot_FO_C_getWaveformData(uint64_t startOffset, uint64_t endOffset);
 
 signals:
     /**
      * @brief 保存开始信号
      */
-    void signal_FS_C_saveStarted();
+    void signal_FO_C_saveStarted();
 
     /**
      * @brief 保存停止信号
      */
-    void signal_FS_C_saveStopped();
+    void signal_FO_C_saveStopped();
 
     /**
      * @brief 保存完成信号
      * @param path 保存路径
      * @param totalBytes 总字节数
      */
-    void signal_FS_C_saveCompleted(const QString& path, uint64_t totalBytes);
+    void signal_FO_C_saveCompleted(const QString& path, uint64_t totalBytes);
 
     /**
      * @brief 保存错误信号
      * @param error 错误消息
      */
-    void signal_FS_C_saveError(const QString& error);
+    void signal_FO_C_saveError(const QString& error);
 
     /**
      * @brief 加载开始信号
      * @param filePath 文件路径
      * @param fileSize 文件大小
      */
-    void signal_FS_C_loadStarted(const QString& filePath, uint64_t fileSize);
+    void signal_FO_C_loadStarted(const QString& filePath, uint64_t fileSize);
 
     /**
      * @brief 加载进度信号
      * @param bytesRead 已读取字节数
      * @param totalBytes 总字节数
      */
-    void signal_FS_C_loadProgress(uint64_t bytesRead, uint64_t totalBytes);
+    void signal_FO_C_loadProgress(uint64_t bytesRead, uint64_t totalBytes);
 
     /**
      * @brief 加载完成信号
      * @param filePath 文件路径
      * @param totalBytes 总字节数
      */
-    void signal_FS_C_loadCompleted(const QString& filePath, uint64_t totalBytes);
+    void signal_FO_C_loadCompleted(const QString& filePath, uint64_t totalBytes);
 
     /**
      * @brief 加载错误信号
      * @param error 错误消息
      */
-    void signal_FS_C_loadError(const QString& error);
+    void signal_FO_C_loadError(const QString& error);
 
     /**
      * @brief 新数据可用信号
      * @param offset 文件偏移
      * @param size 数据大小
      */
-    void signal_FS_C_newDataAvailable(uint64_t offset, uint64_t size);
+    void signal_FO_C_newDataAvailable(uint64_t offset, uint64_t size);
 
     /**
      * @brief 数据查询结果信号
@@ -261,7 +261,7 @@ signals:
      * @param startOffset 起始偏移
      * @param size 数据大小
      */
-    void signal_FS_C_dataQueryResult(const QByteArray& data, uint64_t startOffset, uint64_t size);
+    void signal_FO_C_dataQueryResult(const QByteArray& data, uint64_t startOffset, uint64_t size);
 
     /**
      * @brief 异步数据读取完成信号
@@ -269,14 +269,14 @@ signals:
      * @param startOffset 起始偏移
      * @param requestId 请求ID
      */
-    void signal_FS_C_dataReadCompleted(const QByteArray& data, uint64_t startOffset, uint32_t requestId);
+    void signal_FO_C_dataReadCompleted(const QByteArray& data, uint64_t startOffset, uint32_t requestId);
 
     /**
      * @brief 异步数据读取错误信号
      * @param error 错误信息
      * @param requestId 请求ID
      */
-    void signal_FS_C_dataReadError(const QString& error, uint32_t requestId);
+    void signal_FO_C_dataReadError(const QString& error, uint32_t requestId);
 
     /**
      * @brief 波形数据准备完成信号
@@ -284,97 +284,97 @@ signals:
      * @param startOffset 起始偏移
      * @param endOffset 结束偏移
      */
-    void signal_FS_C_waveformDataReady(const QByteArray& data, uint64_t startOffset, uint64_t endOffset);
+    void signal_FO_C_waveformDataReady(const QByteArray& data, uint64_t startOffset, uint64_t endOffset);
 
 private slots:
     /**
      * @brief 处理模型状态变更
      * @param status 新的保存状态
      */
-    void slot_FS_C_onModelStatusChanged(SaveStatus status);
+    void slot_FO_C_onModelStatusChanged(SaveStatus status);
 
     /**
      * @brief 处理模型统计信息更新
      * @param statistics 新的统计信息
      */
-    void slot_FS_C_onModelStatisticsUpdated(const SaveStatistics& statistics);
+    void slot_FO_C_onModelStatisticsUpdated(const SaveStatistics& statistics);
 
     /**
      * @brief 处理模型保存完成
      * @param path 保存路径
      * @param totalBytes 总字节数
      */
-    void slot_FS_C_onModelSaveCompleted(const QString& path, uint64_t totalBytes);
+    void slot_FO_C_onModelSaveCompleted(const QString& path, uint64_t totalBytes);
 
     /**
      * @brief 处理模型保存错误
      * @param error 错误消息
      */
-    void slot_FS_C_onModelSaveError(const QString& error);
+    void slot_FO_C_onModelSaveError(const QString& error);
 
     /**
      * @brief 处理视图开始保存请求
      */
-    void slot_FS_C_onViewStartSaveRequested();
+    void slot_FO_C_onViewStartSaveRequested();
 
     /**
      * @brief 处理视图停止保存请求
      */
-    void slot_FS_C_onViewStopSaveRequested();
+    void slot_FO_C_onViewStopSaveRequested();
 
     /**
      * @brief 处理工作线程保存进度更新
      * @param bytesWritten 已写入字节数
      * @param fileCount 文件数量
      */
-    void slot_FS_C_onWorkerSaveProgress(uint64_t bytesWritten, int fileCount);
+    void slot_FO_C_onWorkerSaveProgress(uint64_t bytesWritten, int fileCount);
 
     /**
      * @brief 处理工作线程保存完成
      * @param path 保存路径
      * @param totalBytes 总字节数
      */
-    void slot_FS_C_onWorkerSaveCompleted(const QString& path, uint64_t totalBytes);
+    void slot_FO_C_onWorkerSaveCompleted(const QString& path, uint64_t totalBytes);
 
     /**
      * @brief 处理工作线程保存错误
      * @param error 错误消息
      */
-    void slot_FS_C_onWorkerSaveError(const QString& error);
+    void slot_FO_C_onWorkerSaveError(const QString& error);
 
     /**
      * @brief 处理模型加载开始
      * @param filePath 文件路径
      * @param fileSize 文件大小
      */
-    void slot_FS_C_onModelLoadStarted(const QString& filePath, uint64_t fileSize);
+    void slot_FO_C_onModelLoadStarted(const QString& filePath, uint64_t fileSize);
 
     /**
      * @brief 处理模型加载进度
      * @param bytesRead 已读取字节数
      * @param totalBytes 总字节数
      */
-    void slot_FS_C_onModelLoadProgress(uint64_t bytesRead, uint64_t totalBytes);
+    void slot_FO_C_onModelLoadProgress(uint64_t bytesRead, uint64_t totalBytes);
 
     /**
      * @brief 处理模型加载完成
      * @param filePath 文件路径
      * @param totalBytes 总字节数
      */
-    void slot_FS_C_onModelLoadCompleted(const QString& filePath, uint64_t totalBytes);
+    void slot_FO_C_onModelLoadCompleted(const QString& filePath, uint64_t totalBytes);
 
     /**
      * @brief 处理模型加载错误
      * @param error 错误消息
      */
-    void slot_FS_C_onModelLoadError(const QString& error);
+    void slot_FO_C_onModelLoadError(const QString& error);
 
     /**
      * @brief 处理新数据可用信号
      * @param offset 文件偏移
      * @param size 数据大小
      */
-    void slot_FS_C_onModelNewDataAvailable(uint64_t offset, uint64_t size);
+    void slot_FO_C_onModelNewDataAvailable(uint64_t offset, uint64_t size);
 
     /**
      * @brief 处理模型数据读取完成
@@ -382,14 +382,14 @@ private slots:
      * @param startOffset 起始偏移
      * @param requestId 请求ID
      */
-    void slot_FS_C_onModelDataReadCompleted(const QByteArray& data, uint64_t startOffset, uint32_t requestId);
+    void slot_FO_C_onModelDataReadCompleted(const QByteArray& data, uint64_t startOffset, uint32_t requestId);
 
     /**
      * @brief 处理模型数据读取错误
      * @param error 错误信息
      * @param requestId 请求ID
      */
-    void slot_FS_C_onModelDataReadError(const QString& error, uint32_t requestId);
+    void slot_FO_C_onModelDataReadError(const QString& error, uint32_t requestId);
 
 private:
     /**

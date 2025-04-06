@@ -35,7 +35,7 @@ FileOperationController::~FileOperationController()
 
     // 确保停止保存
     if (isSaving()) {
-        slot_FS_C_stopSaving();
+        slot_FO_C_stopSaving();
     }
 
     // 停止统计更新定时器
@@ -117,7 +117,7 @@ FileOperationView* FileOperationController::createSaveView(QWidget* parent)
     return m_currentView;
 }
 
-bool FileOperationController::slot_FS_C_startSaving()
+bool FileOperationController::slot_FO_C_startSaving()
 {
     if (isSaving()) {
         LOG_WARN(LocalQTCompat::fromLocal8Bit("文件保存已经在进行中"));
@@ -126,7 +126,7 @@ bool FileOperationController::slot_FS_C_startSaving()
 
     if (!m_initialized) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件保存控制器未初始化"));
-        emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit("文件保存控制器未初始化"));
+        emit signal_FO_C_saveError(LocalQTCompat::fromLocal8Bit("文件保存控制器未初始化"));
         return false;
     }
 
@@ -145,7 +145,7 @@ bool FileOperationController::slot_FS_C_startSaving()
         // 启动保存 - 直接使用Model的方法，Model会调用FileManager
         if (!m_model->startSaving()) {
             LOG_ERROR(LocalQTCompat::fromLocal8Bit("启动保存失败"));
-            emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit("启动保存失败"));
+            emit signal_FO_C_saveError(LocalQTCompat::fromLocal8Bit("启动保存失败"));
             return false;
         }
 
@@ -153,19 +153,19 @@ bool FileOperationController::slot_FS_C_startSaving()
         m_statsUpdateTimer.start();
 
         LOG_INFO(LocalQTCompat::fromLocal8Bit("开始保存文件到: %1").arg(m_model->getFullSavePath()));
-        emit signal_FS_C_saveStarted();
+        emit signal_FO_C_saveStarted();
         return true;
     }
     catch (const std::exception& e) {
         QString errorMsg = LocalQTCompat::fromLocal8Bit("开始保存异常: %1").arg(e.what());
         LOG_ERROR(errorMsg);
-        emit signal_FS_C_saveError(errorMsg);
+        emit signal_FO_C_saveError(errorMsg);
         return false;
     }
 }
 
 
-bool FileOperationController::slot_FS_C_stopSaving()
+bool FileOperationController::slot_FO_C_stopSaving()
 {
     if (!isSaving()) {
         LOG_WARN(LocalQTCompat::fromLocal8Bit("没有正在进行的保存任务"));
@@ -182,24 +182,24 @@ bool FileOperationController::slot_FS_C_stopSaving()
         m_model->setStatus(SaveStatus::FS_COMPLETED);
 
         LOG_INFO(LocalQTCompat::fromLocal8Bit("停止文件保存"));
-        emit signal_FS_C_saveStopped();
+        emit signal_FO_C_saveStopped();
         return true;
     }
     catch (const std::exception& e) {
         QString errorMsg = LocalQTCompat::fromLocal8Bit("停止保存异常: %1").arg(e.what());
         LOG_ERROR(errorMsg);
-        emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
+        emit signal_FO_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
         return false;
     }
     catch (...) {
         QString errorMsg = LocalQTCompat::fromLocal8Bit("停止保存未知异常");
         LOG_ERROR(errorMsg);
-        emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
+        emit signal_FO_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
         return false;
     }
 }
 
-void FileOperationController::slot_FS_C_showSettings(QWidget* parent)
+void FileOperationController::slot_FO_C_showSettings(QWidget* parent)
 {
     // 如果已有视图，显示它
     if (m_currentView) {
@@ -216,7 +216,7 @@ void FileOperationController::slot_FS_C_showSettings(QWidget* parent)
     view->show();
 }
 
-void FileOperationController::slot_FS_C_processDataPacket(const DataPacket& packet)
+void FileOperationController::slot_FO_C_processDataPacket(const DataPacket& packet)
 {
     // 如果不在保存状态，忽略数据包
     if (!isSaving()) {
@@ -237,12 +237,12 @@ void FileOperationController::slot_FS_C_processDataPacket(const DataPacket& pack
     catch (const std::exception& e) {
         QString errorMsg = LocalQTCompat::fromLocal8Bit("处理数据包异常: %1").arg(e.what());
         LOG_ERROR(errorMsg);
-        emit signal_FS_C_saveError(errorMsg);
-        slot_FS_C_stopSaving();
+        emit signal_FO_C_saveError(errorMsg);
+        slot_FO_C_stopSaving();
     }
 }
 
-void FileOperationController::slot_FS_C_processDataBatch(const DataPacketBatch& packets)
+void FileOperationController::slot_FO_C_processDataBatch(const DataPacketBatch& packets)
 {
     // 如果不在保存状态，忽略数据包
     if (!isSaving() || packets.empty()) {
@@ -268,29 +268,29 @@ void FileOperationController::slot_FS_C_processDataBatch(const DataPacketBatch& 
     catch (const std::exception& e) {
         QString errorMsg = QString("处理数据包批次异常: %1").arg(e.what());
         LOG_ERROR(errorMsg);
-        emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
-        slot_FS_C_stopSaving();
+        emit signal_FO_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
+        slot_FO_C_stopSaving();
     }
     catch (...) {
         QString errorMsg = "处理数据包批次未知异常";
         LOG_ERROR(errorMsg);
-        emit signal_FS_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
-        slot_FS_C_stopSaving();
+        emit signal_FO_C_saveError(LocalQTCompat::fromLocal8Bit(errorMsg.toUtf8().constData()));
+        slot_FO_C_stopSaving();
     }
 }
 
-bool FileOperationController::slot_FS_C_isAutoSaveEnabled() const
+bool FileOperationController::slot_FO_C_isAutoSaveEnabled() const
 {
     return m_model->getOption("auto_save", false).toBool();
 }
 
-void FileOperationController::slot_FS_C_setAutoSaveEnabled(bool enabled)
+void FileOperationController::slot_FO_C_setAutoSaveEnabled(bool enabled)
 {
     m_model->setOption("auto_save", enabled);
     LOG_INFO(LocalQTCompat::fromLocal8Bit("自动保存设置为: %1").arg(enabled ? "启用" : "禁用"));
 }
 
-void FileOperationController::slot_FS_C_onModelStatusChanged(SaveStatus status)
+void FileOperationController::slot_FO_C_onModelStatusChanged(SaveStatus status)
 {
     // 根据状态采取相应操作
     switch (status) {
@@ -304,7 +304,7 @@ void FileOperationController::slot_FS_C_onModelStatusChanged(SaveStatus status)
         // 保存完成后的操作
         SaveStatistics stats = m_model->getStatistics();
         QString path = m_model->getFullSavePath();
-        emit signal_FS_C_saveCompleted(path, stats.totalBytes);
+        emit signal_FO_C_saveCompleted(path, stats.totalBytes);
         break;
     }
     case SaveStatus::FS_ERROR:
@@ -313,7 +313,7 @@ void FileOperationController::slot_FS_C_onModelStatusChanged(SaveStatus status)
     }
 }
 
-void FileOperationController::slot_FS_C_onModelStatisticsUpdated(const SaveStatistics& statistics)
+void FileOperationController::slot_FO_C_onModelStatisticsUpdated(const SaveStatistics& statistics)
 {
 #if 0
     // 记录关键统计信息
@@ -332,36 +332,36 @@ void FileOperationController::slot_FS_C_onModelStatisticsUpdated(const SaveStati
         LOG_INFO(LocalQTCompat::fromLocal8Bit("触发实时数据分析，新增数据: %1 KB")
             .arg(newDataSize / 1024.0, 0, 'f', 2));
 
-        emit signal_FS_C_newDataAvailable(m_lastAnalyzedPosition, newDataSize);
+        emit signal_FO_C_newDataAvailable(m_lastAnalyzedPosition, newDataSize);
         m_lastAnalyzedPosition = statistics.totalBytes;
     }
 
     // 转发统计信息到视图层
-    emit signal_FS_C_statisticsUpdated(statistics);
+    emit signal_FO_C_statisticsUpdated(statistics);
 #endif
 }
 
-void FileOperationController::slot_FS_C_onModelSaveCompleted(const QString& path, uint64_t totalBytes)
+void FileOperationController::slot_FO_C_onModelSaveCompleted(const QString& path, uint64_t totalBytes)
 {
     // 转发保存完成信号
-    emit signal_FS_C_saveCompleted(path, totalBytes);
+    emit signal_FO_C_saveCompleted(path, totalBytes);
 }
 
-void FileOperationController::slot_FS_C_onModelSaveError(const QString& error)
+void FileOperationController::slot_FO_C_onModelSaveError(const QString& error)
 {
     // 处理保存错误
     LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件保存错误: %1").arg(error));
 
     // 停止保存
     if (isSaving()) {
-        slot_FS_C_stopSaving();
+        slot_FO_C_stopSaving();
     }
 
     // 转发错误信号
-    emit signal_FS_C_saveError(error);
+    emit signal_FO_C_saveError(error);
 }
 
-void FileOperationController::slot_FS_C_onViewParametersChanged(const SaveParameters& parameters)
+void FileOperationController::slot_FO_C_onViewParametersChanged(const SaveParameters& parameters)
 {
     // 更新模型参数
     m_model->setSaveParameters(parameters);
@@ -374,16 +374,16 @@ void FileOperationController::slot_FS_C_onViewParametersChanged(const SaveParame
         .arg(autoSave ? "启用" : "禁用"));
 }
 
-bool FileOperationController::slot_FS_C_startLoading(const QString& filePath) {
+bool FileOperationController::slot_FO_C_startLoading(const QString& filePath) {
     if (!m_initialized) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件操作控制器未初始化"));
-        emit signal_FS_C_loadError(LocalQTCompat::fromLocal8Bit("文件操作控制器未初始化"));
+        emit signal_FO_C_loadError(LocalQTCompat::fromLocal8Bit("文件操作控制器未初始化"));
         return false;
     }
 
     if (isSaving()) {
         LOG_WARN(LocalQTCompat::fromLocal8Bit("当前正在保存文件，无法同时加载"));
-        emit signal_FS_C_loadError(LocalQTCompat::fromLocal8Bit("当前正在保存文件，无法同时加载"));
+        emit signal_FO_C_loadError(LocalQTCompat::fromLocal8Bit("当前正在保存文件，无法同时加载"));
         return false;
     }
 
@@ -394,18 +394,18 @@ bool FileOperationController::slot_FS_C_startLoading(const QString& filePath) {
     catch (const std::exception& e) {
         QString errorMsg = LocalQTCompat::fromLocal8Bit("加载文件异常: %1").arg(e.what());
         LOG_ERROR(errorMsg);
-        emit signal_FS_C_loadError(errorMsg);
+        emit signal_FO_C_loadError(errorMsg);
         return false;
     }
 }
 
-bool FileOperationController::slot_FS_C_stopLoading() {
+bool FileOperationController::slot_FO_C_stopLoading() {
     if (!m_initialized) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件操作控制器未初始化"));
         return false;
     }
 
-    if (!slot_FS_C_isLoading()) {
+    if (!slot_FO_C_isLoading()) {
         LOG_WARN(LocalQTCompat::fromLocal8Bit("没有正在进行的加载任务"));
         return false;
     }
@@ -417,12 +417,12 @@ bool FileOperationController::slot_FS_C_stopLoading() {
     catch (const std::exception& e) {
         QString errorMsg = LocalQTCompat::fromLocal8Bit("停止加载异常: %1").arg(e.what());
         LOG_ERROR(errorMsg);
-        emit signal_FS_C_loadError(errorMsg);
+        emit signal_FO_C_loadError(errorMsg);
         return false;
     }
 }
 
-bool FileOperationController::slot_FS_C_isLoading() const {
+bool FileOperationController::slot_FO_C_isLoading() const {
     if (!m_initialized) {
         return false;
     }
@@ -430,24 +430,24 @@ bool FileOperationController::slot_FS_C_isLoading() const {
     return m_model->isLoading();
 }
 
-DataPacket FileOperationController::slot_FS_C_getNextPacket() {
-    if (!m_initialized || !slot_FS_C_isLoading()) {
+DataPacket FileOperationController::slot_FO_C_getNextPacket() {
+    if (!m_initialized || !slot_FO_C_isLoading()) {
         return DataPacket();
     }
 
     return m_model->getNextPacket();
 }
 
-bool FileOperationController::slot_FS_C_hasMorePackets() const {
-    if (!m_initialized || !slot_FS_C_isLoading()) {
+bool FileOperationController::slot_FO_C_hasMorePackets() const {
+    if (!m_initialized || !slot_FO_C_isLoading()) {
         return false;
     }
 
     return m_model->hasMorePackets();
 }
 
-void FileOperationController::slot_FS_C_seekTo(uint64_t position) {
-    if (!m_initialized || !slot_FS_C_isLoading()) {
+void FileOperationController::slot_FO_C_seekTo(uint64_t position) {
+    if (!m_initialized || !slot_FO_C_isLoading()) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法定位：文件未加载"));
         return;
     }
@@ -455,16 +455,16 @@ void FileOperationController::slot_FS_C_seekTo(uint64_t position) {
     m_model->seekTo(position);
 }
 
-uint64_t FileOperationController::slot_FS_C_getTotalFileSize() const {
-    if (!m_initialized || !slot_FS_C_isLoading()) {
+uint64_t FileOperationController::slot_FO_C_getTotalFileSize() const {
+    if (!m_initialized || !slot_FO_C_isLoading()) {
         return 0;
     }
 
     return m_model->getTotalFileSize();
 }
 
-QByteArray FileOperationController::slot_FS_C_getFileData(uint64_t startOffset, uint64_t size) {
-    if (!m_initialized || !slot_FS_C_isLoading()) {
+QByteArray FileOperationController::slot_FO_C_getFileData(uint64_t startOffset, uint64_t size) {
+    if (!m_initialized || !slot_FO_C_isLoading()) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法获取数据：文件未加载"));
         return QByteArray();
     }
@@ -494,7 +494,7 @@ QByteArray FileOperationController::slot_FS_C_getFileData(uint64_t startOffset, 
         }
 
         // 发送数据查询结果信号
-        emit signal_FS_C_dataQueryResult(data, startOffset, data.size());
+        emit signal_FO_C_dataQueryResult(data, startOffset, data.size());
 
         return data;
     }
@@ -505,7 +505,7 @@ QByteArray FileOperationController::slot_FS_C_getFileData(uint64_t startOffset, 
     }
 }
 
-QByteArray FileOperationController::slot_FS_C_readFileRange(const QString& filePath, uint64_t startOffset, uint64_t size) {
+QByteArray FileOperationController::slot_FO_C_readFileRange(const QString& filePath, uint64_t startOffset, uint64_t size) {
     if (!m_initialized) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件操作控制器未初始化"));
         return QByteArray();
@@ -526,8 +526,8 @@ QByteArray FileOperationController::slot_FS_C_readFileRange(const QString& fileP
     }
 }
 
-QByteArray FileOperationController::slot_FS_C_readLoadedFileRange(uint64_t startOffset, uint64_t size) {
-    if (!m_initialized || !slot_FS_C_isLoading()) {
+QByteArray FileOperationController::slot_FO_C_readLoadedFileRange(uint64_t startOffset, uint64_t size) {
+    if (!m_initialized || !slot_FO_C_isLoading()) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("无法读取数据：文件未加载"));
         return QByteArray();
     }
@@ -546,7 +546,7 @@ QByteArray FileOperationController::slot_FS_C_readLoadedFileRange(uint64_t start
     }
 }
 
-uint32_t FileOperationController::slot_FS_C_readFileRangeAsync(const QString& filePath, uint64_t startOffset, uint64_t size, uint32_t requestId) {
+uint32_t FileOperationController::slot_FO_C_readFileRangeAsync(const QString& filePath, uint64_t startOffset, uint64_t size, uint32_t requestId) {
     if (!m_initialized) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件操作控制器未初始化"));
         return 0;
@@ -576,7 +576,7 @@ uint32_t FileOperationController::slot_FS_C_readFileRangeAsync(const QString& fi
     }
 }
 
-QByteArray FileOperationController::slot_FS_C_getWaveformData(uint64_t startOffset, uint64_t endOffset)
+QByteArray FileOperationController::slot_FO_C_getWaveformData(uint64_t startOffset, uint64_t endOffset)
 {
     if (!m_initialized) {
         LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件操作控制器未初始化"));
@@ -597,9 +597,9 @@ QByteArray FileOperationController::slot_FS_C_getWaveformData(uint64_t startOffs
 
     // 根据当前状态决定如何获取数据
     QByteArray data;
-    if (slot_FS_C_isLoading()) {
+    if (slot_FO_C_isLoading()) {
         // 从当前加载的文件获取数据
-        data = slot_FS_C_readLoadedFileRange(startOffset, size);
+        data = slot_FO_C_readLoadedFileRange(startOffset, size);
         LOG_INFO(LocalQTCompat::fromLocal8Bit("从已加载文件获取波形数据, 大小=%1").arg(data.size()));
     }
     else if (isSaving()) {
@@ -607,7 +607,7 @@ QByteArray FileOperationController::slot_FS_C_getWaveformData(uint64_t startOffs
         QString currentSavePath = m_model->getCurrentFileName();
         LOG_INFO(LocalQTCompat::fromLocal8Bit("当前的保存路径：%1").arg(currentSavePath));
         if (!currentSavePath.isEmpty()) {
-            data = slot_FS_C_readFileRange(currentSavePath, startOffset, size);
+            data = slot_FO_C_readFileRange(currentSavePath, startOffset, size);
             LOG_INFO(LocalQTCompat::fromLocal8Bit("从当前保存文件获取波形数据, 大小=%1").arg(data.size()));
         }
     }
@@ -618,15 +618,15 @@ QByteArray FileOperationController::slot_FS_C_getWaveformData(uint64_t startOffs
     }
     else {
         // 发送波形数据准备完成信号
-        emit signal_FS_C_waveformDataReady(data, startOffset, endOffset);
+        emit signal_FO_C_waveformDataReady(data, startOffset, endOffset);
     }
 
     return data;
 }
 
-void FileOperationController::slot_FS_C_onModelDataReadCompleted(const QByteArray& data, uint64_t startOffset, uint32_t requestId) {
+void FileOperationController::slot_FO_C_onModelDataReadCompleted(const QByteArray& data, uint64_t startOffset, uint32_t requestId) {
     // 转发信号
-    emit signal_FS_C_dataReadCompleted(data, startOffset, requestId);
+    emit signal_FO_C_dataReadCompleted(data, startOffset, requestId);
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("数据读取完成，偏移：%1，大小：%2，请求ID：%3")
         .arg(startOffset)
@@ -634,49 +634,49 @@ void FileOperationController::slot_FS_C_onModelDataReadCompleted(const QByteArra
         .arg(requestId));
 }
 
-void FileOperationController::slot_FS_C_onModelDataReadError(const QString& error, uint32_t requestId) {
+void FileOperationController::slot_FO_C_onModelDataReadError(const QString& error, uint32_t requestId) {
     // 转发信号
-    emit signal_FS_C_dataReadError(error, requestId);
+    emit signal_FO_C_dataReadError(error, requestId);
 
     LOG_ERROR(LocalQTCompat::fromLocal8Bit("数据读取错误，请求ID：%1，错误：%2")
         .arg(requestId)
         .arg(error));
 }
 
-void FileOperationController::slot_FS_C_onModelLoadStarted(const QString& filePath, uint64_t fileSize) {
+void FileOperationController::slot_FO_C_onModelLoadStarted(const QString& filePath, uint64_t fileSize) {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("文件加载开始: %1").arg(filePath));
-    emit signal_FS_C_loadStarted(filePath, fileSize);
+    emit signal_FO_C_loadStarted(filePath, fileSize);
 }
 
-void FileOperationController::slot_FS_C_onModelLoadProgress(uint64_t bytesRead, uint64_t totalBytes) {
-    emit signal_FS_C_loadProgress(bytesRead, totalBytes);
+void FileOperationController::slot_FO_C_onModelLoadProgress(uint64_t bytesRead, uint64_t totalBytes) {
+    emit signal_FO_C_loadProgress(bytesRead, totalBytes);
 }
 
-void FileOperationController::slot_FS_C_onModelLoadCompleted(const QString& filePath, uint64_t totalBytes) {
+void FileOperationController::slot_FO_C_onModelLoadCompleted(const QString& filePath, uint64_t totalBytes) {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("文件加载完成: %1, 总大小: %2 字节").arg(filePath).arg(totalBytes));
-    emit signal_FS_C_loadCompleted(filePath, totalBytes);
+    emit signal_FO_C_loadCompleted(filePath, totalBytes);
 }
 
-void FileOperationController::slot_FS_C_onModelLoadError(const QString& error) {
+void FileOperationController::slot_FO_C_onModelLoadError(const QString& error) {
     LOG_ERROR(LocalQTCompat::fromLocal8Bit("文件加载错误: %1").arg(error));
-    emit signal_FS_C_loadError(error);
+    emit signal_FO_C_loadError(error);
 }
 
-void FileOperationController::slot_FS_C_onModelNewDataAvailable(uint64_t offset, uint64_t size) {
-    emit signal_FS_C_newDataAvailable(offset, size);
+void FileOperationController::slot_FO_C_onModelNewDataAvailable(uint64_t offset, uint64_t size) {
+    emit signal_FO_C_newDataAvailable(offset, size);
 }
 
-void FileOperationController::slot_FS_C_onViewStartSaveRequested()
+void FileOperationController::slot_FO_C_onViewStartSaveRequested()
 {
-    slot_FS_C_startSaving();
+    slot_FO_C_startSaving();
 }
 
-void FileOperationController::slot_FS_C_onViewStopSaveRequested()
+void FileOperationController::slot_FO_C_onViewStopSaveRequested()
 {
-    slot_FS_C_stopSaving();
+    slot_FO_C_stopSaving();
 }
 
-void FileOperationController::slot_FS_C_onWorkerSaveProgress(uint64_t bytesWritten, int fileCount)
+void FileOperationController::slot_FO_C_onWorkerSaveProgress(uint64_t bytesWritten, int fileCount)
 {
     // 更新模型中的统计信息
     SaveStatistics stats = m_model->getStatistics();
@@ -685,19 +685,19 @@ void FileOperationController::slot_FS_C_onWorkerSaveProgress(uint64_t bytesWritt
     m_model->updateStatistics(stats);
 }
 
-void FileOperationController::slot_FS_C_onWorkerSaveCompleted(const QString& path, uint64_t totalBytes)
+void FileOperationController::slot_FO_C_onWorkerSaveCompleted(const QString& path, uint64_t totalBytes)
 {
     // 处理工作线程完成信号
     m_model->setStatus(SaveStatus::FS_COMPLETED);
-    emit signal_FS_C_saveCompleted(path, totalBytes);
+    emit signal_FO_C_saveCompleted(path, totalBytes);
 }
 
-void FileOperationController::slot_FS_C_onWorkerSaveError(const QString& error)
+void FileOperationController::slot_FO_C_onWorkerSaveError(const QString& error)
 {
     // 处理工作线程错误
     LOG_ERROR(LocalQTCompat::fromLocal8Bit("工作线程保存错误: %1").arg(error));
     m_model->setStatus(SaveStatus::FS_ERROR);
-    emit signal_FS_C_saveError(error);
+    emit signal_FO_C_saveError(error);
 }
 
 void FileOperationController::updateSaveStatistics()
@@ -733,60 +733,60 @@ void FileOperationController::updateSaveStatistics()
 
 void FileOperationController::connectModelSignals()
 {
-    connect(m_model, &FileOperationModel::signal_FS_M_statusChanged,
-        this, &FileOperationController::slot_FS_C_onModelStatusChanged);
-    connect(m_model, &FileOperationModel::signal_FS_M_statisticsUpdated,
-        this, &FileOperationController::slot_FS_C_onModelStatisticsUpdated);
-    connect(m_model, &FileOperationModel::signal_FS_M_saveCompleted,
-        this, &FileOperationController::slot_FS_C_onModelSaveCompleted);
-    connect(m_model, &FileOperationModel::signal_FS_M_saveError,
-        this, &FileOperationController::slot_FS_C_onModelSaveError);
+    connect(m_model, &FileOperationModel::signal_FO_M_statusChanged,
+        this, &FileOperationController::slot_FO_C_onModelStatusChanged);
+    connect(m_model, &FileOperationModel::signal_FO_M_statisticsUpdated,
+        this, &FileOperationController::slot_FO_C_onModelStatisticsUpdated);
+    connect(m_model, &FileOperationModel::signal_FO_M_saveCompleted,
+        this, &FileOperationController::slot_FO_C_onModelSaveCompleted);
+    connect(m_model, &FileOperationModel::signal_FO_M_saveError,
+        this, &FileOperationController::slot_FO_C_onModelSaveError);
 
     // 离线加载相关连接
-    connect(m_model, &FileOperationModel::signal_FS_M_loadStarted,
-        this, &FileOperationController::slot_FS_C_onModelLoadStarted);
-    connect(m_model, &FileOperationModel::signal_FS_M_loadProgress,
-        this, &FileOperationController::slot_FS_C_onModelLoadProgress);
-    connect(m_model, &FileOperationModel::signal_FS_M_loadCompleted,
-        this, &FileOperationController::slot_FS_C_onModelLoadCompleted);
-    connect(m_model, &FileOperationModel::signal_FS_M_loadError,
-        this, &FileOperationController::slot_FS_C_onModelLoadError);
-    connect(m_model, &FileOperationModel::signal_FS_M_newDataAvailable,
-        this, &FileOperationController::slot_FS_C_onModelNewDataAvailable);
+    connect(m_model, &FileOperationModel::signal_FO_M_loadStarted,
+        this, &FileOperationController::slot_FO_C_onModelLoadStarted);
+    connect(m_model, &FileOperationModel::signal_FO_M_loadProgress,
+        this, &FileOperationController::slot_FO_C_onModelLoadProgress);
+    connect(m_model, &FileOperationModel::signal_FO_M_loadCompleted,
+        this, &FileOperationController::slot_FO_C_onModelLoadCompleted);
+    connect(m_model, &FileOperationModel::signal_FO_M_loadError,
+        this, &FileOperationController::slot_FO_C_onModelLoadError);
+    connect(m_model, &FileOperationModel::signal_FO_M_newDataAvailable,
+        this, &FileOperationController::slot_FO_C_onModelNewDataAvailable);
 
     // 数据读取相关信号连接
-    connect(m_model, &FileOperationModel::signal_FS_M_dataReadCompleted,
-        this, &FileOperationController::slot_FS_C_onModelDataReadCompleted);
-    connect(m_model, &FileOperationModel::signal_FS_M_dataReadError,
-        this, &FileOperationController::slot_FS_C_onModelDataReadError);
+    connect(m_model, &FileOperationModel::signal_FO_M_dataReadCompleted,
+        this, &FileOperationController::slot_FO_C_onModelDataReadCompleted);
+    connect(m_model, &FileOperationModel::signal_FO_M_dataReadError,
+        this, &FileOperationController::slot_FO_C_onModelDataReadError);
 }
 
 void FileOperationController::connectViewSignals(FileOperationView* view)
 {
     if (!view) return;
 
-    connect(view, &FileOperationView::signal_FS_V_saveParametersChanged,
-        this, &FileOperationController::slot_FS_C_onViewParametersChanged);
-    connect(view, &FileOperationView::signal_FS_V_startSaveRequested,
-        this, &FileOperationController::slot_FS_C_onViewStartSaveRequested);
-    connect(view, &FileOperationView::signal_FS_V_stopSaveRequested,
-        this, &FileOperationController::slot_FS_C_onViewStopSaveRequested);
+    connect(view, &FileOperationView::signal_FO_V_saveParametersChanged,
+        this, &FileOperationController::slot_FO_C_onViewParametersChanged);
+    connect(view, &FileOperationView::signal_FO_V_startSaveRequested,
+        this, &FileOperationController::slot_FO_C_onViewStartSaveRequested);
+    connect(view, &FileOperationView::signal_FO_V_stopSaveRequested,
+        this, &FileOperationController::slot_FO_C_onViewStopSaveRequested);
 
     // 连接控制器信号到视图
-    connect(this, &FileOperationController::signal_FS_C_saveStarted,
-        view, &FileOperationView::slot_FS_V_onSaveStarted);
-    connect(this, &FileOperationController::signal_FS_C_saveStopped,
-        view, &FileOperationView::slot_FS_V_onSaveStopped);
-    connect(this, &FileOperationController::signal_FS_C_saveCompleted,
-        view, &FileOperationView::slot_FS_V_onSaveCompleted);
-    connect(this, &FileOperationController::signal_FS_C_saveError,
-        view, &FileOperationView::slot_FS_V_onSaveError);
+    connect(this, &FileOperationController::signal_FO_C_saveStarted,
+        view, &FileOperationView::slot_FO_V_onSaveStarted);
+    connect(this, &FileOperationController::signal_FO_C_saveStopped,
+        view, &FileOperationView::slot_FO_V_onSaveStopped);
+    connect(this, &FileOperationController::signal_FO_C_saveCompleted,
+        view, &FileOperationView::slot_FO_V_onSaveCompleted);
+    connect(this, &FileOperationController::signal_FO_C_saveError,
+        view, &FileOperationView::slot_FO_V_onSaveError);
 
     // 连接模型信号到视图
-    connect(m_model, &FileOperationModel::signal_FS_M_statisticsUpdated,
-        view, &FileOperationView::slot_FS_V_updateStatisticsDisplay);
-    connect(m_model, &FileOperationModel::signal_FS_M_statusChanged,
-        view, &FileOperationView::slot_FS_V_updateStatusDisplay);
+    connect(m_model, &FileOperationModel::signal_FO_M_statisticsUpdated,
+        view, &FileOperationView::slot_FO_V_updateStatisticsDisplay);
+    connect(m_model, &FileOperationModel::signal_FO_M_statusChanged,
+        view, &FileOperationView::slot_FO_V_updateStatusDisplay);
 }
 
 void FileOperationController::connectWorkerSignals()

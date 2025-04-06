@@ -173,6 +173,9 @@
     <ClCompile Include="Source\Analysis\DataAccessService.cpp">
       <Filter>Source Files\Analysis</Filter>
     </ClCompile>
+    <ClCompile Include="Source\MVC\Views\WaveformGLWidget.cpp">
+      <Filter>Source Files\MVC\Views</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="Source\Core\AppStateMachine.h">
@@ -297,6 +300,9 @@
     </QtMoc>
     <QtMoc Include="Source\Analysis\DataAccessService.h">
       <Filter>Source Files\Analysis</Filter>
+    </QtMoc>
+    <QtMoc Include="Source\MVC\Views\WaveformGLWidget.h">
+      <Filter>Source Files\MVC\Views</Filter>
     </QtMoc>
   </ItemGroup>
   <ItemGroup>

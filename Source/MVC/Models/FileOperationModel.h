@@ -213,66 +213,66 @@ signals:
      * @brief 参数变更信号
      * @param parameters 新的保存参数
      */
-    void signal_FS_M_parametersChanged(const SaveParameters& parameters);
+    void signal_FO_M_parametersChanged(const SaveParameters& parameters);
 
     /**
      * @brief 状态变更信号
      * @param status 新的保存状态
      */
-    void signal_FS_M_statusChanged(SaveStatus status);
+    void signal_FO_M_statusChanged(SaveStatus status);
 
     /**
      * @brief 统计信息更新信号
      * @param statistics 新的统计信息
      */
-    void signal_FS_M_statisticsUpdated(const SaveStatistics& statistics);
+    void signal_FO_M_statisticsUpdated(const SaveStatistics& statistics);
 
     /**
      * @brief 保存完成信号
      * @param path 保存路径
      * @param totalBytes 总字节数
      */
-    void signal_FS_M_saveCompleted(const QString& path, uint64_t totalBytes);
+    void signal_FO_M_saveCompleted(const QString& path, uint64_t totalBytes);
 
     /**
      * @brief 保存错误信号
      * @param error 错误消息
      */
-    void signal_FS_M_saveError(const QString& error);
+    void signal_FO_M_saveError(const QString& error);
 
     /**
      * @brief 加载开始信号
      * @param filePath 文件路径
      * @param fileSize 文件大小
      */
-    void signal_FS_M_loadStarted(const QString& filePath, uint64_t fileSize);
+    void signal_FO_M_loadStarted(const QString& filePath, uint64_t fileSize);
 
     /**
      * @brief 加载进度信号
      * @param bytesRead 已读取字节数
      * @param totalBytes 总字节数
      */
-    void signal_FS_M_loadProgress(uint64_t bytesRead, uint64_t totalBytes);
+    void signal_FO_M_loadProgress(uint64_t bytesRead, uint64_t totalBytes);
 
     /**
      * @brief 加载完成信号
      * @param filePath 文件路径
      * @param totalBytes 总字节数
      */
-    void signal_FS_M_loadCompleted(const QString& filePath, uint64_t totalBytes);
+    void signal_FO_M_loadCompleted(const QString& filePath, uint64_t totalBytes);
 
     /**
      * @brief 加载错误信号
      * @param error 错误消息
      */
-    void signal_FS_M_loadError(const QString& error);
+    void signal_FO_M_loadError(const QString& error);
 
     /**
      * @brief 新数据可用信号
      * @param offset 文件偏移
      * @param size 数据大小
      */
-    void signal_FS_M_newDataAvailable(uint64_t offset, uint64_t size);
+    void signal_FO_M_newDataAvailable(uint64_t offset, uint64_t size);
 
     /**
      * @brief 异步数据读取完成信号
@@ -280,14 +280,14 @@ signals:
      * @param startOffset 起始偏移
      * @param requestId 请求ID
      */
-    void signal_FS_M_dataReadCompleted(const QByteArray& data, uint64_t startOffset, uint32_t requestId);
+    void signal_FO_M_dataReadCompleted(const QByteArray& data, uint64_t startOffset, uint32_t requestId);
 
     /**
      * @brief 异步数据读取错误信号
      * @param error 错误信息
      * @param requestId 请求ID
      */
-    void signal_FS_M_dataReadError(const QString& error, uint32_t requestId);
+    void signal_FO_M_dataReadError(const QString& error, uint32_t requestId);
 
 private:
     /**

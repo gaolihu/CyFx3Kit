@@ -59,75 +59,75 @@ signals:
      * @brief 保存参数变更信号
      * @param parameters 新的保存参数
      */
-    void signal_FS_V_saveParametersChanged(const SaveParameters& parameters);
+    void signal_FO_V_saveParametersChanged(const SaveParameters& parameters);
 
     /**
      * @brief 开始保存请求信号
      */
-    void signal_FS_V_startSaveRequested();
+    void signal_FO_V_startSaveRequested();
 
     /**
      * @brief 停止保存请求信号
      */
-    void signal_FS_V_stopSaveRequested();
+    void signal_FO_V_stopSaveRequested();
 
 public slots:
     /**
      * @brief 更新状态显示
      * @param status 保存状态
      */
-    void slot_FS_V_updateStatusDisplay(SaveStatus status);
+    void slot_FO_V_updateStatusDisplay(SaveStatus status);
 
     /**
      * @brief 更新统计信息显示
      * @param stats 保存统计信息
      */
-    void slot_FS_V_updateStatisticsDisplay(const SaveStatistics& stats);
+    void slot_FO_V_updateStatisticsDisplay(const SaveStatistics& stats);
 
     /**
      * @brief 保存开始响应
      */
-    void slot_FS_V_onSaveStarted();
+    void slot_FO_V_onSaveStarted();
 
     /**
      * @brief 保存停止响应
      */
-    void slot_FS_V_onSaveStopped();
+    void slot_FO_V_onSaveStopped();
 
     /**
      * @brief 保存完成响应
      * @param path 保存路径
      * @param totalBytes 总字节数
      */
-    void slot_FS_V_onSaveCompleted(const QString& path, uint64_t totalBytes);
+    void slot_FO_V_onSaveCompleted(const QString& path, uint64_t totalBytes);
 
     /**
      * @brief 保存错误响应
      * @param error 错误消息
      */
-    void slot_FS_V_onSaveError(const QString& error);
+    void slot_FO_V_onSaveError(const QString& error);
 
 private slots:
     /**
      * @brief 保存按钮点击处理
      */
-    void slot_FS_V_onSaveButtonClicked();
+    void slot_FO_V_onSaveButtonClicked();
 
     /**
      * @brief 取消按钮点击处理
      */
-    void slot_FS_V_onCancelButtonClicked();
+    void slot_FO_V_onCancelButtonClicked();
 
     /**
      * @brief 浏览文件夹按钮点击处理
      */
-    void slot_FS_V_onBrowseFolderButtonClicked();
+    void slot_FO_V_onBrowseFolderButtonClicked();
 
     /**
      * @brief 保存范围单选按钮切换处理
      * @param checked 是否选中
      */
-    void slot_FS_V_onSaveRangeRadioButtonToggled(bool checked);
+    void slot_FO_V_onSaveRangeRadioButtonToggled(bool checked);
 
 private:
     /**

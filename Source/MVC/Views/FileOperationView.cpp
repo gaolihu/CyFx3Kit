@@ -73,7 +73,7 @@ void FileOperationView::prepareForShow()
     updateUIState();
 }
 
-void FileOperationView::slot_FS_V_updateStatusDisplay(SaveStatus status)
+void FileOperationView::slot_FO_V_updateStatusDisplay(SaveStatus status)
 {
     switch (status) {
     case SaveStatus::FS_IDLE:
@@ -114,7 +114,7 @@ void FileOperationView::slot_FS_V_updateStatusDisplay(SaveStatus status)
     ui->displayOptionsGroupBox->setEnabled(!m_saving);
 }
 
-void FileOperationView::slot_FS_V_updateStatisticsDisplay(const SaveStatistics& stats)
+void FileOperationView::slot_FO_V_updateStatisticsDisplay(const SaveStatistics& stats)
 {
     // 更新进度条
     if (stats.progress > 0 && m_saving) {
@@ -142,19 +142,19 @@ void FileOperationView::slot_FS_V_updateStatisticsDisplay(const SaveStatistics& 
     ui->totalSizeLabel->setText(sizeText);
 }
 
-void FileOperationView::slot_FS_V_onSaveStarted()
+void FileOperationView::slot_FO_V_onSaveStarted()
 {
-    slot_FS_V_updateStatusDisplay(SaveStatus::FS_SAVING);
+    slot_FO_V_updateStatusDisplay(SaveStatus::FS_SAVING);
 }
 
-void FileOperationView::slot_FS_V_onSaveStopped()
+void FileOperationView::slot_FO_V_onSaveStopped()
 {
-    slot_FS_V_updateStatusDisplay(SaveStatus::FS_IDLE);
+    slot_FO_V_updateStatusDisplay(SaveStatus::FS_IDLE);
 }
 
-void FileOperationView::slot_FS_V_onSaveCompleted(const QString& path, uint64_t totalBytes)
+void FileOperationView::slot_FO_V_onSaveCompleted(const QString& path, uint64_t totalBytes)
 {
-    slot_FS_V_updateStatusDisplay(SaveStatus::FS_COMPLETED);
+    slot_FO_V_updateStatusDisplay(SaveStatus::FS_COMPLETED);
 
     QString message = LocalQTCompat::fromLocal8Bit("文件保存完成\n路径: %1\n总大小: %2 MB")
         .arg(path)
@@ -165,22 +165,22 @@ void FileOperationView::slot_FS_V_onSaveCompleted(const QString& path, uint64_t 
         message);
 }
 
-void FileOperationView::slot_FS_V_onSaveError(const QString& error)
+void FileOperationView::slot_FO_V_onSaveError(const QString& error)
 {
-    slot_FS_V_updateStatusDisplay(SaveStatus::FS_ERROR);
+    slot_FO_V_updateStatusDisplay(SaveStatus::FS_ERROR);
 
     QMessageBox::critical(this,
         LocalQTCompat::fromLocal8Bit("保存错误"),
         error);
 }
 
-void FileOperationView::slot_FS_V_onSaveButtonClicked()
+void FileOperationView::slot_FO_V_onSaveButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("保存按钮点击"));
 
     if (m_saving) {
         // 如果正在保存，则停止保存
-        emit signal_FS_V_stopSaveRequested();
+        emit signal_FO_V_stopSaveRequested();
         return;
     }
 
@@ -194,13 +194,13 @@ void FileOperationView::slot_FS_V_onSaveButtonClicked()
 
     // 更新保存参数
     SaveParameters params = collectSaveParameters();
-    emit signal_FS_V_saveParametersChanged(params);
+    emit signal_FO_V_saveParametersChanged(params);
 
     // 请求开始保存
-    emit signal_FS_V_startSaveRequested();
+    emit signal_FO_V_startSaveRequested();
 }
 
-void FileOperationView::slot_FS_V_onCancelButtonClicked()
+void FileOperationView::slot_FO_V_onCancelButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("取消按钮点击"));
 
@@ -212,7 +212,7 @@ void FileOperationView::slot_FS_V_onCancelButtonClicked()
             QMessageBox::Yes | QMessageBox::No);
 
         if (reply == QMessageBox::Yes) {
-            emit signal_FS_V_stopSaveRequested();
+            emit signal_FO_V_stopSaveRequested();
         }
     }
 
@@ -221,7 +221,7 @@ void FileOperationView::slot_FS_V_onCancelButtonClicked()
 }
 
 
-void FileOperationView::slot_FS_V_onBrowseFolderButtonClicked()
+void FileOperationView::slot_FO_V_onBrowseFolderButtonClicked()
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("选择文件路径按钮点击"));
 
@@ -243,7 +243,7 @@ void FileOperationView::slot_FS_V_onBrowseFolderButtonClicked()
     }
 }
 
-void FileOperationView::slot_FS_V_onSaveRangeRadioButtonToggled(bool checked)
+void FileOperationView::slot_FO_V_onSaveRangeRadioButtonToggled(bool checked)
 {
     ui->rangeFrame->setEnabled(checked);
     updateUIState();
@@ -257,12 +257,12 @@ void FileOperationView::setupUI()
 void FileOperationView::connectSignals()
 {
     // 连接按钮信号
-    connect(ui->saveButton, &QPushButton::clicked, this, &FileOperationView::slot_FS_V_onSaveButtonClicked);
-    connect(ui->cancelButton, &QPushButton::clicked, this, &FileOperationView::slot_FS_V_onCancelButtonClicked);
-    connect(ui->browseFolderButton, &QPushButton::clicked, this, &FileOperationView::slot_FS_V_onBrowseFolderButtonClicked);
+    connect(ui->saveButton, &QPushButton::clicked, this, &FileOperationView::slot_FO_V_onSaveButtonClicked);
+    connect(ui->cancelButton, &QPushButton::clicked, this, &FileOperationView::slot_FO_V_onCancelButtonClicked);
+    connect(ui->browseFolderButton, &QPushButton::clicked, this, &FileOperationView::slot_FO_V_onBrowseFolderButtonClicked);
 
     // 连接单选按钮信号
-    connect(ui->saveRangeRadioButton, &QRadioButton::toggled, this, &FileOperationView::slot_FS_V_onSaveRangeRadioButtonToggled);
+    connect(ui->saveRangeRadioButton, &QRadioButton::toggled, this, &FileOperationView::slot_FO_V_onSaveRangeRadioButtonToggled);
 
     // 连接复选框和其他控件信号以更新UI状态
     connect(ui->lineRangeCheckBox, &QCheckBox::toggled, this, &FileOperationView::updateUIState);

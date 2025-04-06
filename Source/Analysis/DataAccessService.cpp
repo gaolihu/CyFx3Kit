@@ -560,7 +560,7 @@ QVector<double> DataAccessService::getChannelData(int channel, int startIndex, i
 
         if (m_fileOperationController) {
             // 使用文件操作控制器获取数据
-            QByteArray data = m_fileOperationController->slot_FS_C_getWaveformData(startIndex, startIndex + length);
+            QByteArray data = m_fileOperationController->slot_FO_C_getWaveformData(startIndex, startIndex + length);
             if (!data.isEmpty()) {
                 return extractChannelData(data, channel);
             }
@@ -580,8 +580,7 @@ QVector<double> DataAccessService::getChannelData(int channel, int startIndex, i
     return result;
 }
 
-QVector<double> DataAccessService::extractChannelData(const QByteArray& data, int channel)
-{
+QVector<double> DataAccessService::extractChannelData(const QByteArray& data, int channel) {
     QVector<double> result;
 
     if (data.isEmpty() || channel < 0 || channel > 3) {
@@ -589,38 +588,35 @@ QVector<double> DataAccessService::extractChannelData(const QByteArray& data, in
         return result;
     }
 
-    // 为结果分配空间
-    result.reserve(data.size());
-
     LOG_INFO(LocalQTCompat::fromLocal8Bit("开始提取通道%1数据，数据大小：%2字节")
         .arg(channel).arg(data.size()));
 
-    // 解析数据，提取指定通道的位
-    for (int i = 0; i < data.size(); ++i) {
-        uint8_t byteValue = static_cast<uint8_t>(data.at(i));
+    // 常量定义
+    const int HEADER_SIZE = 12;  // 00 00 00 00 99 99 99 99 00 00 00 00
+    const int METADATA_SIZE = 8; // XX SC1 SC2 SC3 XX ~SC1 ~SC2 ~SC3
+    const int PACKET_HEADER_TOTAL = HEADER_SIZE + METADATA_SIZE;
+    const int CHANNEL_COUNT = 4;
 
-        // 根据通道索引提取不同的位
-        double value = 0.0;
+    // 确定数据部分的起始位置
+    int dataStart = PACKET_HEADER_TOTAL;
 
-        switch (channel) {
-        case 0: // BYTE0：提取最低2位
-            value = byteValue & 0x03;
-            break;
-        case 1: // BYTE1：提取中间2位
-            value = (byteValue >> 2) & 0x03;
-            break;
-        case 2: // BYTE2：提取高2位
-            value = (byteValue >> 4) & 0x03;
-            break;
-        case 3: // BYTE3：提取最高2位
-            value = (byteValue >> 6) & 0x03;
-            break;
+    // 计算此通道在交错数据中的起始偏移
+    int channelOffset = channel;
+
+    // 预估结果大小
+    int estimatedSize = (data.size() - dataStart) / CHANNEL_COUNT + 1;
+    result.reserve(estimatedSize);
+
+    // 从数据部分开始，每隔4个字节提取一个属于该通道的字节
+    for (int i = dataStart + channelOffset; i < data.size(); i += CHANNEL_COUNT) {
+        if (i < data.size()) {
+            uint8_t byteValue = static_cast<uint8_t>(data.at(i));
+            // 将字节值归一化到0-1之间显示
+            // 这里采用简单处理：非零值归为1，零值归为0
+            // 实际应用中可能需要按需调整这个转换
+            double value = byteValue > 0 ? 1.0 : 0.0;
+            result.append(value);
         }
-
-        // 归一化到0-1范围，大于0的值都视为高电平
-        value = value > 0 ? 1.0 : 0.0;
-
-        result.append(value);
     }
 
     LOG_INFO(LocalQTCompat::fromLocal8Bit("通道%1数据提取完成，提取了%2个数据点")
@@ -681,6 +677,28 @@ DataAccessService::WaveformData DataAccessService::readWaveformData(uint64_t pac
     }
 }
  
+QByteArray DataAccessService::readRawData(int startIndex, int length) {
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("读取原始数据 - 起始: %1, 长度: %2")
+        .arg(startIndex).arg(length));
+
+    if (!m_fileOperationController) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("FileOperationController未设置"));
+        return QByteArray();
+    }
+
+    // Use the file operation controller to read the raw data
+    QByteArray data = m_fileOperationController->slot_FO_C_getWaveformData(startIndex, startIndex + length);
+
+    if (data.isEmpty()) {
+        LOG_ERROR(LocalQTCompat::fromLocal8Bit("读取原始数据失败"));
+    }
+    else {
+        LOG_INFO(LocalQTCompat::fromLocal8Bit("读取原始数据成功，大小: %1 字节").arg(data.size()));
+    }
+
+    return data;
+}
+
 void DataAccessService::setReadTimeout(int milliseconds)
 {
     m_readTimeout = milliseconds;

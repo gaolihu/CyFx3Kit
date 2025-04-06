@@ -37,12 +37,12 @@
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
     <QtInstall>6.5.3_msvc2019_64</QtInstall>
-    <QtModules>core;gui;widgets;concurrent;charts</QtModules>
+    <QtModules>core;gui;widgets;concurrent;opengl;openglwidgets;charts</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
     <QtInstall>6.5.3_msvc2019_64</QtInstall>
-    <QtModules>core;gui;widgets;concurrent;charts</QtModules>
+    <QtModules>core;gui;widgets;concurrent;opengl;openglwidgets;charts</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
@@ -156,6 +156,7 @@
     <ClCompile Include="Source\MVC\Views\UpdateDeviceView.cpp" />
     <ClCompile Include="Source\MVC\Views\VideoDisplayView.cpp" />
     <ClCompile Include="Source\MVC\Views\WaveformAnalysisView.cpp" />
+    <ClCompile Include="Source\MVC\Views\WaveformGLWidget.cpp" />
     <ClCompile Include="Source\Utils\Logger.cpp" />
     <ClCompile Include="Source\Utils\LogWriter.cpp" />
     <ClCompile Include="Source\Utils\UIUpdater.cpp" />
@@ -199,6 +200,7 @@
     <QtMoc Include="Source\MVC\Views\VideoDisplayView.h" />
     <QtMoc Include="Source\MVC\Views\WaveformAnalysisView.h" />
     <QtMoc Include="Source\MVC\Views\MenuView.h" />
+    <QtMoc Include="Source\MVC\Views\WaveformGLWidget.h" />
     <ClInclude Include="Source\Utils\LoggerTypes.h" />
     <ClInclude Include="Source\Utils\QtCompat.h" />
     <ClInclude Include="Source\Utils\ThreadHelper.h" />

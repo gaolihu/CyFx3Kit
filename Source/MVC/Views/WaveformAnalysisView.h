@@ -3,12 +3,14 @@
 
 #include <QWidget>
 #include <memory>
+#include "WaveformAnalysisController.h"
 
 namespace Ui {
     class WaveformAnalysisClass;
 }
 
 class WaveformAnalysisController;
+class WaveformGLWidget;
 
 /**
  * @brief 波形分析视图类
@@ -60,6 +62,12 @@ public:
      * @param message 状态消息
      */
     void setStatusMessage(const QString& message);
+
+    /**
+     * @brief 获取OpenGL波形控件
+     * @return OpenGL波形控件指针
+     */
+    WaveformGLWidget* getGLWidget() { return m_glWidget; }
 
 signals:
     /**
@@ -142,6 +150,9 @@ protected:
      */
     void hideEvent(QHideEvent* event) override;
 
+    // 更新波形显示
+    void updateWaveform();
+
 private slots:
     /**
      * @brief 处理通道选择变更
@@ -209,7 +220,7 @@ private:
 private:
     Ui::WaveformAnalysisClass* ui;              ///< UI对象
     WaveformAnalysisController* m_controller;   ///< 控制器对象
-    QRect m_chartRect;                          ///< 图表区域
+    WaveformGLWidget* m_glWidget;               ///< OpenGL波形绘制控件
     bool m_isDragging;                          ///< 是否正在拖动
     QPoint m_lastMousePos;                      ///< 上次鼠标位置
 };

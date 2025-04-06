@@ -28,21 +28,21 @@ FileOperationModel::FileOperationModel()
 
     // 加载相关信号连接
     connect(&m_fileManager, &FileManager::signal_FSM_loadStarted,
-        this, &FileOperationModel::signal_FS_M_loadStarted);
+        this, &FileOperationModel::signal_FO_M_loadStarted);
     connect(&m_fileManager, &FileManager::signal_FSM_loadProgress,
-        this, &FileOperationModel::signal_FS_M_loadProgress);
+        this, &FileOperationModel::signal_FO_M_loadProgress);
     connect(&m_fileManager, &FileManager::signal_FSM_loadCompleted,
-        this, &FileOperationModel::signal_FS_M_loadCompleted);
+        this, &FileOperationModel::signal_FO_M_loadCompleted);
     connect(&m_fileManager, &FileManager::signal_FSM_loadError,
-        this, &FileOperationModel::signal_FS_M_loadError);
+        this, &FileOperationModel::signal_FO_M_loadError);
     connect(&m_fileManager, &FileManager::signal_FSM_newDataAvailable,
-        this, &FileOperationModel::signal_FS_M_newDataAvailable);
+        this, &FileOperationModel::signal_FO_M_newDataAvailable);
 
     // 数据读取相关信号连接
     connect(&m_fileManager, &FileManager::signal_FSM_dataReadCompleted,
-        this, &FileOperationModel::signal_FS_M_dataReadCompleted);
+        this, &FileOperationModel::signal_FO_M_dataReadCompleted);
     connect(&m_fileManager, &FileManager::signal_FSM_dataReadError,
-        this, &FileOperationModel::signal_FS_M_dataReadError);
+        this, &FileOperationModel::signal_FO_M_dataReadError);
 
     // 从Manager同步初始状态
     syncFromManager();
@@ -74,7 +74,7 @@ void FileOperationModel::setSaveParameters(const SaveParameters& parameters)
     // 同步状态
     syncFromManager();
 
-    emit signal_FS_M_parametersChanged(modifiedParams);
+    emit signal_FO_M_parametersChanged(modifiedParams);
     LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存参数已更新，已强制设置为RAW格式"));
 }
 
@@ -171,14 +171,14 @@ void FileOperationModel::onSaveManagerCompleted(const QString& path, uint64_t to
 {
     // 更新状态并转发信号
     setStatus(SaveStatus::FS_COMPLETED);
-    emit signal_FS_M_saveCompleted(path, totalBytes);
+    emit signal_FO_M_saveCompleted(path, totalBytes);
 }
 
 void FileOperationModel::onSaveManagerError(const QString& error)
 {
     // 更新状态并转发信号
     setStatus(SaveStatus::FS_ERROR);
-    emit signal_FS_M_saveError(error);
+    emit signal_FO_M_saveError(error);
 }
 
 SaveStatus FileOperationModel::getStatus() const
@@ -191,14 +191,14 @@ void FileOperationModel::setStatus(SaveStatus status)
     SaveStatus oldStatus = m_status.exchange(status);
 
     if (oldStatus != status) {
-        emit signal_FS_M_statusChanged(status);
+        emit signal_FO_M_statusChanged(status);
 
         LOG_INFO(LocalQTCompat::fromLocal8Bit("文件保存状态已更改: %1").arg(static_cast<int>(status)));
 
         // 如果状态已完成或错误，发送对应信号
         if (status == SaveStatus::FS_COMPLETED) {
             SaveStatistics stats = getStatistics();
-            emit signal_FS_M_saveCompleted(getFullSavePath(), stats.totalBytes);
+            emit signal_FO_M_saveCompleted(getFullSavePath(), stats.totalBytes);
         }
     }
 }
@@ -216,7 +216,7 @@ void FileOperationModel::updateStatistics(const SaveStatistics& statistics)
         m_statistics = statistics;
     }
 
-    emit signal_FS_M_statisticsUpdated(statistics);
+    emit signal_FO_M_statisticsUpdated(statistics);
 }
 
 void FileOperationModel::resetStatistics()

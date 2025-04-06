@@ -423,7 +423,7 @@ void FileManager::processBatchData(const QByteArray& batchData, uint64_t offset,
         packet.timestamp = QDateTime::currentMSecsSinceEpoch() * 1000000; // 当前时间（纳秒）
         packet.offsetInFile = offset + currentOffset;
         packet.batchId = batchId;
-        packet.packetIndex = batch.size();
+        packet.packetIndex = static_cast<uint32_t>(batch.size());
 
         // 添加到批次
         batch.push_back(std::move(packet));

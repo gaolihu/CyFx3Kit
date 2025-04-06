@@ -661,23 +661,23 @@ void ModuleManager::processDataPacket(const std::vector<DataPacket>& packets)
 #endif
                 // 处理所有数据包
                 for (const auto& packet : packets) {
-                    m_fileOperationController->slot_FS_C_processDataPacket(packet);
+                    m_fileOperationController->slot_FO_C_processDataPacket(packet);
                 }
             }
             else {
                 // 检查是否启用了自动保存
-                bool autoSave = m_fileOperationController->slot_FS_C_isAutoSaveEnabled();
+                bool autoSave = m_fileOperationController->slot_FO_C_isAutoSaveEnabled();
                 if (autoSave) {
                     LOG_INFO("自动保存已启用，启动保存");
 
                     // 将文件目录设置到数据分析模块中
                     m_dataAnalysisController->setDataSource(m_fileOperationController->getCurrentFileName());
 
-                    if (m_fileOperationController->slot_FS_C_startSaving()) {
+                    if (m_fileOperationController->slot_FO_C_startSaving()) {
                         // 延迟100ms确保保存状态已更新
                         QTimer::singleShot(100, [this, packets]() {
                             for (const auto& packet : packets) {
-                                m_fileOperationController->slot_FS_C_processDataPacket(packet);
+                                m_fileOperationController->slot_FO_C_processDataPacket(packet);
                             }
                             });
                     }
@@ -910,22 +910,22 @@ bool ModuleManager::createFileOperationModule()
         LOG_INFO(LocalQTCompat::fromLocal8Bit("已设置DataAccessService的文件操作控制器引用"));
 
         // 连接视图与控制器的信号
-        connect(m_fileOperationView.get(), &FileOperationView::signal_FS_V_startSaveRequested,
-            m_fileOperationController.get(), &FileOperationController::slot_FS_C_startSaving);
-        connect(m_fileOperationView.get(), &FileOperationView::signal_FS_V_stopSaveRequested,
-            m_fileOperationController.get(), &FileOperationController::slot_FS_C_stopSaving);
-        connect(m_fileOperationView.get(), &FileOperationView::signal_FS_V_saveParametersChanged,
-            m_fileOperationController.get(), &FileOperationController::slot_FS_C_onViewParametersChanged);
+        connect(m_fileOperationView.get(), &FileOperationView::signal_FO_V_startSaveRequested,
+            m_fileOperationController.get(), &FileOperationController::slot_FO_C_startSaving);
+        connect(m_fileOperationView.get(), &FileOperationView::signal_FO_V_stopSaveRequested,
+            m_fileOperationController.get(), &FileOperationController::slot_FO_C_stopSaving);
+        connect(m_fileOperationView.get(), &FileOperationView::signal_FO_V_saveParametersChanged,
+            m_fileOperationController.get(), &FileOperationController::slot_FO_C_onViewParametersChanged);
 
         // 连接控制器到视图的信号
-        connect(m_fileOperationController.get(), &FileOperationController::signal_FS_C_saveStarted,
-            m_fileOperationView.get(), &FileOperationView::slot_FS_V_onSaveStarted);
-        connect(m_fileOperationController.get(), &FileOperationController::signal_FS_C_saveStopped,
-            m_fileOperationView.get(), &FileOperationView::slot_FS_V_onSaveStopped);
-        connect(m_fileOperationController.get(), &FileOperationController::signal_FS_C_saveCompleted,
-            m_fileOperationView.get(), &FileOperationView::slot_FS_V_onSaveCompleted);
-        connect(m_fileOperationController.get(), &FileOperationController::signal_FS_C_saveError,
-            m_fileOperationView.get(), &FileOperationView::slot_FS_V_onSaveError);
+        connect(m_fileOperationController.get(), &FileOperationController::signal_FO_C_saveStarted,
+            m_fileOperationView.get(), &FileOperationView::slot_FO_V_onSaveStarted);
+        connect(m_fileOperationController.get(), &FileOperationController::signal_FO_C_saveStopped,
+            m_fileOperationView.get(), &FileOperationView::slot_FO_V_onSaveStopped);
+        connect(m_fileOperationController.get(), &FileOperationController::signal_FO_C_saveCompleted,
+            m_fileOperationView.get(), &FileOperationView::slot_FO_V_onSaveCompleted);
+        connect(m_fileOperationController.get(), &FileOperationController::signal_FO_C_saveError,
+            m_fileOperationView.get(), &FileOperationView::slot_FO_V_onSaveError);
 
         // 标记为已初始化
         m_moduleInitialized[ModuleType::FILE_OPTIONS] = true;

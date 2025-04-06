@@ -445,7 +445,7 @@ void WaveformAnalysisModel::setChannelEnabled(int channel, bool enabled)
 
 QColor WaveformAnalysisModel::getChannelColor(int channel) const
 {
-    LOG_INFO(LocalQTCompat::fromLocal8Bit("获取%1通道色彩").arg(channel));
+    // LOG_INFO(LocalQTCompat::fromLocal8Bit("获取%1通道色彩").arg(channel));
 
     return m_channelColors.value(channel, QColor(Qt::black));
 }

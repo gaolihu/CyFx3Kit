@@ -180,6 +180,14 @@ public:
         m_fileOperationController = controller;
     }
 
+    /**
+     * @brief 读取原始数据，不做通道处理
+     * @param startIndex 起始索引
+     * @param length 数据长度
+     * @return 原始二进制数据
+     */
+    QByteArray readRawData(int startIndex, int length);
+
 signals:
     /**
      * @brief 数据读取完成信号
