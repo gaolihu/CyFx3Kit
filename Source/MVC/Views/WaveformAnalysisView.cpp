@@ -59,6 +59,9 @@ WaveformAnalysisView::WaveformAnalysisView(QWidget* parent)
     m_glWidget->setAttribute(Qt::WA_TranslucentBackground, false);
     m_glWidget->setAttribute(Qt::WA_OpaquePaintEvent, true);
     m_glWidget->setAttribute(Qt::WA_NoSystemBackground, true);
+
+    // 重要修改：允许鼠标事件直接传递到GLWidget
+    // 不要设置WA_TransparentForMouseEvents，让GLWidget接收鼠标事件
     m_glWidget->setAttribute(Qt::WA_TransparentForMouseEvents, false);
 
     // 确保正确显示
@@ -148,6 +151,19 @@ void WaveformAnalysisView::connectSignals()
     connect(this, &WaveformAnalysisView::signal_WA_V_channelVisibilityChanged,
         WaveformAnalysisModel::getInstance(), &WaveformAnalysisModel::setChannelEnabled);
 
+    if (m_glWidget) {
+        connect(this, &WaveformAnalysisView::signal_WA_V_glMousePressed,
+            m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMousePress);
+        connect(this, &WaveformAnalysisView::signal_WA_V_glMouseMoved,
+            m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMouseMove);
+        connect(this, &WaveformAnalysisView::signal_WA_V_glMouseReleased,
+            m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMouseRelease);
+        connect(this, &WaveformAnalysisView::signal_WA_V_glMouseDoubleClicked,
+            m_glWidget, &WaveformGLWidget::slot_WF_GL_handleMouseDoubleClick);
+        connect(this, &WaveformAnalysisView::signal_WA_V_glWheelScrolled,
+            m_glWidget, &WaveformGLWidget::slot_WF_GL_handleWheelScroll);
+    }
+
     LOG_INFO(LocalQTCompat::fromLocal8Bit("信号和槽连接完成"));
 }
 
@@ -204,36 +220,27 @@ void WaveformAnalysisView::mousePressEvent(QMouseEvent* event)
     // 在非图表区域处理鼠标事件
     if (!chartRect.contains(event->pos())) {
         QWidget::mousePressEvent(event);
+        return;
     }
-    else {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("鼠标按下在图表区域内 - 位置: (%1, %2)")
-            .arg(event->pos().x())
-            .arg(event->pos().y()));
 
-        // 记录拖动起点
-        if (event->button() == Qt::LeftButton) {
-            m_isDragging = true;
-            m_lastMousePos = event->pos();
-        }
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("鼠标按下在图表区域内 - 位置: (%1, %2)")
+        .arg(event->pos().x())
+        .arg(event->pos().y()));
 
-        // 直接转发事件到OpenGL控件
-        if (m_glWidget) {
-            QPoint localPos = m_glWidget->mapFromParent(event->pos() - chartRect.topLeft());
-
-            QMouseEvent mappedEvent(
-                event->type(),
-                localPos,                 // local position
-                event->scenePosition(),   // scene position
-                event->globalPosition(),  // global position
-                event->button(),
-                event->buttons(),
-                event->modifiers(),
-                event->pointingDevice()
-            );
-
-            QApplication::sendEvent(m_glWidget, &mappedEvent);
-        }
+    // 记录拖动起点
+    if (event->button() == Qt::LeftButton) {
+        m_isDragging = true;
+        m_lastMousePos = event->pos();
     }
+
+    // 使用信号通知GL控件，而不是直接转发事件
+    if (m_glWidget) {
+        QPoint localPos = event->pos() - chartRect.topLeft();
+        emit signal_WA_V_glMousePressed(localPos, event->button());
+    }
+
+    // 事件已处理
+    event->accept();
 }
 
 void WaveformAnalysisView::mouseMoveEvent(QMouseEvent* event)
@@ -247,7 +254,7 @@ void WaveformAnalysisView::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    // 处理拖动逻辑 - 这里可能需要直接处理，不调用控制器不存在的方法
+    // 处理拖动逻辑
     if (m_isDragging) {
         QPoint delta = event->pos() - m_lastMousePos;
         if (!delta.isNull()) {
@@ -262,23 +269,14 @@ void WaveformAnalysisView::mouseMoveEvent(QMouseEvent* event)
         }
     }
 
-    // 直接转发事件到OpenGL控件
+    // 使用信号通知GL控件，而不是直接转发事件
     if (m_glWidget) {
-        QPoint localPos = m_glWidget->mapFromParent(event->pos() - chartRect.topLeft());
-
-        QMouseEvent mappedEvent(
-            event->type(),
-            localPos,                 // local position
-            event->scenePosition(),   // scene position
-            event->globalPosition(),  // global position
-            event->button(),
-            event->buttons(),
-            event->modifiers(),
-            event->pointingDevice()
-        );
-
-        QApplication::sendEvent(m_glWidget, &mappedEvent);
+        QPoint localPos = event->pos() - chartRect.topLeft();
+        emit signal_WA_V_glMouseMoved(localPos, event->buttons());
     }
+
+    // 事件已处理
+    event->accept();
 }
 
 void WaveformAnalysisView::mouseReleaseEvent(QMouseEvent* event)
@@ -291,26 +289,20 @@ void WaveformAnalysisView::mouseReleaseEvent(QMouseEvent* event)
     // 获取当前图表区域
     QRect chartRect = ui->m_chartView->geometry();
 
-    // 转发事件到OpenGL控件
-    if (m_glWidget) {
-        QPoint localPos = m_glWidget->mapFromParent(event->pos() - chartRect.topLeft());
-
-        QMouseEvent mappedEvent(
-            event->type(),
-            localPos,                 // local position
-            event->scenePosition(),   // scene position
-            event->globalPosition(),  // global position
-            event->button(),
-            event->buttons(),
-            event->modifiers(),
-            event->pointingDevice()
-        );
-
-        QApplication::sendEvent(m_glWidget, &mappedEvent);
-    }
-    else {
+    // 非图表区域正常处理
+    if (!chartRect.contains(event->pos())) {
         QWidget::mouseReleaseEvent(event);
+        return;
     }
+
+    // 使用信号通知GL控件，而不是直接转发事件
+    if (m_glWidget) {
+        QPoint localPos = event->pos() - chartRect.topLeft();
+        emit signal_WA_V_glMouseReleased(localPos, event->button());
+    }
+
+    // 事件已处理
+    event->accept();
 }
 
 void WaveformAnalysisView::mouseDoubleClickEvent(QMouseEvent* event)
@@ -321,30 +313,21 @@ void WaveformAnalysisView::mouseDoubleClickEvent(QMouseEvent* event)
     // 在非图表区域处理鼠标双击事件
     if (!chartRect.contains(event->pos())) {
         QWidget::mouseDoubleClickEvent(event);
+        return;
     }
-    else {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("鼠标双击在图表区域内 - 位置: (%1, %2)")
-            .arg(event->pos().x())
-            .arg(event->pos().y()));
 
-        // 转发事件到OpenGL控件
-        if (m_glWidget) {
-            QPoint localPos = m_glWidget->mapFromParent(event->pos() - chartRect.topLeft());
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("鼠标双击在图表区域内 - 位置: (%1, %2)")
+        .arg(event->pos().x())
+        .arg(event->pos().y()));
 
-            QMouseEvent mappedEvent(
-                event->type(),
-                localPos,                 // local position
-                event->scenePosition(),   // scene position
-                event->globalPosition(),  // global position
-                event->button(),
-                event->buttons(),
-                event->modifiers(),
-                event->pointingDevice()
-            );
-
-            QApplication::sendEvent(m_glWidget, &mappedEvent);
-        }
+    // 使用信号通知GL控件，而不是直接转发事件
+    if (m_glWidget) {
+        QPoint localPos = event->pos() - chartRect.topLeft();
+        emit signal_WA_V_glMouseDoubleClicked(localPos, event->button());
     }
+
+    // 事件已处理
+    event->accept();
 }
 
 void WaveformAnalysisView::wheelEvent(QWheelEvent* event)
@@ -355,25 +338,34 @@ void WaveformAnalysisView::wheelEvent(QWheelEvent* event)
     // 在非图表区域处理滚轮事件
     if (!chartRect.contains(event->position().toPoint())) {
         QWidget::wheelEvent(event);
+        return;
     }
-    else {
-        LOG_INFO(LocalQTCompat::fromLocal8Bit("滚轮事件在图表区域内 - 位置: (%1, %2)")
-            .arg(event->position().toPoint().x())
-            .arg(event->position().toPoint().y()));
 
-        // 处理缩放
-        if (m_controller) {
-            if (event->angleDelta().y() > 0) {
-                m_controller->slot_WA_C_zoomIn();
-            }
-            else {
-                m_controller->slot_WA_C_zoomOut();
-            }
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("滚轮事件在图表区域内 - 位置: (%1, %2)")
+        .arg(event->position().toPoint().x())
+        .arg(event->position().toPoint().y()));
 
-            // 更新波形显示
-            updateWaveform();
+    // 直接处理缩放逻辑
+    if (m_controller) {
+        if (event->angleDelta().y() > 0) {
+            m_controller->slot_WA_C_zoomIn();
         }
+        else {
+            m_controller->slot_WA_C_zoomOut();
+        }
+
+        // 更新波形显示
+        updateWaveform();
     }
+
+    // 使用信号通知GL控件
+    if (m_glWidget) {
+        QPoint localPos = event->position().toPoint() - chartRect.topLeft();
+        emit signal_WA_V_glWheelScrolled(localPos, event->angleDelta());
+    }
+
+    // 事件已处理
+    event->accept();
 }
 
 void WaveformAnalysisView::resizeEvent(QResizeEvent* event)

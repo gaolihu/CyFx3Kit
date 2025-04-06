@@ -140,26 +140,26 @@ private slots:
      * @param xMin 最小X值
      * @param xMax 最大X值
      */
-    void onGLWidgetViewRangeChanged(double xMin, double xMax);
+    void slot_WA_C_onGLWidgetViewRangeChanged(double xMin, double xMax);
 
     /**
      * @brief 处理OpenGL控件添加标记点
      * @param index 数据索引
      */
-    void onGLWidgetMarkerAdded(int index);
+    void slot_WA_C_onGLWidgetMarkerAdded(int index);
 
     /**
      * @brief 处理OpenGL控件平移请求
      * @param deltaX 水平偏移量
      */
-    void onGLWidgetPanRequested(int deltaX);
+    void slot_WA_C_onGLWidgetPanRequested(int deltaX);
 
     /**
      * @brief 处理OpenGL控件加载数据请求
      * @param startIndex 起始索引
      * @param length 数据长度
      */
-    void onGLWidgetLoadDataRequested(int startIndex, int length);
+    void slot_WA_C_onGLWidgetLoadDataRequested(int startIndex, int length);
 
     /**
      * @brief 模型数据加载完成

@@ -95,6 +95,41 @@ signals:
      */
     void signal_WA_V_verticalScaleChanged(int value);
 
+    /**
+     * @brief 通知OpenGL控件鼠标按下事件
+     * @param pos 本地坐标位置
+     * @param button 按下的按钮
+     */
+    void signal_WA_V_glMousePressed(const QPoint& pos, Qt::MouseButton button);
+
+    /**
+     * @brief 通知OpenGL控件鼠标移动事件
+     * @param pos 本地坐标位置
+     * @param buttons 按下的按钮
+     */
+    void signal_WA_V_glMouseMoved(const QPoint& pos, Qt::MouseButtons buttons);
+
+    /**
+     * @brief 通知OpenGL控件鼠标释放事件
+     * @param pos 本地坐标位置
+     * @param button 释放的按钮
+     */
+    void signal_WA_V_glMouseReleased(const QPoint& pos, Qt::MouseButton button);
+
+    /**
+     * @brief 通知OpenGL控件鼠标双击事件
+     * @param pos 本地坐标位置
+     * @param button 双击的按钮
+     */
+    void signal_WA_V_glMouseDoubleClicked(const QPoint& pos, Qt::MouseButton button);
+
+    /**
+     * @brief 通知OpenGL控件鼠标滚轮事件
+     * @param pos 本地坐标位置
+     * @param angleDelta 滚轮角度变化
+     */
+    void signal_WA_V_glWheelScrolled(const QPoint& pos, const QPoint& angleDelta);
+
 protected:
     /**
      * @brief 绘图事件处理

@@ -85,32 +85,81 @@ public:
      */
     double screenToDataX(int x) const;
 
+public slots:
+    /**
+     * @brief 处理鼠标按下事件
+     * @param pos 本地坐标位置
+     * @param button 按下的按钮
+     */
+    void slot_WF_GL_handleMousePress(const QPoint& pos, Qt::MouseButton button);
+
+    /**
+     * @brief 处理鼠标移动事件
+     * @param pos 本地坐标位置
+     * @param buttons 当前按下的按钮
+     */
+    void slot_WF_GL_handleMouseMove(const QPoint& pos, Qt::MouseButtons buttons);
+
+    /**
+     * @brief 处理鼠标释放事件
+     * @param pos 本地坐标位置
+     * @param button 释放的按钮
+     */
+    void slot_WF_GL_handleMouseRelease(const QPoint& pos, Qt::MouseButton button);
+
+    /**
+     * @brief 处理鼠标双击事件
+     * @param pos 本地坐标位置
+     * @param button 双击的按钮
+     */
+    void slot_WF_GL_handleMouseDoubleClick(const QPoint& pos, Qt::MouseButton button);
+
+    /**
+     * @brief 处理鼠标滚轮事件
+     * @param pos 本地坐标位置
+     * @param angleDelta 角度变化
+     */
+    void slot_WF_GL_handleWheelScroll(const QPoint& pos, const QPoint& angleDelta);
+
+    /**
+     * @brief 处理鼠标滚轮点击
+     * @param pos 本地坐标位置
+     * @param angleDelta 角度变化
+     */
+    void slot_WF_GL_handleWheelEvent(const QPoint& pos, const QPoint& angleDelta);
+
+    /**
+     * @brief 处理范围变化
+     * @param delta 偏移点
+     */
+    void slot_WF_GL_handlePanEvent(const QPoint& delta);
+
 signals:
     /**
      * @brief 视图范围变化信号
      * @param xMin 最小X值
      * @param xMax 最大X值
      */
-    void viewRangeChanged(double xMin, double xMax);
+    void signal_WF_GL_viewRangeChanged(double xMin, double xMax);
 
     /**
      * @brief 请求添加标记点信号
      * @param index 数据索引
      */
-    void markerAdded(int index);
+    void signal_WF_GL_markerAdded(int index);
 
     /**
      * @brief 请求平移信号
      * @param deltaX 水平偏移量
      */
-    void panRequested(int deltaX);
+    void signal_WF_GL_panRequested(int deltaX);
 
     /**
      * @brief 请求加载数据范围
      * @param startIndex 起始索引
      * @param length 数据长度
      */
-    void loadDataRequested(int startIndex, int length);
+    void signal_WF_GL_loadDataRequested(int startIndex, int length);
 
 protected:
     /**

@@ -129,14 +129,14 @@ void WaveformAnalysisController::connectSignals()
     LOG_INFO(LocalQTCompat::fromLocal8Bit("连接控制器信号和槽"));
 
     // 连接OpenGL控件信号到控制器
-    connect(m_glWidget, &WaveformGLWidget::viewRangeChanged,
-        this, &WaveformAnalysisController::onGLWidgetViewRangeChanged);
-    connect(m_glWidget, &WaveformGLWidget::markerAdded,
-        this, &WaveformAnalysisController::onGLWidgetMarkerAdded);
-    connect(m_glWidget, &WaveformGLWidget::panRequested,
-        this, &WaveformAnalysisController::onGLWidgetPanRequested);
-    connect(m_glWidget, &WaveformGLWidget::loadDataRequested,
-        this, &WaveformAnalysisController::onGLWidgetLoadDataRequested);
+    connect(m_glWidget, &WaveformGLWidget::signal_WF_GL_viewRangeChanged,
+        this, &WaveformAnalysisController::slot_WA_C_onGLWidgetViewRangeChanged);
+    connect(m_glWidget, &WaveformGLWidget::signal_WF_GL_markerAdded,
+        this, &WaveformAnalysisController::slot_WA_C_onGLWidgetMarkerAdded);
+    connect(m_glWidget, &WaveformGLWidget::signal_WF_GL_panRequested,
+        this, &WaveformAnalysisController::slot_WA_C_onGLWidgetPanRequested);
+    connect(m_glWidget, &WaveformGLWidget::signal_WF_GL_loadDataRequested,
+        this, &WaveformAnalysisController::slot_WA_C_onGLWidgetLoadDataRequested);
 
     // 从模型到控制器的信号连接
     connect(m_model, &WaveformAnalysisModel::signal_WA_M_dataLoaded,
@@ -417,7 +417,7 @@ bool WaveformAnalysisController::slot_WA_C_loadDataRange(int startPos, int lengt
     return loadWaveformDataFromService(startPos, length);
 }
 
-void WaveformAnalysisController::onGLWidgetViewRangeChanged(double xMin, double xMax)
+void WaveformAnalysisController::slot_WA_C_onGLWidgetViewRangeChanged(double xMin, double xMax)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("OpenGL控件视图范围变更: [%1, %2]").arg(xMin).arg(xMax));
 
@@ -445,7 +445,7 @@ void WaveformAnalysisController::onGLWidgetViewRangeChanged(double xMin, double 
     }
 }
 
-void WaveformAnalysisController::onGLWidgetMarkerAdded(int index)
+void WaveformAnalysisController::slot_WA_C_onGLWidgetMarkerAdded(int index)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("OpenGL控件请求添加标记点: %1").arg(index));
 
@@ -453,7 +453,7 @@ void WaveformAnalysisController::onGLWidgetMarkerAdded(int index)
     m_model->addMarkerPoint(index);
 }
 
-void WaveformAnalysisController::onGLWidgetPanRequested(int deltaX)
+void WaveformAnalysisController::slot_WA_C_onGLWidgetPanRequested(int deltaX)
 {
     if (!m_model || !m_glWidget) return;
 
@@ -516,7 +516,7 @@ void WaveformAnalysisController::onGLWidgetPanRequested(int deltaX)
     }
 }
 
-void WaveformAnalysisController::onGLWidgetLoadDataRequested(int startIndex, int length)
+void WaveformAnalysisController::slot_WA_C_onGLWidgetLoadDataRequested(int startIndex, int length)
 {
     LOG_INFO(LocalQTCompat::fromLocal8Bit("OpenGL控件请求加载数据 - 起始: %1, 长度: %2")
         .arg(startIndex).arg(length));

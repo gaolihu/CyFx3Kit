@@ -170,6 +170,137 @@ double WaveformGLWidget::screenToDataX(int x) const
     return dataIndex;
 }
 
+void WaveformGLWidget::slot_WF_GL_handleMousePress(const QPoint& pos, Qt::MouseButton button)
+{
+    if (button == Qt::LeftButton) {
+        m_lastMousePos = pos;
+        m_isDragging = true;
+        setCursor(Qt::ClosedHandCursor);
+    }
+
+    // 记录事件处理
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("OpenGL控件处理鼠标按下 - 位置: (%1, %2), 按钮: %3")
+        .arg(pos.x()).arg(pos.y()).arg(static_cast<int>(button)));
+}
+
+void WaveformGLWidget::slot_WF_GL_handleMouseMove(const QPoint& pos, Qt::MouseButtons buttons)
+{
+    if (m_isDragging) {
+        QPoint delta = pos - m_lastMousePos;
+        m_lastMousePos = pos;
+
+        if (!delta.isNull()) {
+            // 处理平移
+            slot_WF_GL_handlePanEvent(delta);
+        }
+    }
+
+    // 记录事件处理
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("OpenGL控件处理鼠标移动 - 位置: (%1, %2), 按钮: %3")
+        .arg(pos.x()).arg(pos.y()).arg(static_cast<int>(buttons)));
+}
+
+void WaveformGLWidget::slot_WF_GL_handleMouseRelease(const QPoint& pos, Qt::MouseButton button)
+{
+    if (button == Qt::LeftButton) {
+        m_isDragging = false;
+        setCursor(Qt::ArrowCursor);
+    }
+
+    // 记录事件处理
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("OpenGL控件处理鼠标释放 - 位置: (%1, %2), 按钮: %3")
+        .arg(pos.x()).arg(pos.y()).arg(static_cast<int>(button)));
+}
+
+void WaveformGLWidget::slot_WF_GL_handleMouseDoubleClick(const QPoint& pos, Qt::MouseButton button)
+{
+    if (button == Qt::LeftButton) {
+        // 添加标记点
+        addMarker(pos);
+    }
+
+    // 记录事件处理
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("OpenGL控件处理鼠标双击 - 位置: (%1, %2), 按钮: %3")
+        .arg(pos.x()).arg(pos.y()).arg(static_cast<int>(button)));
+}
+
+void WaveformGLWidget::slot_WF_GL_handleWheelScroll(const QPoint& pos, const QPoint& angleDelta)
+{
+    // 内部处理滚轮事件
+    slot_WF_GL_handleWheelEvent(pos, angleDelta);
+
+    // 记录事件处理
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("OpenGL控件处理滚轮事件 - 位置: (%1, %2), 角度: (%3, %4)")
+        .arg(pos.x()).arg(pos.y()).arg(angleDelta.x()).arg(angleDelta.y()));
+}
+
+// 添加内部事件处理方法
+
+void WaveformGLWidget::slot_WF_GL_handleWheelEvent(const QPoint& pos, const QPoint& angleDelta)
+{
+    if (!m_model)
+        return;
+
+    // 获取当前视图范围
+    double xMin = m_viewXMin;
+    double xMax = m_viewXMax;
+    double range = xMax - xMin;
+
+    // 鼠标位置对应的数据点
+    double clickedIndex = screenToDataX(pos.x());
+    double ratio = (clickedIndex - xMin) / range;
+
+    if (angleDelta.y() > 0) {
+        // 放大 - 缩小范围为原来的80%
+        double newRange = range * 0.8;
+
+        // 保持鼠标所在数据点的相对位置不变
+        double newXMin = clickedIndex - ratio * newRange;
+        double newXMax = newXMin + newRange;
+
+        // 边界检查
+        if (newXMin < 0) {
+            newXMin = 0;
+            newXMax = newXMin + newRange;
+        }
+
+        // 设置新范围
+        setViewRange(newXMin, newXMax);
+
+        // 通知视图范围变更
+        emit signal_WF_GL_viewRangeChanged(newXMin, newXMax);
+    }
+    else {
+        // 缩小 - 放大范围为原来的125%
+        double newRange = range * 1.25;
+
+        // 保持鼠标所在数据点的相对位置不变
+        double newXMin = clickedIndex - ratio * newRange;
+        double newXMax = newXMin + newRange;
+
+        // 边界检查
+        if (newXMin < 0) {
+            newXMin = 0;
+            newXMax = newXMin + newRange;
+        }
+
+        // 设置新范围
+        setViewRange(newXMin, newXMax);
+
+        // 通知视图范围变更
+        emit signal_WF_GL_viewRangeChanged(newXMin, newXMax);
+    }
+}
+
+void WaveformGLWidget::slot_WF_GL_handlePanEvent(const QPoint& delta)
+{
+    // 通知控制器处理平移
+    emit signal_WF_GL_panRequested(delta.x());
+
+    LOG_INFO(LocalQTCompat::fromLocal8Bit("发送平移请求 - 水平偏移: %1")
+        .arg(delta.x()));
+}
+
 void WaveformGLWidget::addMarker(const QPoint& position)
 {
     // 将屏幕坐标转换为数据索引
@@ -179,7 +310,7 @@ void WaveformGLWidget::addMarker(const QPoint& position)
     int index = qRound(dataIndex);
 
     // 发出标记添加请求
-    emit markerAdded(index);
+    emit signal_WF_GL_markerAdded(index);
 }
 
 void WaveformGLWidget::initializeGL()
@@ -793,7 +924,7 @@ void WaveformGLWidget::mouseMoveEvent(QMouseEvent* event)
         m_lastMousePos = event->pos();
 
         // 通知控制器处理平移
-        emit panRequested(delta.x());
+        emit signal_WF_GL_panRequested(delta.x());
     }
 
     QOpenGLWidget::mouseMoveEvent(event);
@@ -851,7 +982,7 @@ void WaveformGLWidget::wheelEvent(QWheelEvent* event)
         setViewRange(newXMin, newXMax);
 
         // 通知视图范围变更
-        emit viewRangeChanged(newXMin, newXMax);
+        emit signal_WF_GL_viewRangeChanged(newXMin, newXMax);
     }
     else {
         // 缩小 - 放大范围为原来的125%
@@ -871,7 +1002,7 @@ void WaveformGLWidget::wheelEvent(QWheelEvent* event)
         setViewRange(newXMin, newXMax);
 
         // 通知视图范围变更
-        emit viewRangeChanged(newXMin, newXMax);
+        emit signal_WF_GL_viewRangeChanged(newXMin, newXMax);
     }
 
     // 阻止事件传播
